@@ -133,11 +133,13 @@ const nk=s=>String(s).replace(/\s+/g,' ').trim().toLowerCase();
 function applyMap(list,label){const F=S.f.t2;if(!F||!S.d)return alert('Pehle Order data file upload karo');
   $$('#t2pb .pr').forEach(d=>d.remove());
   const used=new Set(),miss=[];let ok=0;
-  list.forEach(([dn,on])=>{const i=S.d.H.findIndex(h=>nk(h)===nk(dn)),j=F.H.findIndex(h=>nk(h)===nk(on));
+  let alt=0;
+  list.forEach(([dn,on])=>{let i=S.d.H.findIndex(h=>nk(h)===nk(dn));const j=F.H.findIndex(h=>nk(h)===nk(on));
+    if(i<0&&j>=0){const k=S.d.H.findIndex(h=>nk(h)===nk(on));if(k>=0){i=k;alt++}}
     if(i<0||j<0){miss.push(`${dn} ← ${on} (${i<0?'DSR me column nahi mila':'Order file me column nahi mila'})`);return}
     if(isRem(i)||used.has(i))return;used.add(i);const d=addPair('t2');d.querySelector('.d').value=String(i);d.querySelector('.s').value=String(j);ok++});
   if(!$$('#t2pb .pr').length)addPair('t2');
-  $('#t2am').innerHTML=`✅ ${label}: ${ok} jodiyan lag gayi. Neeche dekh lo, chaho to badal sakte ho.`+(miss.length?`<br><span class="er">Nahi mili (manual chuno): ${miss.map(esc).join('; ')}</span>`:'');return{ok,miss:miss.length}}
+  $('#t2am').innerHTML=`✅ ${label}: ${ok} jodiyan lag gayi.${alt?` (${alt} jagah DSR me column ka naam order file ke naam jaisa mila, wahi use kiya)`:''} Neeche dekh lo, chaho to badal sakte ho.`+(miss.length?`<br><span class="er">Nahi mili (manual chuno): ${miss.map(esc).join('; ')}</span>`:'');return{ok,miss:miss.length}}
 const MAPKEY='dsr_map_t2';
 const getMap=()=>{try{const v=JSON.parse(localStorage.getItem(MAPKEY)||'null');if(Array.isArray(v)&&v.length)return{list:v,label:'Auto (aapki saved mapping file)'}}catch(e){}return{list:PRESET,label:'Auto (VC preset)'}};
 bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';$('#t2add').disabled=true;const m=getMap();applyMap(m.list,m.label)});
@@ -147,8 +149,7 @@ $('#t2mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(!S.f.t2)
   const R=/\.csv$/i.test(f.name)?DSRCore.readCsvText(await f.text()):await DSRCore.readXlsx(()=>f.stream());
   const list=[R.H,...R.rows].filter(r=>r[0]!=null&&r[1]!=null&&String(r[0]).trim()&&String(r[1]).trim()&&!['dsr','dsr ke column'].includes(nk(r[0]))).map(r=>[r[0],r[1]]);
   const r=applyMap(list,`Mapping file (${f.name})`);
-  if(r&&r.ok>0&&!r.miss){try{localStorage.setItem(MAPKEY,JSON.stringify(list));$('#t2am').innerHTML+='<br>💾 Ye mapping browser me save ho gayi; ab agli baar order file upload karte hi yahi apne aap lagegi.'}catch(e){}}
-  else if(r)$('#t2am').innerHTML+='<br>⚠ Kuch column nahi mile, isliye ye mapping <b>save nahi</b> hui. Mapping file me pehla column DSR ke asli column naam ka hona chahiye aur dusra Order data ke column naam ka.'};
+  if(r&&r.ok>0){try{localStorage.setItem(MAPKEY,JSON.stringify(list));$('#t2am').innerHTML+='<br>💾 Ye mapping browser me save ho gayi; ab agli baar order file upload karte hi yahi apne aap lagegi.'}catch(e){}}};
 $('#t2add').onclick=()=>t2add();
 function t2check(){const F=S.f.t2;if(!F||!S.d)return;const dk=+$('#t2dk').value,fk=+$('#t2fk').value;if(!(dk>=0&&fk>=0))return;
   const have=new Set(S.d.rows.map(r=>nm(r[dk]))),seen=new Set();let f=0,dup=0;S.miss=[];
