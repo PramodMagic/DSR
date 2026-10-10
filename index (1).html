@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DSR Updater</title>
+<style>
+:root{--bg:#f4f6f9;--cd:#fff;--tx:#1c2230;--mu:#68718a;--ac:#2f6fed;--bd:#d9dee8;--ok:#188a4a;--er:#c0392b}
+@media(prefers-color-scheme:dark){:root{--bg:#12151b;--cd:#1c2029;--tx:#e7e9f0;--mu:#97a0b5;--ac:#6c9bff;--bd:#323847}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--cd);border-bottom:1px solid var(--bd);padding:8px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}nav{display:flex;gap:6px;padding:10px 14px 0;overflow-x:auto}
+nav button{background:var(--cd);color:var(--tx);border:1px solid var(--bd);white-space:nowrap}nav button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+main{max-width:1000px;margin:0 auto;padding:12px 14px 60px}section{display:none}section.on{display:block}
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}.off{opacity:.4;pointer-events:none}
+h3{margin:0 0 6px;font-size:16px}h4{margin:12px 0 6px;font-size:14px}
+button{font:inherit;background:var(--ac);color:#fff;border:0;border-radius:8px;padding:7px 14px;cursor:pointer}button.g{background:var(--cd);color:var(--tx);border:1px solid var(--bd)}
+select,input[type=text],input[type=file]{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:5px 8px;max-width:100%}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.mu{color:var(--mu);font-size:12.5px}.ok{color:var(--ok)}.er{color:var(--er)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chips label{border:1px solid var(--bd);border-radius:16px;padding:2px 10px;background:var(--bg);cursor:pointer}
+.sc{overflow:auto;max-height:420px}table{border-collapse:collapse;font-size:12.5px}th,td{border:1px solid var(--bd);padding:3px 7px;white-space:nowrap;text-align:left}th{background:var(--bg);position:sticky;top:0}
+.stats{display:flex;gap:8px;flex-wrap:wrap}.stat{flex:1;min-width:110px;border:1px solid var(--bd);border-radius:10px;padding:8px;text-align:center}.stat b{display:block;font-size:20px}
+ul{margin:4px 0;padding-left:20px}
+</style></head><body>
+<header><b>📋 DSR Updater</b><span id="st" class="mu">Master upload nahi hui</span><span class="sp"></span>
+<button class="g" id="undo">↩ Undo</button><button id="dl">⬇ Final DSR Download</button></header>
+<nav id="nav"></nav>
+<main>
+<section id="p1"><div class="card"><h3>Step 1 · Master DSR upload</h3>
+<div class="mu">Master ka format wahi rahega; baaki sab files isi ko update karengi. (.xlsx / .csv, pehli sheet, header pehli row me)</div>
+<div class="row"><input type="file" id="mf" accept=".xlsx,.xls,.csv"></div><div id="mi" class="mu"></div></div>
+<div class="card off" id="cfg"><h3>Important columns (remark rules inhi par chalte hain)</h3>
+<div class="row">Warehouse <select class="dsr" data-ph="1" id="cw"></select> Payment Status <select class="dsr" data-ph="1" id="cp"></select>
+Final Remark <select class="dsr" data-ph="1" id="cf"></select> Remark <select class="dsr" data-ph="1" id="cr"></select> Courier/AWB <select class="dsr" data-ph="1" id="ca"></select></div>
+<div class="mu">Har column apni file ke hisaab se khud select karo. Step 2-5 chalane se pehle ye select hona zaroori hai.</div></div></section>
+
+<section id="p2"></section><section id="p3"></section><section id="p4"></section><section id="p5"></section>
+
+<section id="p6"><div class="card"><h3>DSR dekho (Excel jaisa filter)</h3>
+<div class="row">Column <select class="dsr" id="vc"></select> Value <select id="vv"></select> Search <input type="text" id="vq" placeholder="kuch bhi likho"><button id="vb">Filter</button><button id="dl2">⬇ Download</button></div>
+<div id="vm" class="mu"></div><div class="sc"><table id="vt"></table></div></div></section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const S={d:null,f:{},ns:0,hist:[],miss:[]};
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const gv=v=>v&&typeof v==='object'&&!(v instanceof Date)?v.v:v;
+const tx=v=>{v=gv(v);return v==null?'':v instanceof Date?v.toISOString().slice(0,10):String(v).trim()};
+const nm=v=>tx(v).toLowerCase(), rt=v=>{const t=tx(v);return t==='0'?'':t}, eq=(a,b)=>a.toLowerCase()===b.toLowerCase();
+const op=(a,s,x='')=>x+a.map((h,i)=>`<option value="${i}"${i===s?' selected':''}>${esc(h)}</option>`).join('');
+const uniq=(R,c)=>[...new Set(R.map(r=>tx(r[c])).filter(Boolean))].sort();
+const gi=(H,re,not)=>{const i=H.findIndex(h=>re.test(h)&&!(not&&not.test(h)));return i<0?0:i};
+const shift=(f,d)=>f.replace(/(?<![A-Za-z0-9_.$])(\$?[A-Z]{1,3})(\$?)(\d+)(?![\d(A-Za-z])/g,(m,c,dl,r)=>dl?m:c+(+r+d));
+const C=()=>({wh:+$('#cw').value,pay:+$('#cp').value,fr:+$('#cf').value,rm:+$('#cr').value,awb:+$('#ca').value});
+const need=(...k)=>{const c=C(),n={wh:'Warehouse',pay:'Payment Status',fr:'Final Remark',rm:'Remark',awb:'Courier/AWB'},m=k.filter(x=>!(c[x]>=0));if(m.length){alert('Pehle Step 1 me ye column select karo: '+m.map(x=>n[x]).join(', '));show(1);return false}return true};
+const chips=(id,vals,pre)=>`<div class="chips" id="${id}">${vals.map(v=>`<label><input type="checkbox" value="${esc(v)}" ${pre(v)?'checked':''}> ${esc(v)}</label>`).join('')||'<span class="mu">koi value nahi</span>'}</div><div class="mu"><a href="#" data-all="${id}">Sab</a> · <a href="#" data-none="${id}">Koi nahi</a></div>`;
+const chk=id=>$$(`#${id} input:checked`).map(i=>i.value.toLowerCase());
+document.addEventListener('click',e=>{const a=e.target.closest('a[data-all],a[data-none]');if(!a)return;e.preventDefault();const id=a.dataset.all||a.dataset.none;$$(`#${id} input`).forEach(i=>i.checked=!!a.dataset.all)});
+
+async function rd(f){
+  const wb=XLSX.read(await f.arrayBuffer(),{cellDates:true,cellFormula:true});
+  const ws=wb.Sheets[wb.SheetNames[0]],rg=XLSX.utils.decode_range(ws['!ref']||'A1'),E=XLSX.utils.encode_cell;
+  const H=[];for(let c=rg.s.c;c<=rg.e.c;c++){const x=ws[E({r:rg.s.r,c})];H.push(x&&x.v!=null?String(x.v).trim():'Col'+(c+1))}
+  const rows=[];for(let r=rg.s.r+1;r<=rg.e.r;r++){const row=[];for(let c=rg.s.c;c<=rg.e.c;c++){const x=ws[E({r,c})];row.push(!x?null:x.f?{f:shift(x.f,-rg.s.r),v:x.v}:(x.v===''?null:x.v))}rows.push(row)}
+  while(rows.length&&rows[rows.length-1].every(v=>v==null))rows.pop();
+  return{name:f.name,H,rows}}
+
+function snap(){S.hist.push(structuredClone({H:S.d.H,rows:S.d.rows,F:S.d.F,ns:S.ns}));if(S.hist.length>8)S.hist.shift()}
+$('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return alert('Undo ke liye kuch nahi hai');Object.assign(S.d,h);S.ns=h.ns;refresh()};
+function refresh(){$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;fillDsr()}
+function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,(s.dataset.new?'<option value="new">➕ Naya column</option>':'')+(s.dataset.ph?'<option value="-1">— Select karo —</option>':''));if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))})}
+
+/* ---------- Tabs ---------- */
+['1 Master','2 Order Data','3 Last Mile','4 Invoice','5 FM Mile','6 Dekho & Download'].forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>show(i+1);$('#nav').append(b)});
+function show(n){$$('section').forEach((s,i)=>s.classList.toggle('on',i+1===n));$$('nav button').forEach((b,i)=>b.classList.toggle('on',i+1===n));
+  if(S.d){fillDsr();if(n===4||n===5)frChips('t'+n);if(n===6)vInit()}}
+const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><div class="row"><input type="file" id="${p}f" accept=".xlsx,.xls,.csv"></div><div id="${p}i" class="mu"></div></div>
+<div class="card off" id="${p}c"><div class="row">DSR match column <select class="dsr" id="${p}dk"></select> File match column <select id="${p}fk"></select></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
+const pb=p=>`<h4>File ke columns → DSR columns (copy)</h4><div id="${p}pb"></div><button class="g" id="${p}ap">+ Column add</button>`;
+const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
+<div class="row">Naya Final Remark <input type="text" id="${p}nf" placeholder="khali = change nahi"> Naya Remark <input type="text" id="${p}nr"></div>`;
+$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="mu">Master column ke liye source chuno (same naam auto-map; baaki 0; formula wale me formula chalega):</div><div class="sc" style="max-height:260px"><table id="t2mp"></table></div><div class="row"><button id="t2ck">Check karo</button></div><div id="t2s"></div>
+<h4>Warehouse wise Remark rules</h4><div class="row">Kin rows par: <select id="t2sc"><option value="all">Poori DSR</option><option value="new">Sirf abhi add hui rows</option></select><button id="t2ru">Remark rules chalao</button></div><div class="mu">Rules: Bulk/India, Bulk9, China/China-CJ (courier ke saath/bina), WH Not Assigned — aapke document ke hisaab se.</div>`);
+$('#p3').innerHTML=fb('t3','Step 3 · Last Mile (Logistics) file','Logistics file se status/pickup/delivery date copy hoti hai aur Final Remark transition lagta hai.',`${pb('t3')}<h4>Logistics status column</h4><div class="row"><select id="t3sc"></select></div>
+<div class="mu">Delivered mane jaane wale status:</div><div id="t3de"></div><div class="mu" style="margin-top:6px">RTO / Cancel wale status (Order Cancelled ke remark ke liye):</div><div id="t3rt"></div>
+<div class="row"><button id="t3go">Update karo</button></div><div class="mu">Dispatch Pending / FM Intrasit / Invoice Not Prepared / Reached at india wh / WH Not Assigned / Bulk9 Pending → Last Mile Intrasit. Last Mile Intrasit + delivered → Delivered to end buyer + Shipment Delivered. Order Cancelled → remark = logistics status (delivered/RTO ho to). Delivered to end buyer → no change.</div>`);
+$('#p4').innerHTML=fb('t4','Step 4 · Invoice file','Invoice number, qty, amount, date DSR me copy honge; phir remark badla jayega.',`${pb('t4')}${frBox('t4')}<div class="row"><button id="t4go">Update karo</button></div>`);
+$('#p5').innerHTML=fb('t5','Step 5 · FM Mile file','Invoice ka current status DSR me copy hoga; filter laga kar remark badlo.',`${pb('t5')}<h4>FM status filter (sirf in status wali file rows par)</h4><div class="row">FM status column <select id="t5sc"></select></div><div id="t5st"></div>${frBox('t5')}<div class="row"><button id="t5go">Update karo</button></div>`);
+$('#t4nr').value='FM Intrasit';$('#t5nf').value='Reached at India WH';$('#t5nr').value='WH Working';
+function frChips(p){const c=C(),old=$('#'+p+'fr input')?chk(p+'fr'):null,def=['Bulk9 Order Pending','Dispatch Pending at india wh','Invoice Not Prepared','WH Not Assigned'];
+  const vals=[...new Set([...def,...uniq(S.d.rows,c.fr)])];$('#'+p+'fr').innerHTML=chips(p+'fr-i',vals,v=>old?old.includes(v.toLowerCase()):def.includes(v));$('#'+p+'fr').firstChild.id=p+'fr-i';$('#'+p+'fr').dataset.k=1}
+/* frChips wrapper: chk uses id p+'fr-i' */
+const frSel=p=>chk(p+'fr-i');
+
+/* ---------- pairs ---------- */
+function addPair(p,sIdx){const F=S.f[p],d=document.createElement('div');d.className='row pr';
+  d.innerHTML=`<select class="s">${op(F.H,sIdx||0)}</select> → <select class="dsr d" data-new="1"></select><input type="text" class="nn" style="display:none" placeholder="naya column ka naam">`;
+  $('#'+p+'pb').append(d);const s=d.querySelector('.s'),t=d.querySelector('.d'),n=d.querySelector('.nn');
+  t.onchange=()=>n.style.display=t.value==='new'?'':'none';
+  const auto=()=>{const i=S.d.H.findIndex(h=>eq(h,F.H[+s.value]));t.value=i>=0?String(i):'new';n.value=F.H[+s.value];t.onchange()};
+  s.onchange=auto;fillDsr();auto()}
+const gp=p=>$$(`#${p}pb .pr`).map(d=>({s:+d.querySelector('.s').value,d:d.querySelector('.d').value==='new'?-1:+d.querySelector('.d').value,name:d.querySelector('.nn').value.trim()||S.f[p].H[+d.querySelector('.s').value]}));
+const ensure=q=>q.forEach(x=>{if(x.d<0){const e=S.d.H.indexOf(x.name);if(e>=0)x.d=e;else{S.d.H.push(x.name);S.d.rows.forEach(r=>r.push(null));x.d=S.d.H.length-1}}});
+['t3','t4','t5'].forEach(p=>$('#'+p+'ap').onclick=()=>S.f[p]&&addPair(p));
+
+function bind(p,hook){$('#'+p+'f').onchange=async e=>{
+  if(!S.d){alert('Pehle Master upload karo');e.target.value='';return}
+  const f=e.target.files[0];if(!f)return;const F=await rd(f);S.f[p]=F;
+  $('#'+p+'i').innerHTML=`✅ ${esc(f.name)} — ${F.rows.length} rows, ${F.H.length} columns`;
+  $('#'+p+'fk').innerHTML=op(F.H,0);$('#'+p+'c').classList.remove('off');fillDsr();
+  const dk=$('#'+p+'dk'),c=C();dk.value=String(p==='t3'?(c.awb>=0?c.awb:gi(S.d.H,/awb|tracking/i)):gi(S.d.H,/order.?(id|no)/i));
+  dk.onchange=()=>{const i=F.H.findIndex(h=>eq(h,S.d.H[+dk.value]));if(i>=0)$('#'+p+'fk').value=i;if(p==='t2')mapUI()};dk.onchange();
+  if($('#'+p+'pb')){$('#'+p+'pb').innerHTML='';addPair(p)}
+  hook&&hook(F)}}
+
+/* ---------- Step 1 ---------- */
+$('#mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;const D=await rd(f);const last=D.rows[D.rows.length-1]||[],F={};
+  last.forEach((v,c)=>{if(v&&v.f)F[c]={f:v.f,row:D.rows.length+1}});
+  S.d={name:f.name,H:D.H,rows:D.rows,F};S.hist=[];S.f={};S.ns=0;$$('select.dsr').forEach(s=>s.innerHTML='');fillDsr();
+  $('#mi').innerHTML=`✅ ${esc(f.name)} — ${D.rows.length} rows, ${D.H.length} columns. Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`;
+  $('#cfg').classList.remove('off');refresh()};
+
+$$('#cfg select').forEach(s=>s.addEventListener('change',()=>S.f.t2&&mapUI()));
+/* ---------- Step 2 ---------- */
+bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';mapUI()});
+function mapUI(){const F=S.f.t2,d=S.d,c=C();if(!F)return;
+  $('#t2mp').innerHTML='<tr><th>Master column</th><th>Source</th></tr>'+d.H.map((h,i)=>{const j=F.H.findIndex(x=>eq(x,h));
+    const def=d.F[i]?'F':j>=0?String(j):(i===c.fr||i===c.rm)?'B':'Z';
+    return`<tr><td>${esc(h)}</td><td><select class="mp">${[['Z','0 se fill'],['B','Blank chhodo'],...(d.F[i]?[['F','Formula: '+d.F[i].f]]:[])].map(([v,l])=>`<option value="${v}"${def===v?' selected':''}>${esc(l)}</option>`).join('')}${F.H.map((x,k)=>`<option value="${k}"${def===String(k)?' selected':''}>Order: ${esc(x)}</option>`).join('')}</select></td></tr>`}).join('')}
+$('#t2ck').onclick=()=>{const F=S.f.t2;if(!F)return alert('Order file upload karo');const dk=+$('#t2dk').value,fk=+$('#t2fk').value;
+  const have=new Set(S.d.rows.map(r=>nm(r[dk]))),seen=new Set();let f=0,dup=0;S.miss=[];
+  F.rows.forEach(r=>{const k=nm(r[fk]);if(!k)return;if(have.has(k)){f++;return}if(seen.has(k)){dup++;return}seen.add(k);S.miss.push(r)});
+  $('#t2s').innerHTML=`<div class="stats"><div class="stat"><b>${F.rows.length}</b>Order rows</div><div class="stat"><b class="ok">${f}</b>DSR me already</div><div class="stat"><b class="er">${S.miss.length}</b>DSR me nahi</div></div>${dup?`<div class="mu">${dup} duplicate order rows skip</div>`:''}${S.miss.length?'<div class="row"><button id="t2add">Missing rows DSR me add karo</button></div>':'<div class="ok">Sab available hain 👍</div>'}`;
+  if(S.miss.length)$('#t2add').onclick=t2add};
+function t2add(){snap();const d=S.d,mp=$$('#t2mp select').map(s=>s.value);S.ns=d.rows.length;
+  S.miss.forEach(x=>{d.rows.push(mp.map((m,i)=>{if(m==='F')return{f:shift(d.F[i].f,d.rows.length+2-d.F[i].row)};if(m==='Z')return 0;if(m==='B')return null;const v=gv(x[+m]);return v===''||v==null?null:v}))});
+  $('#t2s').innerHTML=`<div class="ok">✅ ${S.miss.length} nayi rows add hui (unrelated columns = 0, formula columns me formula). Ab neeche Remark rules chalao.</div>`;S.miss=[];refresh()}
+
+const DP='Dispatch Pending at india wh',LM='Last Mile Intrasit',DL='Delivered to end buyer',OC='Order Cancelled',INP='Invoice Not Prepared',B9='Bulk9 Order Pending';
+function rules(start){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows;
+  for(let i=start;i<R.length;i++){const r=R[i],w=nm(r[wh]),p=tx(r[pay]).toUpperCase();let f=rt(r[fr]),m=rt(r[rm]);
+    const set=(a,b,k)=>{if(f!==a||(b!=null&&m!==b)){out[k]=(out[k]||0)+1}r[fr]=a;f=a;if(b!=null){r[rm]=b;m=b}};
+    const inl=l=>l.some(x=>eq(x,f)),e=!f&&!m;
+    if(!w){if(e)set('WH Not Assigned','WH Not Assigned','1E · Warehouse blank → WH Not Assigned');continue}
+    if(w==='bulk'||w==='india'){
+      if(p==='PD'&&e)set(DP,'WH Working','1A · PD blank → Dispatch Pending');
+      else if(p==='PR'){if(eq(f,DP)&&eq(m,'WH Working'))set(OC,null,'1A · PR Dispatch Pending → Order Cancelled');else if(eq(f,LM)&&eq(m,LM))set(OC,'Cancelled During LM Intrasit','1A · PR Last Mile → Cancelled During LM')}
+      else if(p==='PU'&&e)set(DP,'Reseller Payment Not Done','1A · PU → Reseller Payment Not Done');
+      if(!inl([DL,DP,LM,OC]))set(DP,'WH Working','1A · Cleanup → Dispatch Pending / WH Working')}
+    else if(w==='bulk9'){if(e)set(B9,'WH Working','1B · Bulk9 blank → Bulk9 Order Pending');
+      if(!inl([DL,B9,LM,OC]))set(B9,'WH Working','1B · Cleanup → Bulk9 Order Pending')}
+    else if(w==='china'||w==='china-cj'){const hc=!['','0'].includes(tx(r[awb])),L6=[DL,'FM Intrasit',INP,LM,OC,'Reached at india wh'];
+      if(hc){if(p==='PD'&&e)set(INP,'Processed By China','1C · PD → Processed By China');else if(p==='PR'&&e)set(OC,'Cancelled During FM Intrasit','1C · PR → Cancelled During FM');else if(p==='PU'&&e)set(INP,'Reseller Payment Not Done','1C · PU → Reseller Payment Not Done');
+        if(!inl(L6))set(INP,'Processed By China','1C · Cleanup → Processed By China')}
+      else{if(p==='PD'&&e)set(INP,'Not Processed by china','1D · PD → Not Processed by china');else if(p==='PR'&&e)set(INP,'Cancelled By China','1D · PR → Cancelled By China');else if(p==='PU'&&e)set(INP,'Reseller Payment Not Done','1D · PU → Reseller Payment Not Done');
+        if(!inl(L6))set(INP,'Not Processed By China','1D · Cleanup → Not Processed By China')}}
+    else out['Unknown warehouse (skip)']=(out['Unknown warehouse (skip)']||0)+1}
+  return out}
+$('#t2ru').onclick=()=>{if(!S.d)return alert('Master upload karo');if(!need('wh','pay','fr','rm','awb'))return;snap();const o=rules($('#t2sc').value==='new'?S.ns:0),k=Object.keys(o).sort();
+  $('#t2r').innerHTML=k.length?`<div class="ok">✅ Rules lag gaye:</div><ul>${k.map(x=>`<li>${esc(x)}: <b>${o[x]}</b></li>`).join('')}</ul>`:'<div class="mu">Koi row change nahi hui.</div>';refresh()};
+
+/* ---------- Step 3 ---------- */
+bind('t3',F=>{$('#t3sc').innerHTML=op(F.H,gi(F.H,/status/i));t3st();$('#t3sc').onchange=t3st});
+function t3st(){const F=S.f.t3,c=+$('#t3sc').value,v=uniq(F.rows,c);
+  $('#t3de').innerHTML=chips('t3de-i',v,x=>/deliver/i.test(x)&&!/undeliver|not|rto|fail/i.test(x));$('#t3rt').innerHTML=chips('t3rt-i',v,x=>/rto/i.test(x))}
+$('#t3go').onclick=()=>{const F=S.f.t3;if(!F||!need('fr','rm'))return;snap();const dk=+$('#t3dk').value,fk=+$('#t3fk').value,sc=+$('#t3sc').value,q=gp('t3'),{fr,rm}=C();ensure(q);
+  const de=chk('t3de-i'),rt2=chk('t3rt-i'),map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});
+  const src=[B9,DP,'FM Intrasit',INP,'Reached at india wh','WH Not Assigned'].map(s=>s.toLowerCase());let m=0,a=0,b=0,c=0;const hit=new Set();
+  S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null)r[y.d]=v});
+    const s=tx(x[sc]),sl=s.toLowerCase(),f=rt(r[fr]).toLowerCase();
+    if(f==='last mile intrasit'){if(de.includes(sl)){r[fr]=DL;r[rm]='Shipment Delivered';a++}}
+    else if(f==='order cancelled'){if(de.includes(sl)||rt2.includes(sl)){r[rm]=s;b++}}
+    else if(src.includes(f)){r[fr]=LM;r[rm]=LM;c++}});
+  $('#t3r').innerHTML=`<div class="ok">✅ ${m} rows match hui.</div><ul><li>Last Mile Intrasit set: <b>${c}</b></li><li>Delivered to end buyer: <b>${a}</b></li><li>Order Cancelled remark update: <b>${b}</b></li><li>File ke keys jo DSR me nahi mile: <b>${map.size-hit.size}</b></li></ul>`;refresh()};
+
+/* ---------- Step 4 & 5 ---------- */
+function fileStage(p,useSt){const F=S.f[p];if(!F||!need('fr','rm'))return;snap();const dk=+$('#'+p+'dk').value,fk=+$('#'+p+'fk').value,q=gp(p),{fr,rm}=C();ensure(q);
+  const sel=frSel(p),sc=useSt?+$('#'+p+'sc').value:-1,st=useSt?chk(p+'st-i'):null,a=$('#'+p+'nf').value.trim(),b=$('#'+p+'nr').value.trim();
+  const map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});let m=0,u=0;const hit=new Set();
+  S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null)r[y.d]=v});
+    if(sel.includes(rt(r[fr]).toLowerCase())&&(!st||st.includes(tx(x[sc]).toLowerCase()))){if(a)r[fr]=a;if(b)r[rm]=b;u++}});
+  $('#'+p+'r').innerHTML=`<div class="ok">✅ ${m} rows match hui, ${u} rows ka remark update hua.</div><div class="mu">File ke ${map.size-hit.size} keys DSR me nahi mile.</div>`;refresh()}
+bind('t4');$('#t4go').onclick=()=>fileStage('t4',false);
+bind('t5',F=>{$('#t5sc').innerHTML=op(F.H,gi(F.H,/status/i));t5st();$('#t5sc').onchange=t5st});
+function t5st(){$('#t5st').innerHTML=chips('t5st-i',uniq(S.f.t5.rows,+$('#t5sc').value),()=>true)}
+$('#t5go').onclick=()=>fileStage('t5',true);
+
+/* ---------- View & Download ---------- */
+function vInit(){$('#vc').onchange=()=>{$('#vv').innerHTML='<option value="">(sab)</option>'+uniq(S.d.rows,+$('#vc').value).slice(0,500).map(v=>`<option>${esc(v)}</option>`).join('')};$('#vc').onchange();vShow()}
+function vShow(){const d=S.d,c=+$('#vc').value,v=$('#vv').value,q=$('#vq').value.toLowerCase();
+  const rows=d.rows.filter(r=>(!v||tx(r[c])===v)&&(!q||r.some(x=>tx(x).toLowerCase().includes(q))));
+  $('#vm').textContent=`${rows.length} rows mili (pehli 200 dikh rahi hain). Formula cells Excel me khulte hi calculate hongi.`;
+  $('#vt').innerHTML='<tr>'+d.H.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr>'+rows.slice(0,200).map(r=>'<tr>'+r.map(x=>`<td>${x&&x.f&&x.v===undefined?'ƒ':esc(tx(x))}</td>`).join('')+'</tr>').join('')}
+$('#vb').onclick=vShow;
+function download(){if(!S.d)return alert('Master upload nahi hui');const{H,rows}=S.d,ws={},E=XLSX.utils.encode_cell;
+  const put=(r,c,v)=>{if(v==null||v==='')return;let x;
+    if(v instanceof Date)x={t:'d',v,z:'dd-mmm-yyyy'};else if(typeof v==='number')x={t:'n',v};else if(typeof v==='boolean')x={t:'b',v};
+    else if(typeof v==='object'){x={f:v.f,t:typeof v.v==='string'?'s':'n'};if(v.v!==undefined)x.v=v.v}else x={t:'s',v:String(v)};ws[E({r,c})]=x};
+  H.forEach((h,c)=>put(0,c,h));rows.forEach((r,i)=>r.forEach((v,c)=>put(i+1,c,v)));
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:H.length-1}});
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'DSR');wb.Workbook={CalcPr:{fullCalcOnLoad:true}};
+  XLSX.writeFile(wb,'DSR_Final_'+new Date().toISOString().slice(0,10)+'.xlsx',{cellDates:true})}
+$('#dl').onclick=$('#dl2').onclick=download;
+show(1);
+</script></body></html>
