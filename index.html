@@ -55,12 +55,14 @@ const chips=(id,vals,pre)=>`<div class="chips" id="${id}">${vals.slice(0,400).ma
 const chk=id=>$$(`#${id} input:checked`).map(i=>i.value.toLowerCase());
 document.addEventListener('click',e=>{const a=e.target.closest('a[data-all],a[data-none]');if(!a)return;e.preventDefault();const id=a.dataset.all||a.dataset.none;$$(`#${id} input`).forEach(i=>i.checked=!!a.dataset.all)});
 
+const pvHtml=(p,R)=>`<details open style="margin-top:6px"><summary class="mu">Sheet ki pehli rows. Jo row asli header (column ke naam) hai uske bagal wala "Header banao" dabao</summary><div class="sc" style="max-height:230px"><table>${R.preview.map(r=>`<tr><td><button class="g" data-hp="${p}" data-hr="${r.rn}"${r.rn===R.hdrRow?' disabled':''}>${r.rn===R.hdrRow?'✔ Header':'Header banao'}</button></td><td>Row ${r.rn}</td>${r.cells.slice(0,10).map(c=>`<td>${esc(tx(c))}</td>`).join('')}</tr>`).join('')}</table></div></details>`;
+document.addEventListener('click',e=>{const b=e.target.closest('button[data-hp]');if(!b)return;$('#'+b.dataset.hp+'hr').value=b.dataset.hr;$('#'+b.dataset.hp+'hb').click()});
 async function rd(f,hr){
   const t0=Date.now(),prog=n=>{$('#st').textContent=`⏳ ${f.name} padh raha hu... ${Math.round(n/1048576)} MB`};
   $('#st').textContent='⏳ '+f.name+' padh raha hu...';await new Promise(r=>setTimeout(r,30));
   const R=/\.csv$/i.test(f.name)?DSRCore.readCsvText(await f.text(),+hr||0):await DSRCore.readXlsx(()=>f.stream(),prog,0,+hr||0);
   if(S.d)$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;
-  return{name:f.name,H:R.H,rows:R.rows,F:R.F,dateCols:R.dateCols,hdrRow:R.hdrRow}}
+  return{name:f.name,H:R.H,rows:R.rows,F:R.F,dateCols:R.dateCols,hdrRow:R.hdrRow,preview:R.preview}}
 
 function snap(extra){const c=C(),ix=[...new Set([c.fr,c.rm,...(extra||[])].filter(i=>i>=0&&i<S.d.H.length))];
   S.hist.push({len:S.d.rows.length,hl:S.d.H.length,ns:S.ns,cols:ix.map(i=>[i,S.d.rows.map(r=>r[i])])});if(S.hist.length>5)S.hist.shift()}
@@ -106,7 +108,7 @@ function autoPairs(p){const F=S.f[p];if(!F||!S.d)return;$$(`#${p}pb .pr`).forEac
 
 function bind(p,hook){
   const run=async f=>{const F=await rd(f,$('#'+p+'hr').value);S.f[p]=F;
-    $('#'+p+'i').innerHTML=`✅ ${esc(f.name)} — <b>Header row ${F.hdrRow}</b>, ${F.rows.length.toLocaleString()} rows, ${F.H.length} columns. Pehle columns: <i>${F.H.slice(0,8).map(esc).join(' | ')}</i>`;
+    $('#'+p+'i').innerHTML=`✅ ${esc(f.name)} — <b>Header row ${F.hdrRow}</b>, ${F.rows.length.toLocaleString()} rows, ${F.H.length} columns. Pehle columns: <i>${F.H.slice(0,8).map(esc).join(' | ')}</i>`+pvHtml(p,F);
     $('#'+p+'fk').innerHTML='<option value="-1">— Select karo —</option>'+op(F.H,-1);$('#'+p+'c').classList.remove('off');fillDsr();$('#'+p+'dk').selectedIndex=0;
     if($('#'+p+'pb')){$('#'+p+'pb').innerHTML='';addPair(p)}
     hook&&hook(F)};
@@ -115,7 +117,7 @@ function bind(p,hook){
 
 /* ---------- Step 1 ---------- */
 async function loadMaster(f){const D=await rd(f,$('#mhr').value),F=D.F;S.d={name:f.name,H:D.H,rows:D.rows,F,dateCols:D.dateCols};S.hist=[];S.f={};S.fo={};S.ns=0;$$('select.dsr').forEach(s=>s.innerHTML='');fillDsr();
-  $('#mi').innerHTML=`✅ ${esc(f.name)} — <b>Header row ${D.hdrRow}</b>, ${D.rows.length.toLocaleString()} rows, ${D.H.length} columns.<br>Pehle columns: <i>${D.H.slice(0,8).map(esc).join(' | ')}</i><br>Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`;
+  $('#mi').innerHTML=`✅ ${esc(f.name)} — <b>Header row ${D.hdrRow}</b>, ${D.rows.length.toLocaleString()} rows, ${D.H.length} columns.<br>Pehle columns: <i>${D.H.slice(0,8).map(esc).join(' | ')}</i><br>Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`+pvHtml('m',D);
   $('#cfg').classList.remove('off');refresh()}
 $('#mf').onchange=e=>{const f=e.target.files[0];if(!f)return;S.mfile=f;loadMaster(f)};
 $('#mhb').onclick=()=>S.mfile?loadMaster(S.mfile):alert('Pehle Master file chuno');

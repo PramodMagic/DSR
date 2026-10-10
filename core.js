@@ -52,7 +52,7 @@ async function readXlsx(getStream, onProgress, sheetIdx = 0, headerRow = 0) {
   const rid = /r:id="([^"]+)"/.exec(sheets[sheetIdx])[1]; let path = null;
   for (const m of (txt['xl/_rels/workbook.xml.rels'] || '').matchAll(/<Relationship\b[^>]*>/g)) if (new RegExp('Id="' + rid + '"').test(m[0])) { const t = /Target="([^"]+)"/.exec(m[0])[1]; path = t[0] === '/' ? t.slice(1) : 'xl/' + t }
   const isDate = parseStyles(txt['xl/styles.xml'] || '');
-  let H = null, W = 0, F = {}, buf = '', auto = 0, hdrRow = 0, hIdx = -1; const rows = [], pre = [], dateCols = new Set(), K = 30;
+  let H = null, W = 0, F = {}, buf = '', auto = 0, hdrRow = 0, hIdx = -1, preview = []; const rows = [], pre = [], dateCols = new Set(), K = 30;
   const cellRe = /<c ([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
   function parse(inner, cap, dense) {
     const row = dense ? new Array(W).fill(null) : [], fm = cap ? {} : null; let m, any = false; cellRe.lastIndex = 0;
@@ -75,6 +75,7 @@ async function readXlsx(getStream, onProgress, sheetIdx = 0, headerRow = 0) {
   }
   const dens = r => { const o = new Array(W).fill(null); for (let i = 0; i < W && i < r.length; i++) if (r[i] !== undefined) o[i] = r[i]; return o };
   function finalize(h) {
+    preview = pre.slice(0, 12).map(p => ({ rn: p.rn, cells: Array.from({ length: 12 }, (_, i) => p.row[i] ?? null) }));
     const hr = pre[h]; hdrRow = hr.rn; W = hr.row.length; H = [];
     for (let i = 0; i < W; i++) { const v = hr.row[i]; H.push(v == null || v === '' ? 'Col' + (i + 1) : String(v).trim()) }
     const first = pre[h + 1]; if (first) for (const c of Object.keys(first.fm)) if (+c < W) F[c] = { f: first.fm[c].f, row: first.rn };
@@ -105,7 +106,7 @@ async function readXlsx(getStream, onProgress, sheetIdx = 0, headerRow = 0) {
     }
   }, onProgress);
   if (H === null) { if (!pre.length) throw new Error('Sheet khali hai'); finalize(headerRow ? (hIdx >= 0 ? hIdx : pre.length - 1) : autoPick()) }
-  return { H, rows, F, dateCols: [...dateCols], hdrRow };
+  return { H, rows, F, dateCols: [...dateCols], hdrRow, preview };
 }
 
 /* ---------- csv ---------- */
@@ -124,7 +125,7 @@ function readCsvText(t, headerRow = 0) {
   else { const cnt = out.slice(0, 30).map(r => r.filter(x => x !== '').length), th = Math.max(2, Math.ceil(Math.max(0, ...cnt) * 0.8)); h = Math.max(0, cnt.findIndex(c => c >= th)) }
   const H = (out[h] || []).map((x, i) => x.trim() || 'Col' + (i + 1)), W = H.length;
   const rows = out.slice(h + 1).filter(r => r.some(x => x !== '')).map(r => { const o = new Array(W).fill(null); for (let c = 0; c < W; c++) { const v = r[c]; if (v !== undefined && v !== '') o[c] = num(v) } return o });
-  return { H, rows, F: {}, dateCols: [], hdrRow: h + 1 };
+  return { H, rows, F: {}, dateCols: [], hdrRow: h + 1, preview: out.slice(0, 12).map((r, i) => ({ rn: i + 1, cells: Array.from({ length: 12 }, (_, k) => (r[k] === '' ? null : r[k]) ?? null) })) };
 }
 
 /* ---------- write xlsx ---------- */
