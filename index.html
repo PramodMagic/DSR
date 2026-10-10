@@ -24,12 +24,12 @@ ul{margin:4px 0;padding-left:20px}
 <nav id="nav"></nav>
 <main>
 <section id="p1"><div class="card"><h3>Step 1 · Master DSR upload</h3>
-<div class="mu">Master ka format wahi rahega; baaki sab files isi ko update karengi. (.xlsx / .csv, pehli sheet, header pehli row me)</div>
-<div class="row"><input type="file" id="mf" accept=".xlsx,.xls,.csv"></div><div id="mi" class="mu"></div></div>
+<div class="mu">Master ka format wahi rahega; baaki sab files isi ko update karengi. (.xlsx / .csv, pehli sheet, header pehli row me; 3 lakh rows × 75 columns tak). Badi file me padhne me 1-2 minute lag sakta hai.</div>
+<div class="row"><input type="file" id="mf" accept=".xlsx,.xlsm,.csv"></div><div id="mi" class="mu"></div></div>
 <div class="card off" id="cfg"><h3>Important columns (remark rules inhi par chalte hain)</h3>
-<div class="row">Warehouse <select class="dsr" id="cw"></select> Payment Status <select class="dsr" id="cp"></select>
-Final Remark <select class="dsr" id="cf"></select> Remark <select class="dsr" id="cr"></select> Courier/AWB <select class="dsr" id="ca"></select></div>
-<div class="mu">Naam se auto-select hote hain; galat ho to yahin badal lo.</div></div></section>
+<div class="row">Warehouse <select class="dsr" data-ph="1" id="cw"></select> Payment Status <select class="dsr" data-ph="1" id="cp"></select>
+Final Remark <select class="dsr" data-ph="1" id="cf"></select> Remark <select class="dsr" data-ph="1" id="cr"></select> Courier/AWB <select class="dsr" data-ph="1" id="ca"></select></div>
+<div class="mu">Har column apni file ke hisaab se khud select karo. Step 2-5 chalane se pehle ye select hona zaroori hai.</div></div></section>
 
 <section id="p2"></section><section id="p3"></section><section id="p4"></section><section id="p5"></section>
 
@@ -37,7 +37,7 @@ Final Remark <select class="dsr" id="cf"></select> Remark <select class="dsr" id
 <div class="row">Column <select class="dsr" id="vc"></select> Value <select id="vv"></select> Search <input type="text" id="vq" placeholder="kuch bhi likho"><button id="vb">Filter</button><button id="dl2">⬇ Download</button></div>
 <div id="vm" class="mu"></div><div class="sc"><table id="vt"></table></div></div></section>
 </main>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="fflate.min.js"></script><script src="core.js"></script>
 <script>
 const S={d:null,f:{},ns:0,hist:[],miss:[]};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -50,28 +50,29 @@ const uniq=(R,c)=>[...new Set(R.map(r=>tx(r[c])).filter(Boolean))].sort();
 const gi=(H,re,not)=>{const i=H.findIndex(h=>re.test(h)&&!(not&&not.test(h)));return i<0?0:i};
 const shift=(f,d)=>f.replace(/(?<![A-Za-z0-9_.$])(\$?[A-Z]{1,3})(\$?)(\d+)(?![\d(A-Za-z])/g,(m,c,dl,r)=>dl?m:c+(+r+d));
 const C=()=>({wh:+$('#cw').value,pay:+$('#cp').value,fr:+$('#cf').value,rm:+$('#cr').value,awb:+$('#ca').value});
-const chips=(id,vals,pre)=>`<div class="chips" id="${id}">${vals.map(v=>`<label><input type="checkbox" value="${esc(v)}" ${pre(v)?'checked':''}> ${esc(v)}</label>`).join('')||'<span class="mu">koi value nahi</span>'}</div><div class="mu"><a href="#" data-all="${id}">Sab</a> · <a href="#" data-none="${id}">Koi nahi</a></div>`;
+const need=(...k)=>{const c=C(),n={wh:'Warehouse',pay:'Payment Status',fr:'Final Remark',rm:'Remark',awb:'Courier/AWB'},m=k.filter(x=>!(c[x]>=0));if(m.length){alert('Pehle Step 1 me ye column select karo: '+m.map(x=>n[x]).join(', '));show(1);return false}return true};
+const chips=(id,vals,pre)=>`<div class="chips" id="${id}">${vals.slice(0,400).map(v=>`<label><input type="checkbox" value="${esc(v)}" ${pre(v)?'checked':''}> ${esc(v)}</label>`).join('')||'<span class="mu">koi value nahi</span>'}</div><div class="mu"><a href="#" data-all="${id}">Sab</a> · <a href="#" data-none="${id}">Koi nahi</a></div>`;
 const chk=id=>$$(`#${id} input:checked`).map(i=>i.value.toLowerCase());
 document.addEventListener('click',e=>{const a=e.target.closest('a[data-all],a[data-none]');if(!a)return;e.preventDefault();const id=a.dataset.all||a.dataset.none;$$(`#${id} input`).forEach(i=>i.checked=!!a.dataset.all)});
 
 async function rd(f){
-  const wb=XLSX.read(await f.arrayBuffer(),{cellDates:true,cellFormula:true});
-  const ws=wb.Sheets[wb.SheetNames[0]],rg=XLSX.utils.decode_range(ws['!ref']||'A1'),E=XLSX.utils.encode_cell;
-  const H=[];for(let c=rg.s.c;c<=rg.e.c;c++){const x=ws[E({r:rg.s.r,c})];H.push(x&&x.v!=null?String(x.v).trim():'Col'+(c+1))}
-  const rows=[];for(let r=rg.s.r+1;r<=rg.e.r;r++){const row=[];for(let c=rg.s.c;c<=rg.e.c;c++){const x=ws[E({r,c})];row.push(!x?null:x.f?{f:shift(x.f,-rg.s.r),v:x.v}:(x.v===''?null:x.v))}rows.push(row)}
-  while(rows.length&&rows[rows.length-1].every(v=>v==null))rows.pop();
-  return{name:f.name,H,rows}}
+  const t0=Date.now(),prog=n=>{$('#st').textContent=`⏳ ${f.name} padh raha hu... ${Math.round(n/1048576)} MB`};
+  $('#st').textContent='⏳ '+f.name+' padh raha hu...';await new Promise(r=>setTimeout(r,30));
+  const R=/\.csv$/i.test(f.name)?DSRCore.readCsvText(await f.text()):await DSRCore.readXlsx(()=>f.stream(),prog);
+  if(S.d)$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;
+  return{name:f.name,H:R.H,rows:R.rows,F:R.F,dateCols:R.dateCols}}
 
-function snap(){S.hist.push(structuredClone({H:S.d.H,rows:S.d.rows,F:S.d.F,ns:S.ns}));if(S.hist.length>8)S.hist.shift()}
-$('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return alert('Undo ke liye kuch nahi hai');Object.assign(S.d,h);S.ns=h.ns;refresh()};
+function snap(extra){const c=C(),ix=[...new Set([c.fr,c.rm,...(extra||[])].filter(i=>i>=0&&i<S.d.H.length))];
+  S.hist.push({len:S.d.rows.length,hl:S.d.H.length,ns:S.ns,cols:ix.map(i=>[i,S.d.rows.map(r=>r[i])])});if(S.hist.length>5)S.hist.shift()}
+$('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return alert('Undo ke liye kuch nahi hai');const d=S.d;d.rows.length=h.len;d.H.length=h.hl;d.rows.forEach(r=>r.length=h.hl);h.cols.forEach(([i,a])=>{for(let k=0;k<h.len;k++)d.rows[k][i]=a[k]});S.ns=h.ns;refresh()};
 function refresh(){$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;fillDsr()}
-function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,s.dataset.new?'<option value="new">➕ Naya column</option>':'');if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))})}
+function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,(s.dataset.new?'<option value="new">➕ Naya column</option>':'')+(s.dataset.ph?'<option value="-1">— Select karo —</option>':''));if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))})}
 
 /* ---------- Tabs ---------- */
 ['1 Master','2 Order Data','3 Last Mile','4 Invoice','5 FM Mile','6 Dekho & Download'].forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>show(i+1);$('#nav').append(b)});
 function show(n){$$('section').forEach((s,i)=>s.classList.toggle('on',i+1===n));$$('nav button').forEach((b,i)=>b.classList.toggle('on',i+1===n));
   if(S.d){fillDsr();if(n===4||n===5)frChips('t'+n);if(n===6)vInit()}}
-const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><div class="row"><input type="file" id="${p}f" accept=".xlsx,.xls,.csv"></div><div id="${p}i" class="mu"></div></div>
+const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><div class="row"><input type="file" id="${p}f" accept=".xlsx,.xlsm,.csv"></div><div id="${p}i" class="mu"></div></div>
 <div class="card off" id="${p}c"><div class="row">DSR match column <select class="dsr" id="${p}dk"></select> File match column <select id="${p}fk"></select></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
 const pb=p=>`<h4>File ke columns → DSR columns (copy)</h4><div id="${p}pb"></div><button class="g" id="${p}ap">+ Column add</button>`;
 const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
@@ -105,19 +106,17 @@ function bind(p,hook){$('#'+p+'f').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;const F=await rd(f);S.f[p]=F;
   $('#'+p+'i').innerHTML=`✅ ${esc(f.name)} — ${F.rows.length} rows, ${F.H.length} columns`;
   $('#'+p+'fk').innerHTML=op(F.H,0);$('#'+p+'c').classList.remove('off');fillDsr();
-  const dk=$('#'+p+'dk'),c=C();dk.value=String(p==='t3'?c.awb:gi(S.d.H,/order.?(id|no)/i));
+  const dk=$('#'+p+'dk'),c=C();dk.value=String(p==='t3'?(c.awb>=0?c.awb:gi(S.d.H,/awb|tracking/i)):gi(S.d.H,/order.?(id|no)/i));
   dk.onchange=()=>{const i=F.H.findIndex(h=>eq(h,S.d.H[+dk.value]));if(i>=0)$('#'+p+'fk').value=i;if(p==='t2')mapUI()};dk.onchange();
   if($('#'+p+'pb')){$('#'+p+'pb').innerHTML='';addPair(p)}
   hook&&hook(F)}}
 
 /* ---------- Step 1 ---------- */
-$('#mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;const D=await rd(f);const last=D.rows[D.rows.length-1]||[],F={};
-  last.forEach((v,c)=>{if(v&&v.f)F[c]={f:v.f,row:D.rows.length+1}});
-  S.d={name:f.name,H:D.H,rows:D.rows,F};S.hist=[];S.f={};S.ns=0;$$('select.dsr').forEach(s=>s.innerHTML='');fillDsr();
-  const H=D.H;$('#cw').value=gi(H,/ware|wh/i);$('#cp').value=gi(H,/pay.*(stat)|payment/i);$('#cf').value=gi(H,/final.*remark/i);$('#cr').value=gi(H,/remark/i,/final/i);$('#ca').value=gi(H,/awb|courier|tracking/i);
-  $('#mi').innerHTML=`✅ ${esc(f.name)} — ${D.rows.length} rows, ${H.length} columns. Formula columns: <b>${Object.keys(F).map(i=>esc(H[i])).join(', ')||'koi nahi'}</b>`;
+$('#mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;const D=await rd(f);const F=D.F;S.d={name:f.name,H:D.H,rows:D.rows,F,dateCols:D.dateCols};S.hist=[];S.f={};S.ns=0;$$('select.dsr').forEach(s=>s.innerHTML='');fillDsr();
+  $('#mi').innerHTML=`✅ ${esc(f.name)} — ${D.rows.length} rows, ${D.H.length} columns. Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`;
   $('#cfg').classList.remove('off');refresh()};
 
+$$('#cfg select').forEach(s=>s.addEventListener('change',()=>S.f.t2&&mapUI()));
 /* ---------- Step 2 ---------- */
 bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';mapUI()});
 function mapUI(){const F=S.f.t2,d=S.d,c=C();if(!F)return;
@@ -130,7 +129,7 @@ $('#t2ck').onclick=()=>{const F=S.f.t2;if(!F)return alert('Order file upload kar
   $('#t2s').innerHTML=`<div class="stats"><div class="stat"><b>${F.rows.length}</b>Order rows</div><div class="stat"><b class="ok">${f}</b>DSR me already</div><div class="stat"><b class="er">${S.miss.length}</b>DSR me nahi</div></div>${dup?`<div class="mu">${dup} duplicate order rows skip</div>`:''}${S.miss.length?'<div class="row"><button id="t2add">Missing rows DSR me add karo</button></div>':'<div class="ok">Sab available hain 👍</div>'}`;
   if(S.miss.length)$('#t2add').onclick=t2add};
 function t2add(){snap();const d=S.d,mp=$$('#t2mp select').map(s=>s.value);S.ns=d.rows.length;
-  S.miss.forEach(x=>{d.rows.push(mp.map((m,i)=>{if(m==='F')return{f:shift(d.F[i].f,d.rows.length+2-d.F[i].row)};if(m==='Z')return 0;if(m==='B')return null;const v=gv(x[+m]);return v===''||v==null?null:v}))});
+  S.miss.forEach(x=>{d.rows.push(mp.map((m,i)=>{if(m==='F')return null;if(m==='Z')return 0;if(m==='B')return null;const v=gv(x[+m]);return v===''||v==null?null:v}))});
   $('#t2s').innerHTML=`<div class="ok">✅ ${S.miss.length} nayi rows add hui (unrelated columns = 0, formula columns me formula). Ab neeche Remark rules chalao.</div>`;S.miss=[];refresh()}
 
 const DP='Dispatch Pending at india wh',LM='Last Mile Intrasit',DL='Delivered to end buyer',OC='Order Cancelled',INP='Invoice Not Prepared',B9='Bulk9 Order Pending';
@@ -153,14 +152,14 @@ function rules(start){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows;
         if(!inl(L6))set(INP,'Not Processed By China','1D · Cleanup → Not Processed By China')}}
     else out['Unknown warehouse (skip)']=(out['Unknown warehouse (skip)']||0)+1}
   return out}
-$('#t2ru').onclick=()=>{if(!S.d)return alert('Master upload karo');snap();const o=rules($('#t2sc').value==='new'?S.ns:0),k=Object.keys(o).sort();
+$('#t2ru').onclick=()=>{if(!S.d)return alert('Master upload karo');if(!need('wh','pay','fr','rm','awb'))return;snap();const o=rules($('#t2sc').value==='new'?S.ns:0),k=Object.keys(o).sort();
   $('#t2r').innerHTML=k.length?`<div class="ok">✅ Rules lag gaye:</div><ul>${k.map(x=>`<li>${esc(x)}: <b>${o[x]}</b></li>`).join('')}</ul>`:'<div class="mu">Koi row change nahi hui.</div>';refresh()};
 
 /* ---------- Step 3 ---------- */
 bind('t3',F=>{$('#t3sc').innerHTML=op(F.H,gi(F.H,/status/i));t3st();$('#t3sc').onchange=t3st});
 function t3st(){const F=S.f.t3,c=+$('#t3sc').value,v=uniq(F.rows,c);
   $('#t3de').innerHTML=chips('t3de-i',v,x=>/deliver/i.test(x)&&!/undeliver|not|rto|fail/i.test(x));$('#t3rt').innerHTML=chips('t3rt-i',v,x=>/rto/i.test(x))}
-$('#t3go').onclick=()=>{const F=S.f.t3;if(!F)return;snap();const dk=+$('#t3dk').value,fk=+$('#t3fk').value,sc=+$('#t3sc').value,q=gp('t3'),{fr,rm}=C();ensure(q);
+$('#t3go').onclick=()=>{const F=S.f.t3;if(!F||!need('fr','rm'))return;snap(gp('t3').map(x=>x.d));const dk=+$('#t3dk').value,fk=+$('#t3fk').value,sc=+$('#t3sc').value,q=gp('t3'),{fr,rm}=C();ensure(q);
   const de=chk('t3de-i'),rt2=chk('t3rt-i'),map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});
   const src=[B9,DP,'FM Intrasit',INP,'Reached at india wh','WH Not Assigned'].map(s=>s.toLowerCase());let m=0,a=0,b=0,c=0;const hit=new Set();
   S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null)r[y.d]=v});
@@ -171,7 +170,7 @@ $('#t3go').onclick=()=>{const F=S.f.t3;if(!F)return;snap();const dk=+$('#t3dk').
   $('#t3r').innerHTML=`<div class="ok">✅ ${m} rows match hui.</div><ul><li>Last Mile Intrasit set: <b>${c}</b></li><li>Delivered to end buyer: <b>${a}</b></li><li>Order Cancelled remark update: <b>${b}</b></li><li>File ke keys jo DSR me nahi mile: <b>${map.size-hit.size}</b></li></ul>`;refresh()};
 
 /* ---------- Step 4 & 5 ---------- */
-function fileStage(p,useSt){const F=S.f[p];if(!F)return;snap();const dk=+$('#'+p+'dk').value,fk=+$('#'+p+'fk').value,q=gp(p),{fr,rm}=C();ensure(q);
+function fileStage(p,useSt){const F=S.f[p];if(!F||!need('fr','rm'))return;snap(gp(p).map(x=>x.d));const dk=+$('#'+p+'dk').value,fk=+$('#'+p+'fk').value,q=gp(p),{fr,rm}=C();ensure(q);
   const sel=frSel(p),sc=useSt?+$('#'+p+'sc').value:-1,st=useSt?chk(p+'st-i'):null,a=$('#'+p+'nf').value.trim(),b=$('#'+p+'nr').value.trim();
   const map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});let m=0,u=0;const hit=new Set();
   S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null)r[y.d]=v});
@@ -189,14 +188,10 @@ function vShow(){const d=S.d,c=+$('#vc').value,v=$('#vv').value,q=$('#vq').value
   $('#vm').textContent=`${rows.length} rows mili (pehli 200 dikh rahi hain). Formula cells Excel me khulte hi calculate hongi.`;
   $('#vt').innerHTML='<tr>'+d.H.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr>'+rows.slice(0,200).map(r=>'<tr>'+r.map(x=>`<td>${x&&x.f&&x.v===undefined?'ƒ':esc(tx(x))}</td>`).join('')+'</tr>').join('')}
 $('#vb').onclick=vShow;
-function download(){if(!S.d)return alert('Master upload nahi hui');const{H,rows}=S.d,ws={},E=XLSX.utils.encode_cell;
-  const put=(r,c,v)=>{if(v==null||v==='')return;let x;
-    if(v instanceof Date)x={t:'d',v,z:'dd-mmm-yyyy'};else if(typeof v==='number')x={t:'n',v};else if(typeof v==='boolean')x={t:'b',v};
-    else if(typeof v==='object'){x={f:v.f,t:typeof v.v==='string'?'s':'n'};if(v.v!==undefined)x.v=v.v}else x={t:'s',v:String(v)};ws[E({r,c})]=x};
-  H.forEach((h,c)=>put(0,c,h));rows.forEach((r,i)=>r.forEach((v,c)=>put(i+1,c,v)));
-  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:H.length-1}});
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'DSR');wb.Workbook={CalcPr:{fullCalcOnLoad:true}};
-  XLSX.writeFile(wb,'DSR_Final_'+new Date().toISOString().slice(0,10)+'.xlsx',{cellDates:true})}
+async function download(){if(!S.d)return alert('Master upload nahi hui');
+  try{const parts=await DSRCore.writeXlsx(S.d,{sheet:'DSR',onProgress:(i,n)=>{$('#st').textContent=`⏳ Excel ban rahi hai... ${i.toLocaleString()} / ${n.toLocaleString()} rows`}});
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='DSR_Final_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),120000)}
+  catch(e){alert('Export fail: '+e.message)}refresh()}
 $('#dl').onclick=$('#dl2').onclick=download;
 show(1);
 </script></body></html>
