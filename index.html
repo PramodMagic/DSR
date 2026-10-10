@@ -82,7 +82,7 @@ const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><d
 const pb=(p,t)=>`<h4>② ${t||'DSR ke column ke bagal me file ka column chuno (file ke us column se DSR ka column fill hoga)'}</h4><div class="mu"><b>DSR ke column</b> &nbsp;←&nbsp; <b>${FL[p]}</b></div><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button><button class="g" id="${p}au">Same naam wale auto jodo</button></div>`;
 const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
 <div class="row">Naya Final Remark <input type="text" id="${p}nf" placeholder="khali = change nahi"> Naya Remark <input type="text" id="${p}nr"></div>`;
-$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck" class="g">Dobara check karo</button></div><div id="t2s"></div>${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge. Final Remark / Remark yahan mat chuno, wo rules se apne aap bharte hain)')}<div class="row"><button id="t2pre">⚡ Auto mapping (VC Order Data preset)</button><label class="mu">ya apni mapping file (2 columns: DSR | Order Data) <input type="file" id="t2mf" accept=".xlsx,.csv"></label></div><div id="t2am" class="mu"></div><div class="mu">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><label><input type="checkbox" id="t2ar" checked> Add karne ke baad Warehouse Remark rules apne aap lagao (sirf nayi rows par)</label></div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div>
+$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck" class="g">Dobara check karo</button></div><div id="t2s"></div>${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge. Final Remark / Remark yahan mat chuno, wo rules se apne aap bharte hain)')}<div class="row"><button id="t2pre">⚡ Auto mapping lagao</button><button id="t2rs" class="g">Original preset par wapas</button><label class="mu">ya naya mapping file upload karo (2 columns: DSR | Order Data, ye yaad rahegi) <input type="file" id="t2mf" accept=".xlsx,.csv"></label></div><div id="t2am" class="mu"></div><div class="mu">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><label><input type="checkbox" id="t2ar" checked> Add karne ke baad Warehouse Remark rules apne aap lagao (sirf nayi rows par)</label></div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div>
 <h4>Warehouse wise Remark rules</h4><div class="row"><label class="mu"><input type="checkbox" id="t2st"> Document jaisa literal: India ke PU aur China (courier wale) ke PR/PU rules bina "blank hona chahiye" ki shart ke lagao</label></div><div class="row">Kin rows par: <select id="t2sc"><option value="all">Poori DSR</option><option value="new">Sirf abhi add hui rows</option></select><button id="t2ru">Remark rules chalao</button></div><div class="mu">Rules: Bulk/India, Bulk9, China/China-CJ (courier ke saath/bina), WH Not Assigned — aapke document ke hisaab se.</div>`);
 $('#p3').innerHTML=fb('t3','Step 3 · Last Mile (Logistics) file','Logistics file se status/pickup/delivery date copy hoti hai aur Final Remark transition lagta hai.',`${pb('t3')}<h4>Logistics status column</h4><div class="row"><select id="t3sc"></select></div>
 <div class="mu">Delivered mane jaane wale status:</div><div id="t3de"></div><div class="mu" style="margin-top:6px">RTO / Cancel wale status (Order Cancelled ke remark ke liye):</div><div id="t3rt"></div>
@@ -131,19 +131,24 @@ $('#mhb').onclick=()=>S.mfile?loadMaster(S.mfile):alert('Pehle Master file chuno
 const PRESET=[['SKU','SKU'],['Warehouse','Process By'],['AWB','Tracking Number'],['Seller','Username'],['Bafulia Order ID','Order Serial'],['MarketplaceID Order ID','Market Place Order ID'],['Customer Name','Recipient Name'],['Customer Mobile Number','Recipient Phone'],['Order Qty','Product Quantity'],['Shopper value','Total Amount'],['Order Item','Product Name'],['Order Date','Order Date'],['Payment Status','Payment Status'],['Order Status','Order Status']];
 const nk=s=>String(s).replace(/\s+/g,' ').trim().toLowerCase();
 function applyMap(list,label){const F=S.f.t2;if(!F||!S.d)return alert('Pehle Order data file upload karo');
-  $$('#t2pb .pr').forEach(d=>{if(+d.querySelector('.s').value<0&&d.querySelector('.d').value==='-1')d.remove()});
-  const used=new Set(gp('t2').map(q=>q.d)),miss=[];let ok=0;
+  $$('#t2pb .pr').forEach(d=>d.remove());
+  const used=new Set(),miss=[];let ok=0;
   list.forEach(([dn,on])=>{const i=S.d.H.findIndex(h=>nk(h)===nk(dn)),j=F.H.findIndex(h=>nk(h)===nk(on));
     if(i<0||j<0){miss.push(`${dn} ← ${on} (${i<0?'DSR me column nahi mila':'Order file me column nahi mila'})`);return}
     if(isRem(i)||used.has(i))return;used.add(i);const d=addPair('t2');d.querySelector('.d').value=String(i);d.querySelector('.s').value=String(j);ok++});
   if(!$$('#t2pb .pr').length)addPair('t2');
-  $('#t2am').innerHTML=`✅ ${label}: ${ok} jodiyan lag gayi. Neeche dekh lo, chaho to badal sakte ho.`+(miss.length?`<br><span class="er">Nahi mili (manual chuno): ${miss.map(esc).join('; ')}</span>`:'')}
-bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';$('#t2add').disabled=true;applyMap(PRESET,'Auto (VC preset)')});
-$('#t2pre').onclick=()=>applyMap(PRESET,'Auto (VC preset)');
+  $('#t2am').innerHTML=`✅ ${label}: ${ok} jodiyan lag gayi. Neeche dekh lo, chaho to badal sakte ho.`+(miss.length?`<br><span class="er">Nahi mili (manual chuno): ${miss.map(esc).join('; ')}</span>`:'');return{ok,miss:miss.length}}
+const MAPKEY='dsr_map_t2';
+const getMap=()=>{try{const v=JSON.parse(localStorage.getItem(MAPKEY)||'null');if(Array.isArray(v)&&v.length)return{list:v,label:'Auto (aapki saved mapping file)'}}catch(e){}return{list:PRESET,label:'Auto (VC preset)'}};
+bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';$('#t2add').disabled=true;const m=getMap();applyMap(m.list,m.label)});
+$('#t2pre').onclick=()=>{const m=getMap();applyMap(m.list,m.label)};
+$('#t2rs').onclick=()=>{try{localStorage.removeItem(MAPKEY)}catch(e){}applyMap(PRESET,'Original VC preset')};
 $('#t2mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(!S.f.t2){e.target.value='';return alert('Pehle Order data file upload karo')}
   const R=/\.csv$/i.test(f.name)?DSRCore.readCsvText(await f.text()):await DSRCore.readXlsx(()=>f.stream());
   const list=[R.H,...R.rows].filter(r=>r[0]!=null&&r[1]!=null&&String(r[0]).trim()&&String(r[1]).trim()&&!['dsr','dsr ke column'].includes(nk(r[0]))).map(r=>[r[0],r[1]]);
-  applyMap(list,`Mapping file (${f.name})`)};
+  const r=applyMap(list,`Mapping file (${f.name})`);
+  if(r&&r.ok>0&&!r.miss){try{localStorage.setItem(MAPKEY,JSON.stringify(list));$('#t2am').innerHTML+='<br>💾 Ye mapping browser me save ho gayi; ab agli baar order file upload karte hi yahi apne aap lagegi.'}catch(e){}}
+  else if(r)$('#t2am').innerHTML+='<br>⚠ Kuch column nahi mile, isliye ye mapping <b>save nahi</b> hui. Mapping file me pehla column DSR ke asli column naam ka hona chahiye aur dusra Order data ke column naam ka.'};
 $('#t2add').onclick=()=>t2add();
 function t2check(){const F=S.f.t2;if(!F||!S.d)return;const dk=+$('#t2dk').value,fk=+$('#t2fk').value;if(!(dk>=0&&fk>=0))return;
   const have=new Set(S.d.rows.map(r=>nm(r[dk]))),seen=new Set();let f=0,dup=0;S.miss=[];
