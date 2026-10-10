@@ -25,7 +25,7 @@ ul{margin:4px 0;padding-left:20px}
 <main>
 <section id="p1"><div class="card"><h3>Step 1 · Master DSR upload</h3>
 <div class="mu">Master ka format wahi rahega; baaki sab files isi ko update karengi. (.xlsx / .csv, pehli sheet, header pehli row me; 3 lakh rows × 75 columns tak). Badi file me padhne me 1-2 minute lag sakta hai.</div>
-<div class="row"><input type="file" id="mf" accept=".xlsx,.xlsm,.csv"></div><div id="mi" class="mu"></div></div>
+<div class="row"><input type="file" id="mf" accept=".xlsx,.xlsm,.csv"> <label class="mu">Header row no. <input type="number" id="mhr" min="1" placeholder="auto" style="width:80px"></label><button class="g" id="mhb">Dobara padho</button></div><div class="mu">Header row apne aap pehchani jati hai (upar filter/title rows ho to bhi). Galat ho to sahi Excel row number likho.</div><div id="mi" class="mu"></div></div>
 <div class="card off" id="cfg"><h3>Important columns (remark rules inhi par chalte hain)</h3>
 <div class="row">Warehouse <select class="dsr" data-ph="1" id="cw"></select> Payment Status <select class="dsr" data-ph="1" id="cp"></select>
 Final Remark <select class="dsr" data-ph="1" id="cf"></select> Remark <select class="dsr" data-ph="1" id="cr"></select> Courier/AWB <select class="dsr" data-ph="1" id="ca"></select></div>
@@ -39,7 +39,7 @@ Final Remark <select class="dsr" data-ph="1" id="cf"></select> Remark <select cl
 </main>
 <script src="fflate.min.js"></script><script src="core.js"></script>
 <script>
-const S={d:null,f:{},ns:0,hist:[],miss:[]};
+const S={d:null,f:{},fo:{},ns:0,hist:[],miss:[]};
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const gv=v=>v&&typeof v==='object'&&!(v instanceof Date)?v.v:v;
@@ -55,12 +55,12 @@ const chips=(id,vals,pre)=>`<div class="chips" id="${id}">${vals.slice(0,400).ma
 const chk=id=>$$(`#${id} input:checked`).map(i=>i.value.toLowerCase());
 document.addEventListener('click',e=>{const a=e.target.closest('a[data-all],a[data-none]');if(!a)return;e.preventDefault();const id=a.dataset.all||a.dataset.none;$$(`#${id} input`).forEach(i=>i.checked=!!a.dataset.all)});
 
-async function rd(f){
+async function rd(f,hr){
   const t0=Date.now(),prog=n=>{$('#st').textContent=`⏳ ${f.name} padh raha hu... ${Math.round(n/1048576)} MB`};
   $('#st').textContent='⏳ '+f.name+' padh raha hu...';await new Promise(r=>setTimeout(r,30));
-  const R=/\.csv$/i.test(f.name)?DSRCore.readCsvText(await f.text()):await DSRCore.readXlsx(()=>f.stream(),prog);
+  const R=/\.csv$/i.test(f.name)?DSRCore.readCsvText(await f.text(),+hr||0):await DSRCore.readXlsx(()=>f.stream(),prog,0,+hr||0);
   if(S.d)$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;
-  return{name:f.name,H:R.H,rows:R.rows,F:R.F,dateCols:R.dateCols}}
+  return{name:f.name,H:R.H,rows:R.rows,F:R.F,dateCols:R.dateCols,hdrRow:R.hdrRow}}
 
 function snap(extra){const c=C(),ix=[...new Set([c.fr,c.rm,...(extra||[])].filter(i=>i>=0&&i<S.d.H.length))];
   S.hist.push({len:S.d.rows.length,hl:S.d.H.length,ns:S.ns,cols:ix.map(i=>[i,S.d.rows.map(r=>r[i])])});if(S.hist.length>5)S.hist.shift()}
@@ -73,7 +73,7 @@ function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s
 function show(n){$$('section').forEach((s,i)=>s.classList.toggle('on',i+1===n));$$('nav button').forEach((b,i)=>b.classList.toggle('on',i+1===n));
   if(S.d){fillDsr();if(n===4||n===5)frChips('t'+n);if(n===6)vInit()}}
 const FL={t2:'Order data ke column',t3:'Logistics file ke column',t4:'Invoice file ke column',t5:'FM file ke column'};
-const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><div class="row"><input type="file" id="${p}f" accept=".xlsx,.xlsm,.csv"></div><div id="${p}i" class="mu"></div></div>
+const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><div class="row"><input type="file" id="${p}f" accept=".xlsx,.xlsm,.csv"> <label class="mu">Header row no. <input type="number" id="${p}hr" min="1" placeholder="auto" style="width:80px"></label><button class="g" id="${p}hb">Dobara padho</button></div><div id="${p}i" class="mu"></div></div>
 <div class="card off" id="${p}c"><h4 style="margin-top:0">① Lookup (kis column se match karein)</h4><div class="row"><label class="mu"><b>DSR ke column</b><br><select class="dsr" data-ph="1" id="${p}dk"></select></label> <span>↔</span> <label class="mu"><b>${FL[p]}</b><br><select id="${p}fk"></select></label></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
 const pb=(p,t)=>`<h4>② ${t||'DSR ke column ke bagal me file ka column chuno (file ke us column se DSR ka column fill hoga)'}</h4><div class="mu"><b>DSR ke column</b> &nbsp;←&nbsp; <b>${FL[p]}</b></div><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button><button class="g" id="${p}au">Same naam wale auto jodo</button></div>`;
 const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
@@ -104,18 +104,21 @@ function autoPairs(p){const F=S.f[p];if(!F||!S.d)return;$$(`#${p}pb .pr`).forEac
   S.d.H.forEach((h,i)=>{const j=F.H.findIndex(x=>eq(x,h));if(j<0||used.has(i)||(p==='t2'&&S.d.F[i]))return;const d=addPair(p);d.querySelector('.d').value=String(i);d.querySelector('.s').value=String(j)})}
 ['t2','t3','t4','t5'].forEach(p=>{$('#'+p+'ap').onclick=()=>S.f[p]&&addPair(p);$('#'+p+'au').onclick=()=>autoPairs(p)});
 
-function bind(p,hook){$('#'+p+'f').onchange=async e=>{
-  if(!S.d){alert('Pehle Master upload karo');e.target.value='';return}
-  const f=e.target.files[0];if(!f)return;const F=await rd(f);S.f[p]=F;
-  $('#'+p+'i').innerHTML=`✅ ${esc(f.name)} — ${F.rows.length} rows, ${F.H.length} columns`;
-  $('#'+p+'fk').innerHTML='<option value="-1">— Select karo —</option>'+op(F.H,-1);$('#'+p+'c').classList.remove('off');fillDsr();$('#'+p+'dk').selectedIndex=0;
-  if($('#'+p+'pb')){$('#'+p+'pb').innerHTML='';addPair(p)}
-  hook&&hook(F)}}
+function bind(p,hook){
+  const run=async f=>{const F=await rd(f,$('#'+p+'hr').value);S.f[p]=F;
+    $('#'+p+'i').innerHTML=`✅ ${esc(f.name)} — <b>Header row ${F.hdrRow}</b>, ${F.rows.length.toLocaleString()} rows, ${F.H.length} columns. Pehle columns: <i>${F.H.slice(0,8).map(esc).join(' | ')}</i>`;
+    $('#'+p+'fk').innerHTML='<option value="-1">— Select karo —</option>'+op(F.H,-1);$('#'+p+'c').classList.remove('off');fillDsr();$('#'+p+'dk').selectedIndex=0;
+    if($('#'+p+'pb')){$('#'+p+'pb').innerHTML='';addPair(p)}
+    hook&&hook(F)};
+  $('#'+p+'f').onchange=async e=>{if(!S.d){alert('Pehle Master upload karo');e.target.value='';return}const f=e.target.files[0];if(!f)return;S.fo[p]=f;await run(f)};
+  $('#'+p+'hb').onclick=()=>S.fo[p]?run(S.fo[p]):alert('Pehle file chuno')}
 
 /* ---------- Step 1 ---------- */
-$('#mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;const D=await rd(f);const F=D.F;S.d={name:f.name,H:D.H,rows:D.rows,F,dateCols:D.dateCols};S.hist=[];S.f={};S.ns=0;$$('select.dsr').forEach(s=>s.innerHTML='');fillDsr();
-  $('#mi').innerHTML=`✅ ${esc(f.name)} — ${D.rows.length} rows, ${D.H.length} columns. Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`;
-  $('#cfg').classList.remove('off');refresh()};
+async function loadMaster(f){const D=await rd(f,$('#mhr').value),F=D.F;S.d={name:f.name,H:D.H,rows:D.rows,F,dateCols:D.dateCols};S.hist=[];S.f={};S.fo={};S.ns=0;$$('select.dsr').forEach(s=>s.innerHTML='');fillDsr();
+  $('#mi').innerHTML=`✅ ${esc(f.name)} — <b>Header row ${D.hdrRow}</b>, ${D.rows.length.toLocaleString()} rows, ${D.H.length} columns.<br>Pehle columns: <i>${D.H.slice(0,8).map(esc).join(' | ')}</i><br>Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`;
+  $('#cfg').classList.remove('off');refresh()}
+$('#mf').onchange=e=>{const f=e.target.files[0];if(!f)return;S.mfile=f;loadMaster(f)};
+$('#mhb').onclick=()=>S.mfile?loadMaster(S.mfile):alert('Pehle Master file chuno');
 
 /* ---------- Step 2 ---------- */
 bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';$('#t2add').disabled=true});

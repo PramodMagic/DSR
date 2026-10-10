@@ -11,6 +11,7 @@ Sab kuch aapke browser me chalta hai, data kahin upload nahi hota.
 - Desktop Chrome / Edge (64-bit), **8 GB RAM** ya zyada. 3 lakh × 75 columns me ~1.5-2 GB memory lagti hai.
 - Master load: ~1-2 min. Final Excel banana: ~1-2 min. Us waqt upar status me progress dikhta hai, tab band mat karo.
 - Har file ke baad pehle ① **Lookup** (DSR ka column ↔ file ka column) chuno, phir ② **DSR column ← file column** jodo (naam alag ho to bhi chalega; "Same naam wale auto jodo" button bhi hai). Koi bhi auto-select nahi hota.
+- **Header row:** tool apne aap pehchanta hai (upar Pivot filter / title rows ho to bhi). Galat ho to file ke bagal me "Header row no." me sahi Excel row number likh kar "Dobara padho" dabao. Header ke upar ke cells (absolute refs jaise $A$1) final file me nahi aate.
 - Flow: 1 Master (important columns khud select) → 2 Order Data → 3 Last Mile → 4 Invoice → 5 FM Mile → 6 Dekho/Download. Download button upar hamesha hai.
 
 ## Limits / dhyan dene wali baatein

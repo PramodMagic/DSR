@@ -40,7 +40,7 @@ async function unzipPass(getStream, wanted, onProgress) {
   uz.push(new Uint8Array(0), true);
 }
 const FAST = /^r="([A-Z]+)\d+"(?: s="(\d+)")?(?: t="(\w+)")?/;
-async function readXlsx(getStream, onProgress, sheetIdx = 0) {
+async function readXlsx(getStream, onProgress, sheetIdx = 0, headerRow = 0) {
   const txt = {}, sst = []; let sbuf = '';
   await unzipPass(getStream, n => {
     if (n === 'xl/workbook.xml' || n === 'xl/_rels/workbook.xml.rels' || n === 'xl/styles.xml') { txt[n] = ''; return t => { txt[n] += t } }
@@ -52,14 +52,14 @@ async function readXlsx(getStream, onProgress, sheetIdx = 0) {
   const rid = /r:id="([^"]+)"/.exec(sheets[sheetIdx])[1]; let path = null;
   for (const m of (txt['xl/_rels/workbook.xml.rels'] || '').matchAll(/<Relationship\b[^>]*>/g)) if (new RegExp('Id="' + rid + '"').test(m[0])) { const t = /Target="([^"]+)"/.exec(m[0])[1]; path = t[0] === '/' ? t.slice(1) : 'xl/' + t }
   const isDate = parseStyles(txt['xl/styles.xml'] || '');
-  let H = null, W = 0, rows = [], seen = 0, tr = 0, F = {}; const dateCols = new Set(); let buf = '', auto = 0;
+  let H = null, W = 0, F = {}, buf = '', auto = 0, hdrRow = 0, hIdx = -1; const rows = [], pre = [], dateCols = new Set(), K = 30;
   const cellRe = /<c ([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
-  function handleRow(inner, rn) {
-    const first = H === null, capF = !first && seen === 1; const row = first ? [] : new Array(W).fill(null); let m, any = false; cellRe.lastIndex = 0;
+  function parse(inner, cap, dense) {
+    const row = dense ? new Array(W).fill(null) : [], fm = cap ? {} : null; let m, any = false; cellRe.lastIndex = 0;
     while ((m = cellRe.exec(inner))) {
       const body = m[2]; if (body === undefined) continue; const a = m[1]; let cl, s, t, fa = FAST.exec(a);
       if (fa) { cl = fa[1]; s = fa[2]; t = fa[3] } else { const x = /r="([A-Z]+)/.exec(a); if (!x) continue; cl = x[1]; s = (/ s="(\d+)"/.exec(a) || [])[1]; t = (/ t="(\w+)"/.exec(a) || [])[1] }
-      const ci = colIdx(cl); if (!first && ci >= W) continue;
+      const ci = colIdx(cl); if (dense && ci >= W) continue;
       let v = null, val = null; const vi = body.indexOf('<v>');
       if (vi >= 0) v = body.slice(vi + 3, body.indexOf('</v>', vi));
       if (t === 's') val = v === null ? null : (sst[+v] ?? null);
@@ -68,11 +68,31 @@ async function readXlsx(getStream, onProgress, sheetIdx = 0) {
       else if (t === 'b') val = v === '1';
       else if (t === 'e') val = null;
       else if (v !== null && v !== '') { val = +v; if (val !== val) val = null; else if (s !== undefined && isDate[+s]) dateCols.add(ci) }
-      if (capF) { const fx = /<f(?:\s[^>]*)?>([\s\S]*?)<\/f>/.exec(body); if (fx && fx[1]) F[ci] = { f: un(fx[1]), row: rn } }
+      if (cap) { const fx = /<f(?:\s[^>]*)?>([\s\S]*?)<\/f>/.exec(body); if (fx && fx[1]) fm[ci] = { f: un(fx[1]) } }
       if (val !== null && val !== '') { row[ci] = val; any = true }
     }
-    if (first) { H = []; const n = row.length; for (let i = 0; i < n; i++) H.push(row[i] == null || row[i] === '' ? 'Col' + (i + 1) : String(row[i]).trim()); W = n; seen = 1; return }
-    seen++; if (seen === 2) tr = rn; if (any) rows.push(row);
+    return { row, fm, any };
+  }
+  const dens = r => { const o = new Array(W).fill(null); for (let i = 0; i < W && i < r.length; i++) if (r[i] !== undefined) o[i] = r[i]; return o };
+  function finalize(h) {
+    const hr = pre[h]; hdrRow = hr.rn; W = hr.row.length; H = [];
+    for (let i = 0; i < W; i++) { const v = hr.row[i]; H.push(v == null || v === '' ? 'Col' + (i + 1) : String(v).trim()) }
+    const first = pre[h + 1]; if (first) for (const c of Object.keys(first.fm)) if (+c < W) F[c] = { f: first.fm[c].f, row: first.rn };
+    for (let i = h + 1; i < pre.length; i++) if (pre[i].any) rows.push(dens(pre[i].row));
+    pre.length = 0;
+  }
+  function autoPick() {
+    const cnt = pre.map(p => { let c = 0; for (let i = 0; i < p.row.length; i++) { const v = p.row[i]; if (v != null && v !== '') c++ } return c });
+    const th = Math.max(2, Math.ceil(Math.max(0, ...cnt) * 0.8)), h = cnt.findIndex(c => c >= th); return h < 0 ? 0 : h;
+  }
+  function handleRow(inner, rn) {
+    if (H === null) {
+      const p = parse(inner, true, false); p.rn = rn; pre.push(p);
+      if (headerRow) { if (hIdx < 0 && rn >= headerRow) hIdx = pre.length - 1; if (hIdx >= 0 && pre.length > hIdx + 1) finalize(hIdx) }
+      else if (pre.length >= K) finalize(autoPick());
+      return;
+    }
+    const p = parse(inner, false, true); if (p.any) rows.push(p.row);
   }
   await unzipPass(getStream, n => n !== path ? null : (t, fin) => {
     buf += t;
@@ -84,13 +104,12 @@ async function readXlsx(getStream, onProgress, sheetIdx = 0) {
       const rm = /\br="(\d+)"/.exec(buf.slice(s, k)); handleRow(buf.slice(k + 1, e), rm ? +rm[1] : ++auto); buf = buf.slice(e + 6);
     }
   }, onProgress);
-  if (H === null) throw new Error('Sheet khali hai');
-  if (seen < 2) tr = 2;
-  return { H, rows, F, dateCols: [...dateCols] };
+  if (H === null) { if (!pre.length) throw new Error('Sheet khali hai'); finalize(headerRow ? (hIdx >= 0 ? hIdx : pre.length - 1) : autoPick()) }
+  return { H, rows, F, dateCols: [...dateCols], hdrRow };
 }
 
 /* ---------- csv ---------- */
-function readCsvText(t) {
+function readCsvText(t, headerRow = 0) {
   const out = []; let row = [], f = '', q = false, i = 0; const n = t.length; if (t.charCodeAt(0) === 0xFEFF) i = 1;
   const num = s => /^-?(0|[1-9]\d*)(\.\d+)?$/.test(s) ? +s : s;
   for (; i < n; i++) {
@@ -100,9 +119,12 @@ function readCsvText(t) {
     else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(f); f = ''; out.push(row); row = [] } else f += c;
   }
   if (f !== '' || row.length) { row.push(f); out.push(row) }
-  const H = (out[0] || []).map((h, i) => h.trim() || 'Col' + (i + 1)), W = H.length;
-  const rows = out.slice(1).filter(r => r.some(x => x !== '')).map(r => { const o = new Array(W).fill(null); for (let c = 0; c < W; c++) { const v = r[c]; if (v !== undefined && v !== '') o[c] = num(v) } return o });
-  return { H, rows, F: {}, dateCols: [] };
+  let h = 0;
+  if (headerRow) h = Math.min(Math.max(headerRow - 1, 0), Math.max(out.length - 1, 0));
+  else { const cnt = out.slice(0, 30).map(r => r.filter(x => x !== '').length), th = Math.max(2, Math.ceil(Math.max(0, ...cnt) * 0.8)); h = Math.max(0, cnt.findIndex(c => c >= th)) }
+  const H = (out[h] || []).map((x, i) => x.trim() || 'Col' + (i + 1)), W = H.length;
+  const rows = out.slice(h + 1).filter(r => r.some(x => x !== '')).map(r => { const o = new Array(W).fill(null); for (let c = 0; c < W; c++) { const v = r[c]; if (v !== undefined && v !== '') o[c] = num(v) } return o });
+  return { H, rows, F: {}, dateCols: [], hdrRow: h + 1 };
 }
 
 /* ---------- write xlsx ---------- */
