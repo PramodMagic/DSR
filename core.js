@@ -154,7 +154,7 @@ async function sheetPart(zip, d, o) {
         const fx = fa[c];
         if (fx !== undefined) { out += '<c r="' + cn[c] + r + '"><f>' + esc(fx(r).slice(1)) + '</f></c>'; continue }
         const v = row[c]; if (v == null) continue; const t = typeof v;
-        if (t === 'number') { if (v === v && v !== Infinity && v !== -Infinity) out += '<c r="' + cn[c] + r + '"' + (dc.has(c) ? dsa : '') + '><v>' + v + '</v></c>' }
+        if (t === 'number') { if (v === v && v !== Infinity && v !== -Infinity) out += '<c r="' + cn[c] + r + '"' + (dc.has(c) && v !== 0 ? dsa : '') + '><v>' + v + '</v></c>' }
         else if (t === 'string') { if (v !== '') out += '<c r="' + cn[c] + r + '" t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>' }
         else if (t === 'boolean') out += '<c r="' + cn[c] + r + '" t="b"><v>' + (v ? 1 : 0) + '</v></c>';
       }
