@@ -13,6 +13,7 @@ Sab kuch aapke browser me chalta hai, data kahin upload nahi hota.
 - Har file ke baad pehle ① **Lookup** (DSR ka column ↔ file ka column) chuno, phir ② **DSR column ← file column** jodo (naam alag ho to bhi chalega; "Same naam wale auto jodo" button bhi hai). Koi bhi auto-select nahi hota.
 - **Sheet:** agar file me kai sheets hain to tool sabse badi sheet (asli data) apne aap chunta hai. Galat ho to file ke bagal ke "Sheet" dropdown se sahi sheet chuno.
 - **Header row:** tool apne aap pehchanta hai (upar Pivot filter / title rows ho to bhi). Galat ho to file ke bagal me "Header row no." me sahi Excel row number likh kar "Dobara padho" dabao. Header ke upar ke cells (absolute refs jaise $A$1) final file me nahi aate.
+- **Order Data mapping:** Order file upload karte hi VC preset (SKU←SKU, Warehouse←Process By, AWB←Tracking Number ... 14 jodiyan) apne aap lag jati hai. "⚡ Auto mapping" button se dobara lagao, ya apni mapping file (2 columns: DSR | Order Data) upload karo. Manual badalna hamesha ho sakta hai.
 - Flow: 1 Master (important columns khud select) → 2 Order Data → 3 Last Mile → 4 Invoice → 5 FM Mile → 6 Dekho/Download. Download button upar hamesha hai.
 
 ## Limits / dhyan dene wali baatein

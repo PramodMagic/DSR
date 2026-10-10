@@ -82,8 +82,8 @@ const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><d
 const pb=(p,t)=>`<h4>② ${t||'DSR ke column ke bagal me file ka column chuno (file ke us column se DSR ka column fill hoga)'}</h4><div class="mu"><b>DSR ke column</b> &nbsp;←&nbsp; <b>${FL[p]}</b></div><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button><button class="g" id="${p}au">Same naam wale auto jodo</button></div>`;
 const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
 <div class="row">Naya Final Remark <input type="text" id="${p}nf" placeholder="khali = change nahi"> Naya Remark <input type="text" id="${p}nr"></div>`;
-$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck" class="g">Dobara check karo</button></div><div id="t2s"></div>${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge. Final Remark / Remark yahan mat chuno, wo rules se apne aap bharte hain)')}<div class="mu">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><label><input type="checkbox" id="t2ar" checked> Add karne ke baad Warehouse Remark rules apne aap lagao (sirf nayi rows par)</label></div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div>
-<h4>Warehouse wise Remark rules</h4><div class="row">Kin rows par: <select id="t2sc"><option value="all">Poori DSR</option><option value="new">Sirf abhi add hui rows</option></select><button id="t2ru">Remark rules chalao</button></div><div class="mu">Rules: Bulk/India, Bulk9, China/China-CJ (courier ke saath/bina), WH Not Assigned — aapke document ke hisaab se.</div>`);
+$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck" class="g">Dobara check karo</button></div><div id="t2s"></div>${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge. Final Remark / Remark yahan mat chuno, wo rules se apne aap bharte hain)')}<div class="row"><button id="t2pre">⚡ Auto mapping (VC Order Data preset)</button><label class="mu">ya apni mapping file (2 columns: DSR | Order Data) <input type="file" id="t2mf" accept=".xlsx,.csv"></label></div><div id="t2am" class="mu"></div><div class="mu">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><label><input type="checkbox" id="t2ar" checked> Add karne ke baad Warehouse Remark rules apne aap lagao (sirf nayi rows par)</label></div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div>
+<h4>Warehouse wise Remark rules</h4><div class="row"><label class="mu"><input type="checkbox" id="t2st"> Document jaisa literal: India ke PU aur China (courier wale) ke PR/PU rules bina "blank hona chahiye" ki shart ke lagao</label></div><div class="row">Kin rows par: <select id="t2sc"><option value="all">Poori DSR</option><option value="new">Sirf abhi add hui rows</option></select><button id="t2ru">Remark rules chalao</button></div><div class="mu">Rules: Bulk/India, Bulk9, China/China-CJ (courier ke saath/bina), WH Not Assigned — aapke document ke hisaab se.</div>`);
 $('#p3').innerHTML=fb('t3','Step 3 · Last Mile (Logistics) file','Logistics file se status/pickup/delivery date copy hoti hai aur Final Remark transition lagta hai.',`${pb('t3')}<h4>Logistics status column</h4><div class="row"><select id="t3sc"></select></div>
 <div class="mu">Delivered mane jaane wale status:</div><div id="t3de"></div><div class="mu" style="margin-top:6px">RTO / Cancel wale status (Order Cancelled ke remark ke liye):</div><div id="t3rt"></div>
 <div class="row"><button id="t3go">Update karo</button></div><div class="mu">Dispatch Pending / FM Intrasit / Invoice Not Prepared / Reached at india wh / WH Not Assigned / Bulk9 Pending → Last Mile Intrasit. Last Mile Intrasit + delivered → Delivered to end buyer + Shipment Delivered. Order Cancelled → remark = logistics status (delivered/RTO ho to). Delivered to end buyer → no change.</div>`);
@@ -128,7 +128,22 @@ $('#msh').onchange=()=>{if(S.mfile){$('#mhr').value='';loadMaster(S.mfile)}};
 $('#mhb').onclick=()=>S.mfile?loadMaster(S.mfile):alert('Pehle Master file chuno');
 
 /* ---------- Step 2 ---------- */
-bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';$('#t2add').disabled=true});
+const PRESET=[['SKU','SKU'],['Warehouse','Process By'],['AWB','Tracking Number'],['Seller','Username'],['Bafulia Order ID','Order Serial'],['MarketplaceID Order ID','Market Place Order ID'],['Customer Name','Recipient Name'],['Customer Mobile Number','Recipient Phone'],['Order Qty','Product Quantity'],['Shopper value','Total Amount'],['Order Item','Product Name'],['Order Date','Order Date'],['Payment Status','Payment Status'],['Order Status','Order Status']];
+const nk=s=>String(s).replace(/\s+/g,' ').trim().toLowerCase();
+function applyMap(list,label){const F=S.f.t2;if(!F||!S.d)return alert('Pehle Order data file upload karo');
+  $$('#t2pb .pr').forEach(d=>{if(+d.querySelector('.s').value<0&&d.querySelector('.d').value==='-1')d.remove()});
+  const used=new Set(gp('t2').map(q=>q.d)),miss=[];let ok=0;
+  list.forEach(([dn,on])=>{const i=S.d.H.findIndex(h=>nk(h)===nk(dn)),j=F.H.findIndex(h=>nk(h)===nk(on));
+    if(i<0||j<0){miss.push(`${dn} ← ${on} (${i<0?'DSR me column nahi mila':'Order file me column nahi mila'})`);return}
+    if(isRem(i)||used.has(i))return;used.add(i);const d=addPair('t2');d.querySelector('.d').value=String(i);d.querySelector('.s').value=String(j);ok++});
+  if(!$$('#t2pb .pr').length)addPair('t2');
+  $('#t2am').innerHTML=`✅ ${label}: ${ok} jodiyan lag gayi. Neeche dekh lo, chaho to badal sakte ho.`+(miss.length?`<br><span class="er">Nahi mili (manual chuno): ${miss.map(esc).join('; ')}</span>`:'')}
+bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';$('#t2add').disabled=true;applyMap(PRESET,'Auto (VC preset)')});
+$('#t2pre').onclick=()=>applyMap(PRESET,'Auto (VC preset)');
+$('#t2mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;if(!S.f.t2){e.target.value='';return alert('Pehle Order data file upload karo')}
+  const R=/\.csv$/i.test(f.name)?DSRCore.readCsvText(await f.text()):await DSRCore.readXlsx(()=>f.stream());
+  const list=[R.H,...R.rows].filter(r=>r[0]!=null&&r[1]!=null&&String(r[0]).trim()&&String(r[1]).trim()&&!['dsr','dsr ke column'].includes(nk(r[0]))).map(r=>[r[0],r[1]]);
+  applyMap(list,`Mapping file (${f.name})`)};
 $('#t2add').onclick=()=>t2add();
 function t2check(){const F=S.f.t2;if(!F||!S.d)return;const dk=+$('#t2dk').value,fk=+$('#t2fk').value;if(!(dk>=0&&fk>=0))return;
   const have=new Set(S.d.rows.map(r=>nm(r[dk]))),seen=new Set();let f=0,dup=0;S.miss=[];
@@ -149,6 +164,7 @@ function t2add(){if(!S.miss.length)return;const q=gp('t2'),ar=$('#t2ar').checked
   S.miss=[];$('#t2add').disabled=true;$('#t2add').textContent='Missing rows DSR me add karo';refresh()}
 
 const DP='Dispatch Pending at india wh',LM='Last Mile Intrasit',DL='Delivered to end buyer',OC='Order Cancelled',INP='Invoice Not Prepared',B9='Bulk9 Order Pending';
+const STRICT=()=>{const x=$('#t2st');return !!(x&&x.checked)};
 function rules(start){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows;
   for(let i=start;i<R.length;i++){const r=R[i],w0=nm(r[wh]),w=w0==='0'?'':w0,p=tx(r[pay]).toUpperCase();let f=rt(r[fr]),m=rt(r[rm]);
     const set=(a,b,k)=>{if(f!==a||(b!=null&&m!==b)){out[k]=(out[k]||0)+1}r[fr]=a;f=a;if(b!=null){r[rm]=b;m=b}};
@@ -157,12 +173,12 @@ function rules(start){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows;
     if(w==='bulk'||w==='india'){
       if(p==='PD'&&e)set(DP,'WH Working','1A · PD blank → Dispatch Pending');
       else if(p==='PR'){if(eq(f,DP)&&eq(m,'WH Working'))set(OC,null,'1A · PR Dispatch Pending → Order Cancelled');else if(eq(f,LM)&&eq(m,LM))set(OC,'Cancelled During LM Intrasit','1A · PR Last Mile → Cancelled During LM')}
-      else if(p==='PU'&&e)set(DP,'Reseller Payment Not Done','1A · PU → Reseller Payment Not Done');
+      else if(p==='PU'&&(e||STRICT()))set(DP,'Reseller Payment Not Done','1A · PU → Reseller Payment Not Done');
       if(!inl([DL,DP,LM,OC]))set(DP,'WH Working','1A · Cleanup → Dispatch Pending / WH Working')}
     else if(w==='bulk9'){if(e)set(B9,'WH Working','1B · Bulk9 blank → Bulk9 Order Pending');
       if(!inl([DL,B9,LM,OC]))set(B9,'WH Working','1B · Cleanup → Bulk9 Order Pending')}
     else if(w==='china'||w==='china-cj'){const hc=!['','0'].includes(tx(r[awb])),L6=[DL,'FM Intrasit',INP,LM,OC,'Reached at india wh'];
-      if(hc){if(p==='PD'&&e)set(INP,'Processed By China','1C · PD → Processed By China');else if(p==='PR'&&e)set(OC,'Cancelled During FM Intrasit','1C · PR → Cancelled During FM');else if(p==='PU'&&e)set(INP,'Reseller Payment Not Done','1C · PU → Reseller Payment Not Done');
+      if(hc){if(p==='PD'&&e)set(INP,'Processed By China','1C · PD → Processed By China');else if(p==='PR'&&(e||STRICT()))set(OC,'Cancelled During FM Intrasit','1C · PR → Cancelled During FM');else if(p==='PU'&&(e||STRICT()))set(INP,'Reseller Payment Not Done','1C · PU → Reseller Payment Not Done');
         if(!inl(L6))set(INP,'Processed By China','1C · Cleanup → Processed By China')}
       else{if(p==='PD'&&e)set(INP,'Not Processed by china','1D · PD → Not Processed by china');else if(p==='PR'&&e)set(INP,'Cancelled By China','1D · PR → Cancelled By China');else if(p==='PU'&&e)set(INP,'Reseller Payment Not Done','1D · PU → Reseller Payment Not Done');
         if(!inl(L6))set(INP,'Not Processed By China','1D · Cleanup → Not Processed By China')}}
