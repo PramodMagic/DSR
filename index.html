@@ -72,12 +72,13 @@ function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s
 ['1 Master','2 Order Data','3 Last Mile','4 Invoice','5 FM Mile','6 Dekho & Download'].forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>show(i+1);$('#nav').append(b)});
 function show(n){$$('section').forEach((s,i)=>s.classList.toggle('on',i+1===n));$$('nav button').forEach((b,i)=>b.classList.toggle('on',i+1===n));
   if(S.d){fillDsr();if(n===4||n===5)frChips('t'+n);if(n===6)vInit()}}
+const FL={t2:'Order data ke column',t3:'Logistics file ke column',t4:'Invoice file ke column',t5:'FM file ke column'};
 const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><div class="row"><input type="file" id="${p}f" accept=".xlsx,.xlsm,.csv"></div><div id="${p}i" class="mu"></div></div>
-<div class="card off" id="${p}c"><h4 style="margin-top:0">① Lookup — DSR ka kaun sa column, file ke kaun se column se match kare?</h4><div class="row"><select class="dsr" data-ph="1" id="${p}dk"></select> ↔ <select id="${p}fk"></select></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
-const pb=(p,t)=>`<h4>② ${t||'DSR ke column ke bagal me file ka column chuno (file ke us column se DSR ka column fill hoga)'}</h4><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button><button class="g" id="${p}au">Same naam wale auto jodo</button></div>`;
+<div class="card off" id="${p}c"><h4 style="margin-top:0">① Lookup (kis column se match karein)</h4><div class="row"><label class="mu"><b>DSR ke column</b><br><select class="dsr" data-ph="1" id="${p}dk"></select></label> <span>↔</span> <label class="mu"><b>${FL[p]}</b><br><select id="${p}fk"></select></label></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
+const pb=(p,t)=>`<h4>② ${t||'DSR ke column ke bagal me file ka column chuno (file ke us column se DSR ka column fill hoga)'}</h4><div class="mu"><b>DSR ke column</b> &nbsp;←&nbsp; <b>${FL[p]}</b></div><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button><button class="g" id="${p}au">Same naam wale auto jodo</button></div>`;
 const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
 <div class="row">Naya Final Remark <input type="text" id="${p}nf" placeholder="khali = change nahi"> Naya Remark <input type="text" id="${p}nr"></div>`;
-$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck">Check karo — kaun se orders DSR me nahi hain</button></div><div id="t2s"></div>${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge)')}<div class="mu">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div>
+$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck" class="g">Dobara check karo</button></div><div id="t2s"></div>${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge)')}<div class="mu">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><label><input type="checkbox" id="t2ar" checked> Add karne ke baad Warehouse Remark rules apne aap lagao (sirf nayi rows par)</label></div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div>
 <h4>Warehouse wise Remark rules</h4><div class="row">Kin rows par: <select id="t2sc"><option value="all">Poori DSR</option><option value="new">Sirf abhi add hui rows</option></select><button id="t2ru">Remark rules chalao</button></div><div class="mu">Rules: Bulk/India, Bulk9, China/China-CJ (courier ke saath/bina), WH Not Assigned — aapke document ke hisaab se.</div>`);
 $('#p3').innerHTML=fb('t3','Step 3 · Last Mile (Logistics) file','Logistics file se status/pickup/delivery date copy hoti hai aur Final Remark transition lagta hai.',`${pb('t3')}<h4>Logistics status column</h4><div class="row"><select id="t3sc"></select></div>
 <div class="mu">Delivered mane jaane wale status:</div><div id="t3de"></div><div class="mu" style="margin-top:6px">RTO / Cancel wale status (Order Cancelled ke remark ke liye):</div><div id="t3rt"></div>
@@ -119,15 +120,23 @@ $('#mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;const D=await
 /* ---------- Step 2 ---------- */
 bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';$('#t2add').disabled=true});
 $('#t2add').onclick=()=>t2add();
-$('#t2ck').onclick=()=>{const F=S.f.t2;if(!F)return alert('Order file upload karo');if(!keyOk('t2'))return;const dk=+$('#t2dk').value,fk=+$('#t2fk').value;
+function t2check(){const F=S.f.t2;if(!F||!S.d)return;const dk=+$('#t2dk').value,fk=+$('#t2fk').value;if(!(dk>=0&&fk>=0))return;
   const have=new Set(S.d.rows.map(r=>nm(r[dk]))),seen=new Set();let f=0,dup=0;S.miss=[];
   F.rows.forEach(r=>{const k=nm(r[fk]);if(!k)return;if(have.has(k)){f++;return}if(seen.has(k)){dup++;return}seen.add(k);S.miss.push(r)});
-  $('#t2s').innerHTML=`<div class="stats"><div class="stat"><b>${F.rows.length.toLocaleString()}</b>Order rows</div><div class="stat"><b class="ok">${f.toLocaleString()}</b>DSR me already</div><div class="stat"><b class="er">${S.miss.length.toLocaleString()}</b>DSR me nahi</div></div>${dup?`<div class="mu">${dup} duplicate order rows skip</div>`:''}${S.miss.length?'':'<div class="ok">Sab available hain 👍</div>'}`;
-  const b=$('#t2add');b.disabled=!S.miss.length;b.textContent=S.miss.length?`${S.miss.length.toLocaleString()} missing rows DSR me add karo`:'Add karne ko kuch nahi'};
-function t2add(){if(!S.miss.length)return;const q=gp('t2');if(!q.length&&!confirm('Koi column map nahi kiya, sirf 0/blank rows judengi. Aage badhein?'))return;
-  snap();const d=S.d,c=C(),mp=new Map(q.map(x=>[x.d,x.s]));S.ns=d.rows.length;
+  const pv=S.miss.slice(0,10);
+  $('#t2s').innerHTML=`<div class="stats"><div class="stat"><b>${F.rows.length.toLocaleString()}</b>Order data rows</div><div class="stat"><b class="ok">${f.toLocaleString()}</b>DSR me already hain</div><div class="stat"><b class="er">${S.miss.length.toLocaleString()}</b>DSR me nahi hain</div></div>${dup?`<div class="mu">${dup} duplicate order rows skip</div>`:''}`+
+   (S.miss.length?`<p><b>Order data ki ${S.miss.length.toLocaleString()} rows DSR me nahi hain</b> (pehli ${pv.length} neeche):</p><div class="sc" style="max-height:240px"><table><tr>${F.H.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>${pv.map(r=>`<tr>${F.H.map((h,i)=>`<td>${esc(tx(r[i]))}</td>`).join('')}</tr>`).join('')}</table></div>`:'<div class="ok">Sab orders DSR me available hain 👍</div>');
+  const b=$('#t2add');b.disabled=!S.miss.length;b.textContent=S.miss.length?`${S.miss.length.toLocaleString()} missing rows DSR me add karo`:'Add karne ko kuch nahi'}
+$('#t2ck').onclick=()=>{if(!S.f.t2)return alert('Order data file upload karo');if(!keyOk('t2'))return;t2check()};
+['#t2dk','#t2fk'].forEach(id=>$(id).addEventListener('change',e=>{if(e.isTrusted===false)return;t2check()}));
+function t2add(){if(!S.miss.length)return;const q=gp('t2'),ar=$('#t2ar').checked;
+  if(!q.length&&!confirm('Koi column map nahi kiya, sirf 0/blank rows judengi. Aage badhein?'))return;
+  if(ar&&!need('wh','pay','fr','rm','awb'))return;
+  snap();const d=S.d,c=C(),mp=new Map(q.map(x=>[x.d,x.s])),n=S.miss.length;S.ns=d.rows.length;
   S.miss.forEach(x=>d.rows.push(d.H.map((_,i)=>{if(mp.has(i)){const v=gv(x[mp.get(i)]);return v===''||v==null?null:v}return d.F[i]||i===c.fr||i===c.rm?null:0})));
-  $('#t2s').innerHTML=`<div class="ok">✅ ${S.miss.length.toLocaleString()} nayi rows add hui (chune hue columns file se, baaki 0, formula columns me formula). Ab neeche Remark rules chalao.</div>`;S.miss=[];$('#t2add').disabled=true;$('#t2add').textContent='Missing rows DSR me add karo';refresh()}
+  let ex='';if(ar){const o=rules(S.ns),k=Object.keys(o).sort();ex=k.length?'<ul>'+k.map(x=>`<li>${esc(x)}: <b>${o[x]}</b></li>`).join('')+'</ul>':'<div class="mu">Remark rules se koi change nahi hua.</div>'}
+  $('#t2s').innerHTML=`<div class="ok">✅ ${n.toLocaleString()} nayi rows DSR me add hui (chune hue columns file se, baaki 0, formula columns me formula)${ar?' aur Remark rules lag gaye:':'. Remark rules neeche se chalao.'}</div>${ex}`;
+  S.miss=[];$('#t2add').disabled=true;$('#t2add').textContent='Missing rows DSR me add karo';refresh()}
 
 const DP='Dispatch Pending at india wh',LM='Last Mile Intrasit',DL='Delivered to end buyer',OC='Order Cancelled',INP='Invoice Not Prepared',B9='Bulk9 Order Pending';
 function rules(start){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows;
