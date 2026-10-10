@@ -34,23 +34,27 @@ function parseStyles(x) {
 }
 async function unzipPass(getStream, wanted, onProgress) {
   const uz = new ff.Unzip(); uz.register(ff.UnzipInflate); uz.register(ff.UnzipPassThrough);
-  uz.onfile = f => { const h = wanted(f.name); if (!h) return; const dec = new TextDecoder(); f.ondata = (err, c, fin) => { if (err) throw err; h(dec.decode(c, { stream: !fin }), fin) }; f.start() };
+  uz.onfile = f => { const h = wanted(f.name, f); if (!h) return; const dec = new TextDecoder(); f.ondata = (err, c, fin) => { if (err) throw err; h(dec.decode(c, { stream: !fin }), fin) }; f.start() };
   let n = 0, ly = 0;
   for await (const c of chunks(getStream())) { uz.push(c, false); n += c.length; if (n - ly > 4194304) { ly = n; onProgress && onProgress(n); await tick() } }
   uz.push(new Uint8Array(0), true);
 }
 const FAST = /^r="([A-Z]+)\d+"(?: s="(\d+)")?(?: t="(\w+)")?/;
-async function readXlsx(getStream, onProgress, sheetIdx = 0, headerRow = 0) {
-  const txt = {}, sst = []; let sbuf = '';
-  await unzipPass(getStream, n => {
+async function readXlsx(getStream, onProgress, sheetIdx = -1, headerRow = 0) {
+  const txt = {}, sst = [], sizes = {}; let sbuf = '';
+  await unzipPass(getStream, (n, f) => {
+    sizes[n] = f.originalSize ?? f.size;
     if (n === 'xl/workbook.xml' || n === 'xl/_rels/workbook.xml.rels' || n === 'xl/styles.xml') { txt[n] = ''; return t => { txt[n] += t } }
     if (n === 'xl/sharedStrings.xml') return t => { sbuf += t; const re = /<si>([\s\S]*?)<\/si>|<si\/>/g; let m, last = 0; while ((m = re.exec(sbuf))) { sst.push(m[1] === undefined ? '' : siText(m[1])); last = re.lastIndex } sbuf = sbuf.slice(last) };
     return null;
   }, onProgress);
-  const sheets = [...(txt['xl/workbook.xml'] || '').matchAll(/<sheet\b[^>]*>/g)].map(m => m[0]);
+  const relMap = {};
+  for (const m of (txt['xl/_rels/workbook.xml.rels'] || '').matchAll(/<Relationship\b[^>]*>/g)) { const id = /Id="([^"]+)"/.exec(m[0]), t = /Target="([^"]+)"/.exec(m[0]); if (id && t) relMap[id[1]] = t[1][0] === '/' ? t[1].slice(1) : 'xl/' + t[1] }
+  const sheets = [...(txt['xl/workbook.xml'] || '').matchAll(/<sheet\b[^>]*>/g)].map(m => { const nm = /name="([^"]*)"/.exec(m[0]), r = /r:id="([^"]+)"/.exec(m[0]); const path = r ? relMap[r[1]] : null; return { name: nm ? un(nm[1]) : 'Sheet', path, size: sizes[path] } });
+  if (!sheets.length) throw new Error('Sheet nahi mili');
+  if (sheetIdx < 0) { sheetIdx = 0; let best = -1; sheets.forEach((x, i) => { if (x.size !== undefined && x.size > best) { best = x.size; sheetIdx = i } }) }
   if (!sheets[sheetIdx]) throw new Error('Sheet nahi mili');
-  const rid = /r:id="([^"]+)"/.exec(sheets[sheetIdx])[1]; let path = null;
-  for (const m of (txt['xl/_rels/workbook.xml.rels'] || '').matchAll(/<Relationship\b[^>]*>/g)) if (new RegExp('Id="' + rid + '"').test(m[0])) { const t = /Target="([^"]+)"/.exec(m[0])[1]; path = t[0] === '/' ? t.slice(1) : 'xl/' + t }
+  const path = sheets[sheetIdx].path;
   const isDate = parseStyles(txt['xl/styles.xml'] || '');
   let H = null, W = 0, F = {}, buf = '', auto = 0, hdrRow = 0, hIdx = -1, preview = []; const rows = [], pre = [], dateCols = new Set(), K = 30;
   const cellRe = /<c ([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g;
@@ -106,7 +110,7 @@ async function readXlsx(getStream, onProgress, sheetIdx = 0, headerRow = 0) {
     }
   }, onProgress);
   if (H === null) { if (!pre.length) throw new Error('Sheet khali hai'); finalize(headerRow ? (hIdx >= 0 ? hIdx : pre.length - 1) : autoPick()) }
-  return { H, rows, F, dateCols: [...dateCols], hdrRow, preview };
+  return { H, rows, F, dateCols: [...dateCols], hdrRow, preview, dataPath: path, sheets: sheets.map(x => ({ name: x.name, size: x.size })), sheetIdx };
 }
 
 /* ---------- csv ---------- */
@@ -125,49 +129,84 @@ function readCsvText(t, headerRow = 0) {
   else { const cnt = out.slice(0, 30).map(r => r.filter(x => x !== '').length), th = Math.max(2, Math.ceil(Math.max(0, ...cnt) * 0.8)); h = Math.max(0, cnt.findIndex(c => c >= th)) }
   const H = (out[h] || []).map((x, i) => x.trim() || 'Col' + (i + 1)), W = H.length;
   const rows = out.slice(h + 1).filter(r => r.some(x => x !== '')).map(r => { const o = new Array(W).fill(null); for (let c = 0; c < W; c++) { const v = r[c]; if (v !== undefined && v !== '') o[c] = num(v) } return o });
-  return { H, rows, F: {}, dateCols: [], hdrRow: h + 1, preview: out.slice(0, 12).map((r, i) => ({ rn: i + 1, cells: Array.from({ length: 12 }, (_, k) => (r[k] === '' ? null : r[k]) ?? null) })) };
+  return { H, rows, F: {}, dateCols: [], hdrRow: h + 1, sheets: [], sheetIdx: 0, preview: out.slice(0, 12).map((r, i) => ({ rn: i + 1, cells: Array.from({ length: 12 }, (_, k) => (r[k] === '' ? null : r[k]) ?? null) })) };
 }
 
 /* ---------- write xlsx ---------- */
 const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"', RNS = 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"';
-async function writeXlsx(d, opt = {}) {
-  const { H, rows, F } = d, W = H.length, n = rows.length, sheet = opt.sheet || 'DSR', dc = new Set(d.dateCols || []);
-  const fm = {}; for (const c of Object.keys(F || {})) if (+c < W) fm[c] = compileFormula(F[c].f, F[c].row);
-  const fa = new Array(W); for (const c of Object.keys(fm)) fa[+c] = fm[c]; const parts = []; const enc = new TextEncoder();
-  const zip = new ff.Zip((err, chunk) => { if (err) throw err; parts.push(chunk) });
-  const add = (name, str) => { const f = new ff.ZipDeflate(name, { level: 1 }); zip.add(f); f.push(enc.encode(str), true) };
-  add('[Content_Types].xml', X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
-  add('_rels/.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
-  add('xl/workbook.xml', X + `<workbook ${NS} ${RNS}><sheets><sheet name="${esc(sheet)}" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
-  add('xl/_rels/workbook.xml.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
-  add('xl/styles.xml', X + `<styleSheet ${NS}><numFmts count="1"><numFmt numFmtId="164" formatCode="dd\\-mmm\\-yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
-  const sh = new ff.ZipDeflate('xl/worksheets/sheet1.xml', { level: 1 }); zip.add(sh);
-  const cn = Array.from({ length: W }, (_, i) => colName(i)), last = cn[W - 1] + (n + 1);
-  let s = X + `<worksheet ${NS}><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><sheetData><row r="1">`;
-  for (let c = 0; c < W; c++) s += `<c r="${cn[c]}1" s="2" t="inlineStr"><is><t xml:space="preserve">${esc(String(H[c]))}</t></is></c>`;
+const mkZip = parts => new ff.Zip((err, chunk) => { if (err) throw err; parts.push(chunk) });
+const addText = (zip, name, str) => { const f = new ff.ZipDeflate(name, { level: 1 }); zip.add(f); f.push(new TextEncoder().encode(str), true) };
+/* data sheet XML (header row = o.hdr, date style = o.ds, header style = o.hs) */
+async function sheetPart(zip, d, o) {
+  const { H, rows, F } = d, W = H.length, n = rows.length, hdr = o.hdr || 1, dc = new Set(d.dateCols || []), enc = new TextEncoder();
+  const fa = new Array(W); for (const c of Object.keys(F || {})) if (+c < W) fa[+c] = compileFormula(F[c].f, F[c].row);
+  const sh = new ff.ZipDeflate(o.path, { level: 1 }); zip.add(sh);
+  const cn = Array.from({ length: W }, (_, i) => colName(i)), last = cn[W - 1] + (hdr + n), dsa = o.ds != null ? ' s="' + o.ds + '"' : '', hsa = o.hs != null ? ' s="' + o.hs + '"' : '';
+  let s = X + `<worksheet ${NS}><sheetViews><sheetView workbookViewId="0"><pane ySplit="${hdr}" topLeftCell="A${hdr + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><sheetData><row r="${hdr}">`;
+  for (let c = 0; c < W; c++) s += `<c r="${cn[c]}${hdr}"${hsa} t="inlineStr"><is><t xml:space="preserve">${esc(String(H[c]))}</t></is></c>`;
   s += '</row>'; sh.push(enc.encode(s), false);
   const B = 2000;
   for (let k0 = 0; k0 < n; k0 += B) {
-    let o = ''; const k1 = Math.min(n, k0 + B);
+    let out = ''; const k1 = Math.min(n, k0 + B);
     for (let k = k0; k < k1; k++) {
-      const r = k + 2, row = rows[k]; o += '<row r="' + r + '">';
+      const r = hdr + k + 1, row = rows[k]; out += '<row r="' + r + '">';
       for (let c = 0; c < W; c++) {
         const fx = fa[c];
-        if (fx !== undefined) { o += '<c r="' + cn[c] + r + '"><f>' + esc(fx(r).slice(1)) + '</f></c>'; continue }
-        const v = row[c];
-        if (v == null) continue;
-        const t = typeof v;
-        if (t === 'number') { if (v === v && v !== Infinity && v !== -Infinity) o += '<c r="' + cn[c] + r + (dc.has(c) ? '" s="1"' : '"') + '><v>' + v + '</v></c>' }
-        else if (t === 'string') { if (v !== '') o += '<c r="' + cn[c] + r + '" t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>' }
-        else if (t === 'boolean') o += '<c r="' + cn[c] + r + '" t="b"><v>' + (v ? 1 : 0) + '</v></c>';
+        if (fx !== undefined) { out += '<c r="' + cn[c] + r + '"><f>' + esc(fx(r).slice(1)) + '</f></c>'; continue }
+        const v = row[c]; if (v == null) continue; const t = typeof v;
+        if (t === 'number') { if (v === v && v !== Infinity && v !== -Infinity) out += '<c r="' + cn[c] + r + '"' + (dc.has(c) ? dsa : '') + '><v>' + v + '</v></c>' }
+        else if (t === 'string') { if (v !== '') out += '<c r="' + cn[c] + r + '" t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>' }
+        else if (t === 'boolean') out += '<c r="' + cn[c] + r + '" t="b"><v>' + (v ? 1 : 0) + '</v></c>';
       }
-      o += '</row>';
+      out += '</row>';
     }
-    sh.push(enc.encode(o), false); opt.onProgress && opt.onProgress(k1, n); await tick();
+    sh.push(enc.encode(out), false); o.onProgress && o.onProgress(k1, n); await tick();
   }
-  sh.push(enc.encode(`</sheetData><autoFilter ref="A1:${last}"/></worksheet>`), true); zip.end();
+  sh.push(enc.encode(`</sheetData><autoFilter ref="A${hdr}:${last}"/></worksheet>`), true);
+}
+/* simple: nayi workbook (sirf ek sheet) */
+async function writeXlsx(d, opt = {}) {
+  const sheet = opt.sheet || 'DSR', parts = [], zip = mkZip(parts);
+  addText(zip, '[Content_Types].xml', X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+  addText(zip, '_rels/.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  addText(zip, 'xl/workbook.xml', X + `<workbook ${NS} ${RNS}><sheets><sheet name="${esc(sheet)}" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
+  addText(zip, 'xl/_rels/workbook.xml.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+  addText(zip, 'xl/styles.xml', X + `<styleSheet ${NS}><numFmts count="1"><numFmt numFmtId="164" formatCode="dd\\-mmm\\-yyyy"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
+  await sheetPart(zip, d, { path: 'xl/worksheets/sheet1.xml', hdr: 1, ds: 1, hs: 2, onProgress: opt.onProgress }); zip.end();
   return parts;
 }
-const api = { readXlsx, readCsvText, writeXlsx, compileFormula, colName, colIdx };
+/* original file ko base bana kar sirf data sheet badalta hai: dusri sheets, formulas, pivot sab bache rahte hain */
+async function writeXlsxPreserve(d, getStream, opt = {}) {
+  const parts = [], zip = mkZip(parts), dp = d.dataPath, rel = dp.replace('worksheets/', 'worksheets/_rels/') + '.rels', hdr = d.hdrRow || 1;
+  const last = colName(d.H.length - 1) + (hdr + d.rows.length); let ds = null;
+  const patch = (n, t) => {
+    if (n === '[Content_Types].xml') return t.replace(/<Override[^>]*calcChain[^>]*\/>/g, '');
+    if (n === 'xl/_rels/workbook.xml.rels') return t.replace(/<Relationship\b[^>]*calcChain[^>]*\/>/g, '');
+    if (n === 'xl/workbook.xml') {
+      t = t.replace(/<definedName\b[^>]*name="_xlnm\._FilterDatabase"[^>]*>[^<]*<\/definedName>/g, '').replace(/<definedNames>\s*<\/definedNames>/g, '');
+      if (/<calcPr\b[^>]*\/>/.test(t)) return t.replace(/<calcPr\b([^>]*?)\s*\/>/, (m, a) => /fullCalcOnLoad/.test(a) ? m : `<calcPr${a} fullCalcOnLoad="1"/>`);
+      return t.replace('</workbook>', '<calcPr fullCalcOnLoad="1"/></workbook>');
+    }
+    if (n === 'xl/styles.xml') { const m = /<cellXfs count="(\d+)"/.exec(t); if (!m) return t; ds = +m[1]; return t.replace(m[0], `<cellXfs count="${ds + 1}"`).replace('</cellXfs>', '<xf numFmtId="14" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>') }
+    if (/pivotCacheDefinition\d+\.xml$/.test(n)) {
+      t = /refreshOnLoad=/.test(t) ? t : t.replace(/<pivotCacheDefinition\b/, '<pivotCacheDefinition refreshOnLoad="1"');
+      return t.replace(/<worksheetSource\b[^>]*>/, m => (d.sheetName && m.includes('sheet="' + esc(d.sheetName).replace(/"/g, '&quot;') + '"')) ? m.replace(/ref="[^"]*"/, `ref="A${hdr}:${last}"`) : m);
+    }
+    return t;
+  };
+  const isPatch = n => n === '[Content_Types].xml' || n === 'xl/workbook.xml' || n === 'xl/_rels/workbook.xml.rels' || n === 'xl/styles.xml' || /^xl\/pivotCache\/pivotCacheDefinition\d+\.xml$/.test(n);
+  const uz = new ff.Unzip(); uz.register(ff.UnzipInflate); uz.register(ff.UnzipPassThrough);
+  uz.onfile = f => {
+    if (f.name === dp || f.name === rel || f.name === 'xl/calcChain.xml') return;
+    if (isPatch(f.name)) { let t = ''; const dec = new TextDecoder(); f.ondata = (err, c, fin) => { if (err) throw err; t += dec.decode(c, { stream: !fin }); if (fin) addText(zip, f.name, patch(f.name, t)) }; f.start(); return }
+    const out = new ff.ZipDeflate(f.name, { level: 1 }); zip.add(out); f.ondata = (err, c, fin) => { if (err) throw err; out.push(c, fin) }; f.start();
+  };
+  let n = 0, ly = 0;
+  for await (const c of chunks(getStream())) { uz.push(c, false); n += c.length; if (n - ly > 4194304) { ly = n; opt.onCopy && opt.onCopy(n); await tick() } }
+  uz.push(new Uint8Array(0), true);
+  await sheetPart(zip, d, { path: dp, hdr, ds, hs: null, onProgress: opt.onProgress }); zip.end();
+  return parts;
+}
+const api = { readXlsx, readCsvText, writeXlsx, writeXlsxPreserve, compileFormula, colName, colIdx };
 root.DSRCore = api; if (typeof module !== 'undefined') module.exports = api;
 })();
