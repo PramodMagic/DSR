@@ -66,18 +66,18 @@ function snap(extra){const c=C(),ix=[...new Set([c.fr,c.rm,...(extra||[])].filte
   S.hist.push({len:S.d.rows.length,hl:S.d.H.length,ns:S.ns,cols:ix.map(i=>[i,S.d.rows.map(r=>r[i])])});if(S.hist.length>5)S.hist.shift()}
 $('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return alert('Undo ke liye kuch nahi hai');const d=S.d;d.rows.length=h.len;d.H.length=h.hl;d.rows.forEach(r=>r.length=h.hl);h.cols.forEach(([i,a])=>{for(let k=0;k<h.len;k++)d.rows[k][i]=a[k]});S.ns=h.ns;refresh()};
 function refresh(){$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;fillDsr()}
-function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,(s.dataset.new?'<option value="new">➕ Naya column</option>':'')+(s.dataset.ph?'<option value="-1">— Select karo —</option>':''));if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))})}
+function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,(s.dataset.ph?'<option value="-1">— Select karo —</option>':'')+(s.dataset.new?'<option value="new">➕ Naya column</option>':''));if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))})}
 
 /* ---------- Tabs ---------- */
 ['1 Master','2 Order Data','3 Last Mile','4 Invoice','5 FM Mile','6 Dekho & Download'].forEach((t,i)=>{const b=document.createElement('button');b.textContent=t;b.onclick=()=>show(i+1);$('#nav').append(b)});
 function show(n){$$('section').forEach((s,i)=>s.classList.toggle('on',i+1===n));$$('nav button').forEach((b,i)=>b.classList.toggle('on',i+1===n));
   if(S.d){fillDsr();if(n===4||n===5)frChips('t'+n);if(n===6)vInit()}}
 const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu">${d}</div><div class="row"><input type="file" id="${p}f" accept=".xlsx,.xlsm,.csv"></div><div id="${p}i" class="mu"></div></div>
-<div class="card off" id="${p}c"><div class="row">DSR match column <select class="dsr" id="${p}dk"></select> File match column <select id="${p}fk"></select></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
-const pb=p=>`<h4>File ke columns → DSR columns (copy)</h4><div id="${p}pb"></div><button class="g" id="${p}ap">+ Column add</button>`;
+<div class="card off" id="${p}c"><h4 style="margin-top:0">① Lookup — DSR ka kaun sa column, file ke kaun se column se match kare?</h4><div class="row"><select class="dsr" data-ph="1" id="${p}dk"></select> ↔ <select id="${p}fk"></select></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
+const pb=(p,t)=>`<h4>② ${t||'DSR ke column ke bagal me file ka column chuno (file ke us column se DSR ka column fill hoga)'}</h4><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button><button class="g" id="${p}au">Same naam wale auto jodo</button></div>`;
 const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
 <div class="row">Naya Final Remark <input type="text" id="${p}nf" placeholder="khali = change nahi"> Naya Remark <input type="text" id="${p}nr"></div>`;
-$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="mu">Master column ke liye source chuno (same naam auto-map; baaki 0; formula wale me formula chalega):</div><div class="sc" style="max-height:260px"><table id="t2mp"></table></div><div class="row"><button id="t2ck">Check karo</button></div><div id="t2s"></div>
+$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck">Check karo — kaun se orders DSR me nahi hain</button></div><div id="t2s"></div>${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge)')}<div class="mu">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div>
 <h4>Warehouse wise Remark rules</h4><div class="row">Kin rows par: <select id="t2sc"><option value="all">Poori DSR</option><option value="new">Sirf abhi add hui rows</option></select><button id="t2ru">Remark rules chalao</button></div><div class="mu">Rules: Bulk/India, Bulk9, China/China-CJ (courier ke saath/bina), WH Not Assigned — aapke document ke hisaab se.</div>`);
 $('#p3').innerHTML=fb('t3','Step 3 · Last Mile (Logistics) file','Logistics file se status/pickup/delivery date copy hoti hai aur Final Remark transition lagta hai.',`${pb('t3')}<h4>Logistics status column</h4><div class="row"><select id="t3sc"></select></div>
 <div class="mu">Delivered mane jaane wale status:</div><div id="t3de"></div><div class="mu" style="margin-top:6px">RTO / Cancel wale status (Order Cancelled ke remark ke liye):</div><div id="t3rt"></div>
@@ -91,23 +91,23 @@ function frChips(p){const c=C(),old=$('#'+p+'fr input')?chk(p+'fr'):null,def=['B
 const frSel=p=>chk(p+'fr-i');
 
 /* ---------- pairs ---------- */
-function addPair(p,sIdx){const F=S.f[p],d=document.createElement('div');d.className='row pr';
-  d.innerHTML=`<select class="s">${op(F.H,sIdx||0)}</select> → <select class="dsr d" data-new="1"></select><input type="text" class="nn" style="display:none" placeholder="naya column ka naam">`;
-  $('#'+p+'pb').append(d);const s=d.querySelector('.s'),t=d.querySelector('.d'),n=d.querySelector('.nn');
-  t.onchange=()=>n.style.display=t.value==='new'?'':'none';
-  const auto=()=>{const i=S.d.H.findIndex(h=>eq(h,F.H[+s.value]));t.value=i>=0?String(i):'new';n.value=F.H[+s.value];t.onchange()};
-  s.onchange=auto;fillDsr();auto()}
-const gp=p=>$$(`#${p}pb .pr`).map(d=>({s:+d.querySelector('.s').value,d:d.querySelector('.d').value==='new'?-1:+d.querySelector('.d').value,name:d.querySelector('.nn').value.trim()||S.f[p].H[+d.querySelector('.s').value]}));
+function addPair(p){const F=S.f[p],d=document.createElement('div');d.className='row pr';
+  d.innerHTML=`<select class="dsr d" data-ph="1"${p==='t2'?'':' data-new="1"'}></select> ← <select class="s"><option value="-1">— File ka column —</option>${op(F.H)}</select><input type="text" class="nn" style="display:none" placeholder="naya column ka naam"><button class="g x" title="hatao">✕</button>`;
+  $('#'+p+'pb').append(d);const t=d.querySelector('.d'),n=d.querySelector('.nn');
+  t.onchange=()=>{n.style.display=t.value==='new'?'':'none'};d.querySelector('.x').onclick=()=>d.remove();fillDsr();return d}
+const gp=p=>$$(`#${p}pb .pr`).map(d=>{const dv=d.querySelector('.d').value,s=+d.querySelector('.s').value;return{s,d:dv==='new'?-1:+dv,name:d.querySelector('.nn').value.trim()||(s>=0?S.f[p].H[s]:''),ok:s>=0&&dv!=='-1'&&dv!==''}}).filter(q=>q.ok);
 const ensure=q=>q.forEach(x=>{if(x.d<0){const e=S.d.H.indexOf(x.name);if(e>=0)x.d=e;else{S.d.H.push(x.name);S.d.rows.forEach(r=>r.push(null));x.d=S.d.H.length-1}}});
-['t3','t4','t5'].forEach(p=>$('#'+p+'ap').onclick=()=>S.f[p]&&addPair(p));
+const keyOk=p=>{const ok=+$('#'+p+'dk').value>=0&&+$('#'+p+'fk').value>=0;if(!ok)alert('Pehle ① Lookup select karo: DSR ka column aur file ka column');return ok};
+function autoPairs(p){const F=S.f[p];if(!F||!S.d)return;$$(`#${p}pb .pr`).forEach(d=>{if(+d.querySelector('.s').value<0&&d.querySelector('.d').value==='-1')d.remove()});
+  const used=new Set(gp(p).map(q=>q.d));
+  S.d.H.forEach((h,i)=>{const j=F.H.findIndex(x=>eq(x,h));if(j<0||used.has(i)||(p==='t2'&&S.d.F[i]))return;const d=addPair(p);d.querySelector('.d').value=String(i);d.querySelector('.s').value=String(j)})}
+['t2','t3','t4','t5'].forEach(p=>{$('#'+p+'ap').onclick=()=>S.f[p]&&addPair(p);$('#'+p+'au').onclick=()=>autoPairs(p)});
 
 function bind(p,hook){$('#'+p+'f').onchange=async e=>{
   if(!S.d){alert('Pehle Master upload karo');e.target.value='';return}
   const f=e.target.files[0];if(!f)return;const F=await rd(f);S.f[p]=F;
   $('#'+p+'i').innerHTML=`✅ ${esc(f.name)} — ${F.rows.length} rows, ${F.H.length} columns`;
-  $('#'+p+'fk').innerHTML=op(F.H,0);$('#'+p+'c').classList.remove('off');fillDsr();
-  const dk=$('#'+p+'dk'),c=C();dk.value=String(p==='t3'?(c.awb>=0?c.awb:gi(S.d.H,/awb|tracking/i)):gi(S.d.H,/order.?(id|no)/i));
-  dk.onchange=()=>{const i=F.H.findIndex(h=>eq(h,S.d.H[+dk.value]));if(i>=0)$('#'+p+'fk').value=i;if(p==='t2')mapUI()};dk.onchange();
+  $('#'+p+'fk').innerHTML='<option value="-1">— Select karo —</option>'+op(F.H,-1);$('#'+p+'c').classList.remove('off');fillDsr();$('#'+p+'dk').selectedIndex=0;
   if($('#'+p+'pb')){$('#'+p+'pb').innerHTML='';addPair(p)}
   hook&&hook(F)}}
 
@@ -116,21 +116,18 @@ $('#mf').onchange=async e=>{const f=e.target.files[0];if(!f)return;const D=await
   $('#mi').innerHTML=`✅ ${esc(f.name)} — ${D.rows.length} rows, ${D.H.length} columns. Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`;
   $('#cfg').classList.remove('off');refresh()};
 
-$$('#cfg select').forEach(s=>s.addEventListener('change',()=>S.f.t2&&mapUI()));
 /* ---------- Step 2 ---------- */
-bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';mapUI()});
-function mapUI(){const F=S.f.t2,d=S.d,c=C();if(!F)return;
-  $('#t2mp').innerHTML='<tr><th>Master column</th><th>Source</th></tr>'+d.H.map((h,i)=>{const j=F.H.findIndex(x=>eq(x,h));
-    const def=d.F[i]?'F':j>=0?String(j):(i===c.fr||i===c.rm)?'B':'Z';
-    return`<tr><td>${esc(h)}</td><td><select class="mp">${[['Z','0 se fill'],['B','Blank chhodo'],...(d.F[i]?[['F','Formula: '+d.F[i].f]]:[])].map(([v,l])=>`<option value="${v}"${def===v?' selected':''}>${esc(l)}</option>`).join('')}${F.H.map((x,k)=>`<option value="${k}"${def===String(k)?' selected':''}>Order: ${esc(x)}</option>`).join('')}</select></td></tr>`}).join('')}
-$('#t2ck').onclick=()=>{const F=S.f.t2;if(!F)return alert('Order file upload karo');const dk=+$('#t2dk').value,fk=+$('#t2fk').value;
+bind('t2',()=>{S.miss=[];$('#t2s').innerHTML='';$('#t2add').disabled=true});
+$('#t2add').onclick=()=>t2add();
+$('#t2ck').onclick=()=>{const F=S.f.t2;if(!F)return alert('Order file upload karo');if(!keyOk('t2'))return;const dk=+$('#t2dk').value,fk=+$('#t2fk').value;
   const have=new Set(S.d.rows.map(r=>nm(r[dk]))),seen=new Set();let f=0,dup=0;S.miss=[];
   F.rows.forEach(r=>{const k=nm(r[fk]);if(!k)return;if(have.has(k)){f++;return}if(seen.has(k)){dup++;return}seen.add(k);S.miss.push(r)});
-  $('#t2s').innerHTML=`<div class="stats"><div class="stat"><b>${F.rows.length}</b>Order rows</div><div class="stat"><b class="ok">${f}</b>DSR me already</div><div class="stat"><b class="er">${S.miss.length}</b>DSR me nahi</div></div>${dup?`<div class="mu">${dup} duplicate order rows skip</div>`:''}${S.miss.length?'<div class="row"><button id="t2add">Missing rows DSR me add karo</button></div>':'<div class="ok">Sab available hain 👍</div>'}`;
-  if(S.miss.length)$('#t2add').onclick=t2add};
-function t2add(){snap();const d=S.d,mp=$$('#t2mp select').map(s=>s.value);S.ns=d.rows.length;
-  S.miss.forEach(x=>{d.rows.push(mp.map((m,i)=>{if(m==='F')return null;if(m==='Z')return 0;if(m==='B')return null;const v=gv(x[+m]);return v===''||v==null?null:v}))});
-  $('#t2s').innerHTML=`<div class="ok">✅ ${S.miss.length} nayi rows add hui (unrelated columns = 0, formula columns me formula). Ab neeche Remark rules chalao.</div>`;S.miss=[];refresh()}
+  $('#t2s').innerHTML=`<div class="stats"><div class="stat"><b>${F.rows.length.toLocaleString()}</b>Order rows</div><div class="stat"><b class="ok">${f.toLocaleString()}</b>DSR me already</div><div class="stat"><b class="er">${S.miss.length.toLocaleString()}</b>DSR me nahi</div></div>${dup?`<div class="mu">${dup} duplicate order rows skip</div>`:''}${S.miss.length?'':'<div class="ok">Sab available hain 👍</div>'}`;
+  const b=$('#t2add');b.disabled=!S.miss.length;b.textContent=S.miss.length?`${S.miss.length.toLocaleString()} missing rows DSR me add karo`:'Add karne ko kuch nahi'};
+function t2add(){if(!S.miss.length)return;const q=gp('t2');if(!q.length&&!confirm('Koi column map nahi kiya, sirf 0/blank rows judengi. Aage badhein?'))return;
+  snap();const d=S.d,c=C(),mp=new Map(q.map(x=>[x.d,x.s]));S.ns=d.rows.length;
+  S.miss.forEach(x=>d.rows.push(d.H.map((_,i)=>{if(mp.has(i)){const v=gv(x[mp.get(i)]);return v===''||v==null?null:v}return d.F[i]||i===c.fr||i===c.rm?null:0})));
+  $('#t2s').innerHTML=`<div class="ok">✅ ${S.miss.length.toLocaleString()} nayi rows add hui (chune hue columns file se, baaki 0, formula columns me formula). Ab neeche Remark rules chalao.</div>`;S.miss=[];$('#t2add').disabled=true;$('#t2add').textContent='Missing rows DSR me add karo';refresh()}
 
 const DP='Dispatch Pending at india wh',LM='Last Mile Intrasit',DL='Delivered to end buyer',OC='Order Cancelled',INP='Invoice Not Prepared',B9='Bulk9 Order Pending';
 function rules(start){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows;
@@ -159,7 +156,7 @@ $('#t2ru').onclick=()=>{if(!S.d)return alert('Master upload karo');if(!need('wh'
 bind('t3',F=>{$('#t3sc').innerHTML=op(F.H,gi(F.H,/status/i));t3st();$('#t3sc').onchange=t3st});
 function t3st(){const F=S.f.t3,c=+$('#t3sc').value,v=uniq(F.rows,c);
   $('#t3de').innerHTML=chips('t3de-i',v,x=>/deliver/i.test(x)&&!/undeliver|not|rto|fail/i.test(x));$('#t3rt').innerHTML=chips('t3rt-i',v,x=>/rto/i.test(x))}
-$('#t3go').onclick=()=>{const F=S.f.t3;if(!F||!need('fr','rm'))return;snap(gp('t3').map(x=>x.d));const dk=+$('#t3dk').value,fk=+$('#t3fk').value,sc=+$('#t3sc').value,q=gp('t3'),{fr,rm}=C();ensure(q);
+$('#t3go').onclick=()=>{const F=S.f.t3;if(!F||!need('fr','rm')||!keyOk('t3'))return;snap(gp('t3').map(x=>x.d));const dk=+$('#t3dk').value,fk=+$('#t3fk').value,sc=+$('#t3sc').value,q=gp('t3'),{fr,rm}=C();ensure(q);
   const de=chk('t3de-i'),rt2=chk('t3rt-i'),map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});
   const src=[B9,DP,'FM Intrasit',INP,'Reached at india wh','WH Not Assigned'].map(s=>s.toLowerCase());let m=0,a=0,b=0,c=0;const hit=new Set();
   S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null)r[y.d]=v});
@@ -170,7 +167,7 @@ $('#t3go').onclick=()=>{const F=S.f.t3;if(!F||!need('fr','rm'))return;snap(gp('t
   $('#t3r').innerHTML=`<div class="ok">✅ ${m} rows match hui.</div><ul><li>Last Mile Intrasit set: <b>${c}</b></li><li>Delivered to end buyer: <b>${a}</b></li><li>Order Cancelled remark update: <b>${b}</b></li><li>File ke keys jo DSR me nahi mile: <b>${map.size-hit.size}</b></li></ul>`;refresh()};
 
 /* ---------- Step 4 & 5 ---------- */
-function fileStage(p,useSt){const F=S.f[p];if(!F||!need('fr','rm'))return;snap(gp(p).map(x=>x.d));const dk=+$('#'+p+'dk').value,fk=+$('#'+p+'fk').value,q=gp(p),{fr,rm}=C();ensure(q);
+function fileStage(p,useSt){const F=S.f[p];if(!F||!need('fr','rm')||!keyOk(p))return;snap(gp(p).map(x=>x.d));const dk=+$('#'+p+'dk').value,fk=+$('#'+p+'fk').value,q=gp(p),{fr,rm}=C();ensure(q);
   const sel=frSel(p),sc=useSt?+$('#'+p+'sc').value:-1,st=useSt?chk(p+'st-i'):null,a=$('#'+p+'nf').value.trim(),b=$('#'+p+'nr').value.trim();
   const map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});let m=0,u=0;const hit=new Set();
   S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null)r[y.d]=v});
