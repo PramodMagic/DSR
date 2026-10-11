@@ -33,7 +33,13 @@ Final Remark <select class="dsr" data-ph="1" id="cf"></select> Remark <select cl
 
 <section id="p2"></section><section id="p3"></section><section id="p4"></section><section id="p5"></section>
 
-<section id="p6"><div class="card"><h3>DSR dekho (Excel jaisa filter)</h3>
+<section id="p6"><div class="card"><h3>⑤ Order Date se columns fill karo (Month / Week / Time / Date)</h3>
+<div class="mu">Order Date se: <b>Month</b> = mahine ka naam (October), <b>Week</b> = Week1 jaisa, <b>Time of order</b> = sirf time, <b>Payment by reseller</b> = sirf date. Sab rows par lagta hai (nayi + purani). Agar in columns me pehle formula tha to ab seedha value ban jati hai.</div>
+<div class="row"><label class="mu"><b>DSR ka Order Date column</b><br><select class="dsr" data-ph="1" id="fxo"></select></label></div>
+<div class="row"><label class="mu"><b>Month</b><br><select class="dsr" data-ph="1" id="fxm"></select></label> <label class="mu"><b>Week</b><br><select class="dsr" data-ph="1" id="fxw"></select></label> <label class="mu"><b>Time of order</b><br><select class="dsr" data-ph="1" id="fxt"></select></label> <label class="mu"><b>Payment by reseller</b><br><select class="dsr" data-ph="1" id="fxp"></select></label></div>
+<div class="row"><label class="mu">Week ka tarika<br><select id="fxwm"><option value="m">Month ka week (1-7 = Week1, 8-14 = Week2 ...)</option><option value="y">Saal ka week number (ISO)</option></select></label> <label class="mu">Time ka format<br><select id="fxtf"><option value="2">dd-mm-yyyy hh:mm:ss (00-01-1900 10:25:05, aapke example jaisa)</option><option value="1">hh:mm:ss (10:25:05)</option></select></label></div>
+<div class="row"><label><input type="checkbox" id="fxa" checked> Download se pehle aur "Sab ek saath chalao" ke aakhir me ye apne aap chalao</label><button id="fxgo">Ab fill karo</button></div><div id="fxs"></div></div>
+<div class="card"><h3>DSR dekho (Excel jaisa filter)</h3>
 <div class="row">Column <select class="dsr" id="vc"></select> Value <select id="vv"></select> Search <input type="text" id="vq" placeholder="kuch bhi likho"><button id="vb">Filter</button><button id="dl2">⬇ Download</button></div>
 <div id="vm" class="mu"></div><div class="sc"><table id="vt"></table></div></div></section>
 </main>
@@ -67,8 +73,8 @@ async function rd(f,x){
   return{name:f.name,H:R.H,rows:R.rows,F:R.F,dateCols:R.dateCols,hdrRow:R.hdrRow,preview:R.preview,dataPath:R.dataPath,sheetName:(R.sheets[R.sheetIdx]||{}).name||'-'}}
 
 function snap(extra){const c=C(),ix=[...new Set([c.fr,c.rm,...(extra||[])].filter(i=>i>=0&&i<S.d.H.length))];
-  S.hist.push({len:S.d.rows.length,hl:S.d.H.length,ns:S.ns,cols:ix.map(i=>[i,S.d.rows.map(r=>r[i])])});if(S.hist.length>5)S.hist.shift()}
-$('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return alert('Undo ke liye kuch nahi hai');const d=S.d;d.rows.length=h.len;d.H.length=h.hl;d.rows.forEach(r=>r.length=h.hl);h.cols.forEach(([i,a])=>{for(let k=0;k<h.len;k++)d.rows[k][i]=a[k]});S.ns=h.ns;refresh()};
+  S.hist.push({len:S.d.rows.length,hl:S.d.H.length,ns:S.ns,F:{...S.d.F},cf:{...(S.d.colFmt||{})},cols:ix.map(i=>[i,S.d.rows.map(r=>r[i])])});if(S.hist.length>5)S.hist.shift()}
+$('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return alert('Undo ke liye kuch nahi hai');const d=S.d;d.rows.length=h.len;d.H.length=h.hl;d.rows.forEach(r=>r.length=h.hl);h.cols.forEach(([i,a])=>{for(let k=0;k<h.len;k++)d.rows[k][i]=a[k]});S.ns=h.ns;if(h.F)d.F=h.F;d.colFmt=h.cf||{};refresh()};
 function refresh(){$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;fillDsr()}
 function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,(s.dataset.ph?'<option value="-1">— Select karo —</option>':'')+(s.dataset.new?'<option value="new">➕ Naya column</option>':''));if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))})}
 
@@ -126,7 +132,7 @@ function bind(p,hook){
 /* ---------- Step 1 ---------- */
 async function loadMaster(f){const D=await rd(f,'m'),F=D.F;S.d={name:f.name,H:D.H,rows:D.rows,F,dateCols:D.dateCols,dataPath:D.dataPath,sheetName:D.sheetName,hdrRow:D.hdrRow};S.hist=[];S.f={};S.fo={};S.ns=0;$$('select.dsr').forEach(s=>s.innerHTML='');fillDsr();
   $('#mi').innerHTML=`✅ ${esc(f.name)} — Sheet <b>${esc(D.sheetName)}</b>, <b>Header row ${D.hdrRow}</b>, ${D.rows.length.toLocaleString()} rows, ${D.H.length} columns.<br>Pehle columns: <i>${D.H.slice(0,8).map(esc).join(' | ')}</i><br>Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`+pvHtml('m',D);
-  $('#cfg').classList.remove('off');refresh();spDefaults()}
+  $('#cfg').classList.remove('off');refresh();spDefaults();fxDefaults()}
 $('#mf').onchange=e=>{const f=e.target.files[0];if(!f)return;S.mfile=f;$('#mhr').value='';$('#msh').value='-1';loadMaster(f)};
 $('#msh').onchange=()=>{if(S.mfile){$('#mhr').value='';loadMaster(S.mfile)}};
 $('#mhb').onclick=()=>S.mfile?loadMaster(S.mfile):alert('Pehle Master file chuno');
@@ -176,9 +182,10 @@ function t2update(){const F=S.f.t2;if(!F||!S.d)return alert('Pehle Order data fi
   let ex='';if(ur){const o=rules(0,$('#t2us2').value==='a'?null:mask),k=Object.keys(o).sort();ex=k.length?'<ul>'+k.map(x=>`<li>${esc(x)}: <b>${o[x]}</b></li>`).join('')+'</ul>':'<div class="mu">Remark rules se koi change nahi hua.</div>'}
   $('#t2us').innerHTML=`<div class="ok">✅ ${m.toLocaleString()} rows order data se match hui. Update hua: ${q.map((y,k)=>esc(d.H[y.d])+' <b>'+per[k].toLocaleString()+'</b>').join(' · ')}.${useC?` Courier column: ${nA.toLocaleString()} rows me AWB, ${nZ.toLocaleString()} me 0 (${ch.toLocaleString()} badli).`:''}${ur?' Remark rules:':''}</div>${ex}`;refresh()}
 $('#t2up').onclick=t2update;
+$('#fxgo').onclick=()=>fxFill(false);
 $('#t2all').onclick=()=>{if(!S.f.t2||!S.d)return alert('Pehle Order data file upload karo');if(!keyOk('t2'))return;
   if(!gp('t2u').length)return alert('④ me status update ki jodiyan chuno (Auto mapping lagao dabao)');
-  t2check();if(S.miss.length&&!t2add())return;t2update()};
+  t2check();if(S.miss.length&&!t2add())return;t2update();if($('#fxa').checked)fxFill(true)};
 $('#t2add').onclick=()=>t2add();
 function t2check(){const F=S.f.t2;if(!F||!S.d)return;const dk=+$('#t2dk').value,fk=+$('#t2fk').value;if(!(dk>=0&&fk>=0))return;
   const have=new Set(S.d.rows.map(r=>nm(r[dk]))),seen=new Set();let f=0,dup=0;S.miss=[];
@@ -205,6 +212,27 @@ const DP='Dispatch Pending at india wh',LM='Last Mile Intrasit',DL='Delivered to
 const spCfg=()=>{const c=+($('#spc')||{}).value,v=nm(($('#spv')||{}).value||'');if(!(c>=0)||!v)return null;return{c,v,vr:$('#spv').value.trim(),f:$('#spf').value.trim(),r:$('#spr').value.trim(),p:($('#spp').value||'').toUpperCase()}};
 const isSP=r=>{const c=spCfg();return !!c&&nm(r[c.c])===c.v&&(!c.p||tx(r[C().pay]).toUpperCase()===c.p)};
 function spDefaults(){if(!S.d||+$('#spc').value>=0)return;const H=S.d.H;let i=H.findIndex(h=>/^username$/i.test(String(h).trim()));if(i<0)i=H.findIndex(h=>/^(user name|seller)$/i.test(String(h).trim()));if(i>=0)$('#spc').value=String(i)}
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function toSerial(v){v=gv(v);if(v==null||v==='')return null;if(typeof v==='number')return v>0?v:null;
+  const t=String(v).trim();let y,mo,d,h=0,mi=0,sec=0,m;
+  if(m=/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(t)){y=+m[1];mo=+m[2];d=+m[3];h=+(m[4]||0);mi=+(m[5]||0);sec=+(m[6]||0)}
+  else if(m=/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/.exec(t)){d=+m[1];mo=+m[2];y=+m[3];h=+(m[4]||0);mi=+(m[5]||0);sec=+(m[6]||0)}
+  else if(/^\d+(\.\d+)?$/.test(t)){const n=+t;return n>0?n:null}
+  else return null;
+  if(mo<1||mo>12||d<1||d>31)return null;
+  return Date.UTC(y,mo-1,d)/86400000+25569+(h*3600+mi*60+sec)/86400}
+const ymd=n=>{const dt=new Date((Math.floor(n+1e-9)-25569)*86400000);return{y:dt.getUTCFullYear(),m:dt.getUTCMonth(),d:dt.getUTCDate()}};
+const isoWeek=o=>{const t=new Date(Date.UTC(o.y,o.m,o.d)),dn=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-dn+3);const f=new Date(Date.UTC(t.getUTCFullYear(),0,4));return 1+Math.round(((t-f)/86400000-3+((f.getUTCDay()+6)%7))/7)};
+function fxDefaults(){if(!S.d)return;const H=S.d.H,set=(id,re)=>{if(+$('#'+id).value>=0)return;const i=H.findIndex(h=>re.test(String(h).trim()));if(i>=0)$('#'+id).value=String(i)};
+  set('fxo',/^order date$/i);set('fxm',/^month$/i);set('fxw',/^week$/i);set('fxt',/^time of order$/i);set('fxp',/^payment by reseller$/i)}
+function fxFill(silent){const d=S.d;if(!d)return;const g=id=>+$('#'+id).value,o=g('fxo'),cm=g('fxm'),cw=g('fxw'),ct=g('fxt'),cp=g('fxp'),cols=[cm,cw,ct,cp].filter(i=>i>=0);
+  if(!(o>=0)||!cols.length){if(!silent)alert('⑤ me Order Date column aur kam se kam ek fill hone wala column select karo');return}
+  snap(cols);d.colFmt=Object.assign({},d.colFmt||{});if(cp>=0)d.colFmt[cp]='date';if(ct>=0)d.colFmt[ct]=$('#fxtf').value==='1'?'t1':'t2';
+  let conv=0;cols.forEach(i=>{if(d.F[i]){delete d.F[i];conv++}});
+  const wm=$('#fxwm').value==='m';let n=0,bad=0;
+  d.rows.forEach(r=>{const sv=toSerial(r[o]);if(sv==null){const t=tx(r[o]);if(t!==''&&t!=='0')bad++;return}n++;const p=ymd(sv);
+    if(cm>=0)r[cm]=MONTHS[p.m];if(cw>=0)r[cw]='Week'+(wm?Math.ceil(p.d/7):isoWeek(p));if(ct>=0)r[ct]=Math.round((sv-Math.floor(sv+1e-9))*86400)/86400;if(cp>=0)r[cp]=Math.floor(sv+1e-9)});
+  $('#fxs').innerHTML=`<div class="ok">✅ ${n.toLocaleString()} rows me fill hua: ${cols.map(i=>esc(d.H[i])).join(', ')}.${conv?` (${conv} column me pehle formula tha, ab seedha value hai)`:''}${bad?` ⚠ ${bad} rows ki Order Date samajh nahi aayi (skip hui).`:''}</div>`;refresh()}
 const STRICT=()=>{const x=$('#t2st');return !!(x&&x.checked)};
 function rules(start,mask){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows,SP=spCfg();
   for(let i=start;i<R.length;i++){if(mask&&!mask[i])continue;const r=R[i],w0=nm(r[wh]),w=w0==='0'?'':w0,p=tx(r[pay]).toUpperCase();let f=rt(r[fr]),m=rt(r[rm]);
@@ -262,7 +290,7 @@ function vShow(){const d=S.d,c=+$('#vc').value,v=$('#vv').value,q=$('#vq').value
   $('#vm').textContent=`${rows.length} rows mili (pehli 200 dikh rahi hain). Formula cells Excel me khulte hi calculate hongi.`;
   $('#vt').innerHTML='<tr>'+d.H.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr>'+rows.slice(0,200).map(r=>'<tr>'+r.map(x=>`<td>${x&&x.f&&x.v===undefined?'ƒ':esc(tx(x))}</td>`).join('')+'</tr>').join('')}
 $('#vb').onclick=vShow;
-async function download(){if(!S.d)return alert('Master upload nahi hui');
+async function download(){if(!S.d)return alert('Master upload nahi hui');if($('#fxa').checked)fxFill(true);
   try{const prog=(i,n)=>{$('#st').textContent=`⏳ Excel ban rahi hai... ${i.toLocaleString()} / ${n.toLocaleString()} rows`};
     const keep=$('#keep').checked&&S.mfile&&S.d.dataPath&&!/\.csv$/i.test(S.mfile.name);
     const parts=keep?await DSRCore.writeXlsxPreserve(S.d,()=>S.mfile.stream(),{onProgress:prog,onCopy:n=>{$('#st').textContent='⏳ Original sheets copy ho rahi hain... '+Math.round(n/1048576)+' MB'}}):await DSRCore.writeXlsx(S.d,{sheet:S.d.sheetName||'DSR',onProgress:prog});
