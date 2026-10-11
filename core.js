@@ -142,9 +142,13 @@ async function sheetPart(zip, d, o) {
   const fa = new Array(W); for (const c of Object.keys(F || {})) if (+c < W) fa[+c] = compileFormula(F[c].f, F[c].row);
   const sh = new ff.ZipDeflate(o.path, { level: 1 }); zip.add(sh);
   const cn = Array.from({ length: W }, (_, i) => colName(i)), last = cn[W - 1] + (hdr + n), dsa = o.ds != null ? ' s="' + o.ds + '"' : '', hsa = o.hs != null ? ' s="' + o.hs + '"' : '';
-  const cf = d.colFmt || {}, sty = new Array(W).fill(null);
-  for (let c = 0; c < W; c++) { const k = cf[c]; if (k === 't1' && o.t1 != null) sty[c] = [' s="' + o.t1 + '"', true]; else if (k === 't2' && o.t2 != null) sty[c] = [' s="' + o.t2 + '"', true]; else if ((k === 'date' || dc.has(c)) && o.ds != null) sty[c] = [dsa, false] }
-  let s = X + `<worksheet ${NS}><sheetViews><sheetView workbookViewId="0"><pane ySplit="${hdr}" topLeftCell="A${hdr + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/><sheetData><row r="${hdr}">`;
+  const cf = d.colFmt || {}, sty = new Array(W).fill(null), zero = !!o.zero, bsa = o.bs != null ? ' s="' + o.bs + '"' : '';
+  for (let c = 0; c < W; c++) { const k = cf[c]; if (k === 't1' && o.t1 != null) sty[c] = ' s="' + o.t1 + '"'; else if (k === 't2' && o.t2 != null) sty[c] = ' s="' + o.t2 + '"'; else if ((k === 'date' || dc.has(c)) && o.ds != null) sty[c] = dsa }
+  const wd = H.map(h => Math.min(40, Math.max(10, String(h).length * 1.15 + 3)));
+  for (let k = 0; k < Math.min(n, 300); k++) { const row = rows[k]; for (let c = 0; c < W; c++) { const v = row[c]; if (v != null) { const L = typeof v === 'string' ? Math.min(45, v.length + 2) : 13; if (L > wd[c]) wd[c] = L } } }
+  for (let c = 0; c < W; c++) { const k = cf[c]; if (k === 't2') wd[c] = Math.max(wd[c], 22); else if (k === 't1') wd[c] = Math.max(wd[c], 11); else if (k === 'date' || dc.has(c)) wd[c] = Math.max(wd[c], 13) }
+  const cols = '<cols>' + wd.map((w, c) => `<col min="${c + 1}" max="${c + 1}" width="${w.toFixed(1)}" customWidth="1"/>`).join('') + '</cols>';
+  let s = X + `<worksheet ${NS}><sheetViews><sheetView workbookViewId="0"><pane ySplit="${hdr}" topLeftCell="A${hdr + 1}" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>${cols}<sheetData><row r="${hdr}" ht="32" customHeight="1">`;
   for (let c = 0; c < W; c++) s += `<c r="${cn[c]}${hdr}"${hsa} t="inlineStr"><is><t xml:space="preserve">${esc(String(H[c]))}</t></is></c>`;
   s += '</row>'; sh.push(enc.encode(s), false);
   const B = 2000;
@@ -154,11 +158,11 @@ async function sheetPart(zip, d, o) {
       const r = hdr + k + 1, row = rows[k]; out += '<row r="' + r + '">';
       for (let c = 0; c < W; c++) {
         const fx = fa[c];
-        if (fx !== undefined) { out += '<c r="' + cn[c] + r + '"><f>' + esc(fx(r).slice(1)) + '</f></c>'; continue }
-        const v = row[c]; if (v == null) continue; const t = typeof v;
-        if (t === 'number') { if (v === v && v !== Infinity && v !== -Infinity) { const sy = sty[c]; out += '<c r="' + cn[c] + r + '"' + (sy && (sy[1] || v !== 0) ? sy[0] : '') + '><v>' + v + '</v></c>' } }
-        else if (t === 'string') { if (v !== '') out += '<c r="' + cn[c] + r + '" t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>' }
-        else if (t === 'boolean') out += '<c r="' + cn[c] + r + '" t="b"><v>' + (v ? 1 : 0) + '</v></c>';
+        if (fx !== undefined) { out += '<c r="' + cn[c] + r + '"' + bsa + '><f>' + esc(fx(r).slice(1)) + '</f></c>'; continue }
+        let v = row[c]; if (v == null || v === '') { if (!zero) continue; v = 0 } const t = typeof v;
+        if (t === 'number') { if (v === v && v !== Infinity && v !== -Infinity) { const sy = sty[c]; out += '<c r="' + cn[c] + r + '"' + (sy && v !== 0 ? sy : bsa) + '><v>' + v + '</v></c>' } }
+        else if (t === 'string') { out += '<c r="' + cn[c] + r + '"' + bsa + ' t="inlineStr"><is><t xml:space="preserve">' + esc(v) + '</t></is></c>' }
+        else if (t === 'boolean') out += '<c r="' + cn[c] + r + '"' + bsa + ' t="b"><v>' + (v ? 1 : 0) + '</v></c>';
       }
       out += '</row>';
     }
@@ -173,14 +177,14 @@ async function writeXlsx(d, opt = {}) {
   addText(zip, '_rels/.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
   addText(zip, 'xl/workbook.xml', X + `<workbook ${NS} ${RNS}><sheets><sheet name="${esc(sheet)}" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
   addText(zip, 'xl/_rels/workbook.xml.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
-  addText(zip, 'xl/styles.xml', X + `<styleSheet ${NS}><numFmts count="3"><numFmt numFmtId="164" formatCode="dd\\-mmm\\-yyyy"/><numFmt numFmtId="165" formatCode="hh:mm:ss"/><numFmt numFmtId="166" formatCode="dd\\-mm\\-yyyy\\ hh:mm:ss"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
-  await sheetPart(zip, d, { path: 'xl/worksheets/sheet1.xml', hdr: 1, ds: 1, hs: 2, t1: 3, t2: 4, onProgress: opt.onProgress }); zip.end();
+  addText(zip, 'xl/styles.xml', X + `<styleSheet ${NS}><numFmts count="3"><numFmt numFmtId="164" formatCode="dd\\-mmm\\-yyyy"/><numFmt numFmtId="165" formatCode="hh:mm:ss"/><numFmt numFmtId="166" formatCode="dd\\-mm\\-yyyy\\ hh:mm:ss"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E6B52"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
+  await sheetPart(zip, d, { path: 'xl/worksheets/sheet1.xml', hdr: 1, ds: 1, hs: 2, t1: 3, t2: 4, bs: 5, zero: opt.zero, onProgress: opt.onProgress }); zip.end();
   return parts;
 }
 /* original file ko base bana kar sirf data sheet badalta hai: dusri sheets, formulas, pivot sab bache rahte hain */
 async function writeXlsxPreserve(d, getStream, opt = {}) {
   const parts = [], zip = mkZip(parts), dp = d.dataPath, rel = dp.replace('worksheets/', 'worksheets/_rels/') + '.rels', hdr = d.hdrRow || 1;
-  const last = colName(d.H.length - 1) + (hdr + d.rows.length); let ds = null, t1 = null, t2 = null;
+  const last = colName(d.H.length - 1) + (hdr + d.rows.length); let ds = null, t1 = null, t2 = null, hs = null, bs = null;
   const patch = (n, t) => {
     if (n === '[Content_Types].xml') return t.replace(/<Override[^>]*calcChain[^>]*\/>/g, '');
     if (n === 'xl/_rels/workbook.xml.rels') return t.replace(/<Relationship\b[^>]*calcChain[^>]*\/>/g, '');
@@ -190,11 +194,23 @@ async function writeXlsxPreserve(d, getStream, opt = {}) {
       return t.replace('</workbook>', '<calcPr fullCalcOnLoad="1"/></workbook>');
     }
     if (n === 'xl/styles.xml') {
-      const m = /<cellXfs count="(\d+)"/.exec(t); if (!m) return t; ds = +m[1]; t1 = ds + 1; t2 = ds + 2;
+      const m = /<cellXfs count="(\d+)"/.exec(t); if (!m) return t; const base = +m[1]; ds = base; t1 = base + 1; t2 = base + 2;
       const nf = '<numFmt numFmtId="196" formatCode="dd\\-mm\\-yyyy\\ hh:mm:ss"/>';
       if (/<numFmts count="\d+"/.test(t)) t = t.replace(/<numFmts count="(\d+)"([^>]*)>/, (a, c, r) => `<numFmts count="${+c + 1}"${r}>`).replace('</numFmts>', nf + '</numFmts>');
       else t = t.replace(/(<styleSheet\b[^>]*>)/, `$1<numFmts count="1">${nf}</numFmts>`);
-      return t.replace(m[0], `<cellXfs count="${ds + 3}"`).replace('</cellXfs>', '<xf numFmtId="14" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="21" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="196" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>');
+      const gc = tag => { const r = new RegExp('<' + tag + '\\b[^>]*?count="(\\d+)"').exec(t); return r ? +r[1] : null };
+      const fN = gc('fonts'), flN = gc('fills'), bN = gc('borders'), fancy = fN != null && flN != null && bN != null; let bid = 0;
+      if (fancy) {
+        bid = bN;
+        const bump = (tag, xml) => { const c0 = gc(tag); t = t.replace(new RegExp('<' + tag + '\\b([^>]*?)count="\\d+"'), (a, r) => `<${tag}${r}count="${c0 + 1}"`).replace('</' + tag + '>', xml + '</' + tag + '>') };
+        bump('fonts', '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>');
+        bump('fills', '<fill><patternFill patternType="solid"><fgColor rgb="FF1E6B52"/><bgColor indexed="64"/></patternFill></fill>');
+        bump('borders', '<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border>');
+      }
+      const xf = (nfid, extra = '', inner = '') => { const h = extra.includes('H'), at = `<xf numFmtId="${nfid}" fontId="${h ? fN : 0}" fillId="${h ? flN : 0}" borderId="${bid}" xfId="0" applyNumberFormat="1" applyBorder="1"${h ? ' applyFont="1" applyFill="1" applyAlignment="1"' : ''}`; return inner ? at + '>' + inner + '</xf>' : at + '/>' };
+      let xs = xf(14) + xf(21) + xf(196);
+      if (fancy) { xs += xf(0, 'H', '<alignment horizontal="center" vertical="center" wrapText="1"/>') + xf(0); hs = base + 3; bs = base + 4 }
+      return t.replace(m[0], `<cellXfs count="${base + 3 + (fancy ? 2 : 0)}"`).replace('</cellXfs>', xs + '</cellXfs>');
     }
     if (/pivotCacheDefinition\d+\.xml$/.test(n)) {
       t = /refreshOnLoad=/.test(t) ? t : t.replace(/<pivotCacheDefinition\b/, '<pivotCacheDefinition refreshOnLoad="1"');
@@ -212,7 +228,7 @@ async function writeXlsxPreserve(d, getStream, opt = {}) {
   let n = 0, ly = 0;
   for await (const c of chunks(getStream())) { uz.push(c, false); n += c.length; if (n - ly > 4194304) { ly = n; opt.onCopy && opt.onCopy(n); await tick() } }
   uz.push(new Uint8Array(0), true);
-  await sheetPart(zip, d, { path: dp, hdr, ds, hs: null, t1, t2, onProgress: opt.onProgress }); zip.end();
+  await sheetPart(zip, d, { path: dp, hdr, ds, hs, bs, t1, t2, zero: opt.zero, onProgress: opt.onProgress }); zip.end();
   return parts;
 }
 const api = { readXlsx, readCsvText, writeXlsx, writeXlsxPreserve, compileFormula, colName, colIdx };
