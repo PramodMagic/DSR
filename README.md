@@ -21,6 +21,11 @@ Sab kuch aapke browser me chalta hai, data kahin upload nahi hota.
 - **🔄 Update Order Data (upar header me):** ek click me: missing orders add → status update → Courier → Remark rules (Special rule samet) → Order Date columns. Khatam hone par summary dikhti hai aur seedha Download ka button milta hai. (Pehle Master + Step 2 me Order file upload karni hoti hai.)
 - **Page saaf rakhne ke liye:** Step 2 ke sections (② mapping, ③ Courier, ④ status update, advanced rules) folded rehte hain, "Sab kholo / Sab band karo" se control karo. Header ka "ℹ️ Help text" checkbox lambi samjhane wali lines dikhata/chhupata hai (browser yaad rakhta hai).
 - **Download formatting:** header hara rang + bold safed text + wrap, patli border har cell par, column ki chaudai apne aap, header freeze aur filter. "⚙ Download options" me: dusri sheets rakho, aur **khali cells 0 se bharo** (formula wale columns chhodkar; sirf downloaded file me, DSR data nahi badalta).
+- **Step 3 Last Mile (Logistics_Logic.docx ke hisaab se):** ① Lookup (DSR column ↔ logistics column) + extra lookup columns jo serial wise try hote hain (pehla na mile to agla). Phir A, B, C teen steps, har ek me DSR date column ← logistics date column:
+  - **A Pickup:** date sirf tab bharti hai jab DSR me khali ho. Pickup date bhari (nayi ya purani) ho aur Final Remark in 5 me ho (Bulk9 Order Pending, Dispatch Pending at india wh, FM Intrasit, Invoice Not Prepared, WH Not Assigned) → Last Mile Intrasit / Last Mile Intrasit.
+  - **B Delivery:** delivery date bhari ho aur Final Remark in 6 me ho (upar ke 5 + Last Mile Intrasit) → Delivered to end buyer / Shipment Delivered.
+  - **C RTO:** RTO date (ek ya zyada columns) bhari ho to koi bhi Final Remark/Remark ho → Order Cancelled / RTO Received.
+  Teeno A → B → C order me chalte hain (baad wala pehle ko override karta hai). Username special rule (DF Order Cancelled) wali rows ko ye steps nahi chhuate. Text dates (2026-10-05, 05-10-2026) apne aap Excel date ban jati hain. Remark/list sab editable hain.
 - Flow: 1 Master (important columns khud select) → 2 Order Data → 3 Last Mile → 4 Invoice → 5 FM Mile → 6 Dekho/Download. Download button upar hamesha hai.
 
 ## Limits / dhyan dene wali baatein
