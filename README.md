@@ -26,6 +26,7 @@ Sab kuch aapke browser me chalta hai, data kahin upload nahi hota.
   - **B Delivery:** delivery date bhari ho aur Final Remark in 6 me ho (upar ke 5 + Last Mile Intrasit) → Delivered to end buyer / Shipment Delivered.
   - **C RTO:** RTO date (ek ya zyada columns) bhari ho to koi bhi Final Remark/Remark ho → Order Cancelled / RTO Received.
   Teeno A → B → C order me chalte hain (baad wala pehle ko override karta hai). Username special rule (DF Order Cancelled) wali rows ko ye steps nahi chhuate. Text dates (2026-10-05, 05-10-2026) apne aap Excel date ban jati hain. Remark/list sab editable hain.
+- **"N/A" blank maana jata hai:** logistics/order file me N/A, NA, null, none, - jaisi values date ya tracking nahi maani jaati (Last Mile, Courier rule aur China courier check me).
 - Flow: 1 Master (important columns khud select) → 2 Order Data → 3 Last Mile → 4 Invoice → 5 FM Mile → 6 Dekho/Download. Download button upar hamesha hai.
 
 ## Limits / dhyan dene wali baatein

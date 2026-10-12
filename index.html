@@ -68,6 +68,8 @@ const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const gv=v=>v&&typeof v==='object'&&!(v instanceof Date)?v.v:v;
 const tx=v=>{v=gv(v);return v==null?'':v instanceof Date?v.toISOString().slice(0,10):String(v).trim()};
+const NAV=new Set(['','0','n/a','na','null','none','nan','-','--']);
+const isFilled=v=>!NAV.has(tx(v).toLowerCase()),isNA=v=>{const t=tx(v).toLowerCase();return t!==''&&t!=='0'&&NAV.has(t)};
 const nm=v=>tx(v).toLowerCase(), rt=v=>{const t=tx(v);return t==='0'?'':t}, eq=(a,b)=>a.toLowerCase()===b.toLowerCase();
 const op=(a,s,x='')=>x+a.map((h,i)=>`<option value="${i}"${i===s?' selected':''}>${esc(h)}</option>`).join('');
 const uniq=(R,c)=>[...new Set(R.map(r=>tx(r[c])).filter(Boolean))].sort();
@@ -112,8 +114,7 @@ $('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi 
 <details class="sec"><summary>② Column mapping — missing orders DSR me add karne ke liye <span class="mu" id="t2cnt"></span></summary><div class="in">${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge. Final Remark / Remark yahan mat chuno, wo rules se apne aap bharte hain)')}<div class="row"><button id="t2pre">⚡ Auto mapping lagao</button><button id="t2rs" class="g">Original preset par wapas</button><label class="mu">ya naya mapping file upload karo (2 columns: DSR | Order Data, ye yaad rahegi) <input type="file" id="t2mf" accept=".xlsx,.csv"></label></div><div id="t2am" class="mu"></div><div class="mu hint">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><label><input type="checkbox" id="t2ar" checked> Add karne ke baad Warehouse Remark rules apne aap lagao (sirf nayi rows par)</label></div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div></div></details>
 <details class="sec"><summary>③ Courier column rule (tracking ho to AWB, warna 0)</summary><div class="in"><div class="row"><label class="mu"><b>DSR ka Courier column</b><br><select class="dsr" data-ph="1" id="t2cc"></select></label> <span>←</span> <label class="mu"><b>DSR ka Tracking column</b><br><select class="dsr" data-ph="1" id="t2ct"></select></label></div><div class="mu hint">Tracking column me koi tracking ID ho to Courier me <b>AWB</b> jayega; tracking nahi (blank ya 0) ho to Courier me <b>0</b>. Dono dropdown auto-select hote hain, chaho to badal lo.</div></div></details>
 <details class="sec"><summary>④ Jo orders DSR me pehle se hain: current status update <span class="mu" id="t2ucnt"></span></summary><div class="in"><div class="mu hint">Upar ka ① Lookup hi use hota hai. DSR ka column ← Order data ka column chuno (jaise Process By, Tracking Number, Payment Status, Order Status). Order data me jo value blank hai wo DSR ki purani value ko nahi hatati. ③ ka Courier rule (tracking ho to AWB, warna 0) in rows par bhi lagta hai.</div>${pb('t2u','DSR ke column ke bagal me Order data ka column chuno (status update ke liye)')}<div class="row"><button id="t2upre">⚡ Auto mapping lagao</button><button id="t2urs" class="g">Original preset par wapas</button><label class="mu">ya mapping file (DSR | Order Data) <input type="file" id="t2umf" accept=".xlsx,.csv"></label></div><div id="t2uam" class="mu"></div><div class="row"><label class="mu"><input type="checkbox" id="t2ur" checked> Update ke baad in matched rows par Final Remark / Remark ke rules wapas chalao (payment status badalne par Final Remark/Remark bhi badle)</label> <select id="t2us2"><option value="m">Sirf order data se match hui rows (nayi + purani)</option><option value="a">Poori DSR</option></select></div><div class="row"><button id="t2up" class="g">Sirf existing rows ka status update karo</button></div></div></details><div id="t2us"></div>
-<details class="sec"><summary>⚙ Remark rules + Special rule (advanced)</summary><div class="in"><h4>Warehouse wise Remark rules</h4><div class="row"><label class="mu"><input type="checkbox" id="t2st"> Document jaisa literal: India ke PU aur China (courier wale) ke PR/PU rules bina "blank hona chahiye" ki shart ke lagao</label></div>
-<h4>Special rule (Username ke hisaab se)</h4><div class="row"><label class="mu"><b>DSR ka Username column</b><br><select class="dsr" data-ph="1" id="spc"></select></label> <span>=</span> <input type="text" id="spv" value="onestopbulk" size="14"> <span>→ Final Remark</span> <input type="text" id="spf" value="Order Cancelled" size="16"> <span>Remark</span> <input type="text" id="spr" value="DF Order Cancelled" size="18"> <label class="mu">Payment Status<br><select id="spp"><option value="">Sab</option><option value="PR">Sirf PR</option></select></label></div><div class="row"><label class="mu"><b>In Final Remark wali rows ko chhodo</b> (jaisi hain waisi rahengi, comma se alag)<br><input type="text" id="spx" value="Delivered to end buyer, Last Mile Intrasit, Order Cancelled" size="62"></label></div>
+<details class="sec"><summary>⚙ Remark rules + Special rule (advanced)</summary><div class="in"><h4>Warehouse wise Remark rules</h4><h4>Special rule (Username ke hisaab se)</h4><div class="row"><label class="mu"><b>DSR ka Username column</b><br><select class="dsr" data-ph="1" id="spc"></select></label> <span>=</span> <input type="text" id="spv" value="onestopbulk" size="14"> <span>→ Final Remark</span> <input type="text" id="spf" value="Order Cancelled" size="16"> <span>Remark</span> <input type="text" id="spr" value="DF Order Cancelled" size="18"> <label class="mu">Payment Status<br><select id="spp"><option value="">Sab</option><option value="PR">Sirf PR</option></select></label></div><div class="row"><label class="mu"><b>In Final Remark wali rows ko chhodo</b> (jaisi hain waisi rahengi, comma se alag)<br><input type="text" id="spx" value="Delivered to end buyer, Last Mile Intrasit, Order Cancelled" size="62"></label></div>
 <div class="mu hint">Ye rule sabse pehle lagta hai: Username match hone par (aur Final Remark upar ki list me na ho to) warehouse wale baaki rules nahi lagte, aur Last Mile me bhi iska Remark nahi badalta. Upar ki list wale Final Remark ki rows pe special rule aur baaki rules, kuch nahi lagta, wo as it is rehti hain. Column khali chhodo to ye rule band.</div>
 <div class="row">Kin rows par: <select id="t2sc"><option value="all">Poori DSR</option><option value="new">Sirf abhi add hui rows</option></select><button id="t2ru">Remark rules chalao</button></div><div class="mu hint">Rules: Bulk/India, Bulk9, China/China-CJ (courier ke saath/bina), WH Not Assigned — aapke document ke hisaab se.</div></div></details>`);
 $('#p3').innerHTML=fb('t3','Step 3 · Last Mile (Logistics file)','Logistics file se Pickup / Delivery / RTO date DSR me aati hai aur uske hisaab se Final Remark / Remark badalte hain (A → B → C).',`<details class="sec" open><summary>Extra lookup columns (serial wise)</summary><div class="in">${pb2('t3k')}<div class="mu hint">Upar ① me pehla lookup hai. Jis DSR row ka pehle lookup se match na mile, uske liye ye columns upar se neeche ek-ek karke try hote hain.</div></div></details>
@@ -202,8 +203,8 @@ function t2update(){const F=S.f.t2;if(!F||!S.d)return alert('Pehle Order data fi
   const map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});
   const mask=ur?new Array(d.rows.length).fill(false):null;let m=0,ch=0,nA=0,nZ=0;const per=q.map(()=>0);
   d.rows.forEach((r,i)=>{const x=map.get(nm(r[dk]));if(!x)return;m++;if(mask)mask[i]=true;
-    q.forEach((y,k)=>{const v=gv(x[y.s]);if(v===''||v==null)return;if(tx(r[y.d])!==tx(v)){r[y.d]=v;per[k]++}});
-    if(useC){const tv=tx(r[ct]),nv=(tv!==''&&tv!=='0')?'AWB':0;if(nv==='AWB')nA++;else nZ++;if(r[cc]!==nv){r[cc]=nv;ch++}}});
+    q.forEach((y,k)=>{const v=gv(x[y.s]);if(v===''||v==null||isNA(v))return;if(tx(r[y.d])!==tx(v)){r[y.d]=v;per[k]++}});
+    if(useC){const nv=isFilled(r[ct])?'AWB':0;if(nv==='AWB')nA++;else nZ++;if(r[cc]!==nv){r[cc]=nv;ch++}}});
   let ex='';if(ur){const o=rules(0,$('#t2us2').value==='a'?null:mask),k=Object.keys(o).sort();ex=k.length?'<ul>'+k.map(x=>`<li>${esc(x)}: <b>${o[x]}</b></li>`).join('')+'</ul>':'<div class="mu">Remark rules se koi change nahi hua.</div>'}
   $('#t2us').innerHTML=`<div class="ok">✅ ${m.toLocaleString()} rows order data se match hui. Update hua: ${q.map((y,k)=>esc(d.H[y.d])+' <b>'+per[k].toLocaleString()+'</b>').join(' · ')}.${useC?` Courier column: ${nA.toLocaleString()} rows me AWB, ${nZ.toLocaleString()} me 0 (${ch.toLocaleString()} badli).`:''}${ur?' Remark rules:':''}</div>${ex}`;refresh()}
 $('#t2up').onclick=t2update;
@@ -235,8 +236,8 @@ function t2add(){if(!S.miss.length)return;const q=gp('t2'),ar=$('#t2ar').checked
   const skipped=q.filter(x=>isRem(x.d)).length;snap();const d=S.d,mp=new Map(q.filter(x=>!isRem(x.d)).map(x=>[x.d,x.s])),n=S.miss.length;S.ns=d.rows.length;
   const dk0=+$('#t2dk').value,fk0=+$('#t2fk').value;let keyAuto=false;if(dk0>=0&&fk0>=0&&!mp.has(dk0)&&!isRem(dk0)){mp.set(dk0,fk0);keyAuto=true}
   const cc=+$('#t2cc').value,ct=+$('#t2ct').value,useC=cc>=0&&ct>=0&&cc!==ct&&!d.F[cc];let nA=0,nZ=0;
-  S.miss.forEach(x=>{const r=d.H.map((_,i)=>{if(mp.has(i)){const v=gv(x[mp.get(i)]);return v===''||v==null?null:v}return d.F[i]||isRem(i)?null:0});
-    if(useC){const tv=tx(r[ct]);if(tv!==''&&tv!=='0'){r[cc]='AWB';nA++}else{r[cc]=0;nZ++}}d.rows.push(r)});
+  S.miss.forEach(x=>{const r=d.H.map((_,i)=>{if(mp.has(i)){const v=gv(x[mp.get(i)]);return v===''||v==null||isNA(v)?null:v}return d.F[i]||isRem(i)?null:0});
+    if(useC){if(isFilled(r[ct])){r[cc]='AWB';nA++}else{r[cc]=0;nZ++}}d.rows.push(r)});
   let ex='';if(ar){const o=rules(S.ns),k=Object.keys(o).sort();ex=k.length?'<ul>'+k.map(x=>`<li>${esc(x)}: <b>${o[x]}</b></li>`).join('')+'</ul>':'<div class="mu">Remark rules se koi change nahi hua.</div>'}
   $('#t2s').innerHTML=`<div class="ok">✅ ${n.toLocaleString()} nayi rows DSR me add hui (chune hue columns file se, baaki 0, formula columns me formula; Final Remark/Remark blank)${keyAuto?'. Lookup column ki value bhi file se bhari gayi taaki nayi rows aage match ho sakein':''}${useC?`. Courier column: ${nA} rows me AWB, ${nZ} rows me 0`:''}${skipped?` — Final Remark/Remark ka mapping ignore kiya (wo rules se bharte hain)`:''}${ar?' aur Remark rules lag gaye:':'. Remark rules neeche se chalao.'}</div>${ex}`;
   S.miss=[];$('#t2add').disabled=true;$('#t2add').textContent='Missing rows DSR me add karo';refresh();return true}
@@ -266,7 +267,6 @@ function fxFill(silent){const d=S.d;if(!d)return;const g=id=>+$('#'+id).value,o=
   d.rows.forEach(r=>{const sv=toSerial(r[o]);if(sv==null){const t=tx(r[o]);if(t!==''&&t!=='0')bad++;return}n++;const p=ymd(sv);
     if(cm>=0)r[cm]=MONTHS[p.m];if(cw>=0)r[cw]='Week'+(wm?Math.ceil(p.d/7):isoWeek(p));if(ct>=0)r[ct]=Math.round((sv-Math.floor(sv+1e-9))*86400)/86400;if(cp>=0)r[cp]=Math.floor(sv+1e-9)});
   $('#fxs').innerHTML=`<div class="ok">✅ ${n.toLocaleString()} rows me fill hua: ${cols.map(i=>esc(d.H[i])).join(', ')}.${conv?` (${conv} column me pehle formula tha, ab seedha value hai)`:''}${bad?` ⚠ ${bad} rows ki Order Date samajh nahi aayi (skip hui).`:''}</div>`;refresh()}
-const STRICT=()=>{const x=$('#t2st');return !!(x&&x.checked)};
 function rules(start,mask){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows,SP=spCfg();
   for(let i=start;i<R.length;i++){if(mask&&!mask[i])continue;const r=R[i],w0=nm(r[wh]),w=w0==='0'?'':w0,p=tx(r[pay]).toUpperCase();let f=rt(r[fr]),m=rt(r[rm]);
     const set=(a,b,k)=>{if(f!==a||(b!=null&&m!==b)){out[k]=(out[k]||0)+1}r[fr]=a;f=a;if(b!=null){r[rm]=b;m=b}};
@@ -276,12 +276,12 @@ function rules(start,mask){const{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows,SP=spCf
     if(w==='bulk'||w==='india'){
       if(p==='PD'&&e)set(DP,'WH Working','1A · PD blank → Dispatch Pending');
       else if(p==='PR'){if(eq(f,DP)&&eq(m,'WH Working'))set(OC,null,'1A · PR Dispatch Pending → Order Cancelled');else if(eq(f,LM)&&eq(m,LM))set(OC,'Cancelled During LM Intrasit','1A · PR Last Mile → Cancelled During LM')}
-      else if(p==='PU'&&(e||STRICT()))set(DP,'Reseller Payment Not Done','1A · PU → Reseller Payment Not Done');
+      else if(p==='PU'&&e)set(DP,'Reseller Payment Not Done','1A · PU → Reseller Payment Not Done');
       if(!inl([DL,DP,LM,OC]))set(DP,'WH Working','1A · Cleanup → Dispatch Pending / WH Working')}
     else if(w==='bulk9'){if(e)set(B9,'WH Working','1B · Bulk9 blank → Bulk9 Order Pending');
       if(!inl([DL,B9,LM,OC]))set(B9,'WH Working','1B · Cleanup → Bulk9 Order Pending')}
-    else if(w==='china'||w==='china-cj'){const hc=!['','0'].includes(tx(r[awb])),L6=[DL,'FM Intrasit',INP,LM,OC,'Reached at india wh'];
-      if(hc){if(p==='PD'&&e)set(INP,'Processed By China','1C · PD → Processed By China');else if(p==='PR'&&(e||STRICT()))set(OC,'Cancelled During FM Intrasit','1C · PR → Cancelled During FM');else if(p==='PU'&&(e||STRICT()))set(INP,'Reseller Payment Not Done','1C · PU → Reseller Payment Not Done');
+    else if(w==='china'||w==='china-cj'){const hc=isFilled(r[awb]),L6=[DL,'FM Intrasit',INP,LM,OC,'Reached at india wh'];
+      if(hc){if(p==='PD'&&e)set(INP,'Processed By China','1C · PD → Processed By China');else if(p==='PR'&&e)set(OC,'Cancelled During FM Intrasit','1C · PR → Cancelled During FM');else if(p==='PU'&&e)set(INP,'Reseller Payment Not Done','1C · PU → Reseller Payment Not Done');
         if(!inl(L6))set(INP,'Processed By China','1C · Cleanup → Processed By China')}
       else{if(p==='PD'&&e)set(INP,'Not Processed by china','1D · PD → Not Processed by china');else if(p==='PR'&&e)set(INP,'Cancelled By China','1D · PR → Cancelled By China');else if(p==='PU'&&e)set(INP,'Reseller Payment Not Done','1D · PU → Reseller Payment Not Done');
         if(!inl(L6))set(INP,'Not Processed By China','1D · Cleanup → Not Processed By China')}}
@@ -292,7 +292,6 @@ $('#t2ru').onclick=()=>{if(!S.d)return alert('Master upload karo');if(!need('wh'
 
 /* ---------- Step 3 (Logistics_Logic.docx: A pickup, B delivery, C RTO) ---------- */
 bind('t3',F=>{['t3k','t3a','t3b','t3c'].forEach(p=>{S.f[p]=F;$('#'+p+'pb').innerHTML='';addPair(p)})});
-const isFilled=v=>{const t=tx(v);return t!==''&&t!=='0'};
 const dateVal=v=>{if(typeof v==='number')return v;const n=toSerial(v);return n==null?v:n};
 function t3run(){const F=S.f.t3;if(!F||!S.d)return alert('Pehle Logistics file upload karo');if(!need('fr','rm')||!keyOk('t3'))return;
   const d=S.d,{fr,rm}=C();
@@ -321,7 +320,7 @@ $('#t3go').onclick=t3run;
 function fileStage(p,useSt){const F=S.f[p];if(!F||!need('fr','rm')||!keyOk(p))return;snap(gp(p).map(x=>x.d));const dk=+$('#'+p+'dk').value,fk=+$('#'+p+'fk').value,q=gp(p),{fr,rm}=C();ensure(q);
   const sel=frSel(p),sc=useSt?+$('#'+p+'sc').value:-1,st=useSt?chk(p+'st-i'):null,a=$('#'+p+'nf').value.trim(),b=$('#'+p+'nr').value.trim();
   const map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});let m=0,u=0;const hit=new Set();
-  S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null)r[y.d]=v});
+  S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null&&!isNA(v))r[y.d]=v});
     if(sel.includes(rt(r[fr]).toLowerCase())&&(!st||st.includes(tx(x[sc]).toLowerCase()))){if(a)r[fr]=a;if(b)r[rm]=b;u++}});
   $('#'+p+'r').innerHTML=`<div class="ok">✅ ${m} rows match hui, ${u} rows ka remark update hua.</div><div class="mu">File ke ${map.size-hit.size} keys DSR me nahi mile.</div>`;refresh()}
 bind('t4');$('#t4go').onclick=()=>fileStage('t4',false);
