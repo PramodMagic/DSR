@@ -313,7 +313,12 @@ function t3run(){const F=S.f.t3;if(!F||!S.d)return alert('Pehle Logistics file u
       const f=rt(r[fr]).toLowerCase();if(x.from&&x.from.size&&!x.from.has(f))return;
       if(isSP(r)){o.sp++;return}
       if(f!==x.toFr.toLowerCase()||rt(r[rm]).toLowerCase()!==x.toRm.toLowerCase()){r[fr]=x.toFr;r[rm]=x.toRm;o.remark++}});return o});
-  $('#t3r').innerHTML=`<div class="ok">✅ Lookup se ${matched.toLocaleString()} DSR rows logistics file me mili (${(d.rows.length-matched).toLocaleString()} nahi mili).</div><ul>${res.map(o=>`<li><b>${o.name}</b>: date nayi bhari <b>${o.filled.toLocaleString()}</b>, pehle se bhari ${o.already.toLocaleString()}, logistics me date nahi ${o.nofile.toLocaleString()} · Final Remark/Remark badla: <b>${o.remark.toLocaleString()}</b>${o.sp?` (DF special rule wali ${o.sp} rows chhodi)`:''}</li>`).join('')}</ul>`;refresh()}
+  $('#t3r').innerHTML=`<div class="ok">✅ Lookup se ${matched.toLocaleString()} DSR rows logistics file me mili (${(d.rows.length-matched).toLocaleString()} nahi mili).</div><ul>${res.map(o=>`<li><b>${o.name}</b>: date nayi bhari <b>${o.filled.toLocaleString()}</b>, pehle se bhari ${o.already.toLocaleString()}, logistics me date nahi ${o.nofile.toLocaleString()} · Final Remark/Remark badla: <b>${o.remark.toLocaleString()}</b>${o.sp?` (DF special rule wali ${o.sp} rows chhodi)`:''}</li>`).join('')}</ul>${t3diag(F,lk,secs,matched)}`;refresh()}
+function t3diag(F,lk,secs,matched){const N=F.rows.length,L=[];
+  lk.forEach(([di,fi],j)=>{const nf=F.rows.filter(r=>{const k=nm(r[fi]);return k&&!NAV.has(k)}).length;L.push([nf,`Lookup ${j+1}: logistics ke "${F.H[fi]}" column me asli value ${nf.toLocaleString()} / ${N.toLocaleString()} rows me hai`])});
+  secs.forEach(x=>x.pairs.forEach(q=>{const nf=F.rows.filter(r=>isFilled(r[q.s])).length;L.push([nf,`${x.name}: logistics ke "${F.H[q.s]}" me asli date ${nf.toLocaleString()} / ${N.toLocaleString()} rows me hai`])}));
+  const bad=L.some(l=>l[0]===0)||matched===0;
+  return `<div class="${bad?'er':'mu'}" style="margin-top:8px"><b>${bad?'⚠ Jaanch — logistics file me hi data nahi mil raha:':'Jaanch:'}</b><ul>${L.map(l=>`<li class="${l[0]===0?'er':''}">${esc(l[1])}${l[0]===0?' (N/A ya khali: yahan se kuch bhi DSR me nahi aa sakta)':''}</li>`).join('')}</ul>${bad?'Sahi report download karo jisme AWB Code aur dates bhari hon, ya lookup ke liye wo column chuno jisme DSR jaisi value ho.':''}</div>`}
 $('#t3go').onclick=t3run;
 
 /* ---------- Step 4 & 5 ---------- */
