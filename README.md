@@ -5,7 +5,8 @@ Deploy: GitHub repo me teeno files commit → Vercel me Import → Framework Pre
 Browser: desktop Chrome/Edge, 8 GB RAM. Sirf .xlsx/.xlsm/.csv. Download se pehle kaam save nahi hota (page refresh = data gaya).
 
 ## Flow
-1 Master (5 important columns khud chuno) → 2 Order Data → 3 Last Mile → 4 Invoice → 5 FM Mile → Download.
+Tabs: **1 Master → 2 Order Data → 3 Invoice → 4 FM Mile → 5 Last Mile → 6 Dekho & Download**. Ye sirf serial hai, zaroori nahi: Master (aur 5 important columns) ke baad koi bhi step kabhi bhi, kisi bhi order me chala sakte ho.
+Galat file upload ho gayi ho to bina refresh kiye dusri file chun lo: purana result/mapping hat jata hai, lookup columns (naam same ho to) wahi rehte hain, aur Step 2 me check apne aap dobara chalta hai. Same naam ki file dobara chun sakte ho. Galat file ka update ho chuka ho to ↩ Undo (pichle 5 steps), ya naya Master upload karo (sab reset ho jata hai).
 Header me **🔄 Update Order Data** = Step 2 ka poora kaam ek click me. Header ka "ℹ️ Help text" lambi lines dikhata/chhupata hai.
 
 ## Step 2 · Order Data (AOrder_Data_Final_Remark_and_Remark_Rules.docx)
@@ -23,14 +24,14 @@ Process By × Payment Status × Courier ke targets:
 - **Special rule:** Username = onestopbulk aur Final Remark in me se (blank, Bulk9 Order Dispatch Pending AT India WH, FM Intrasit, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH) → Order Cancelled / DF Order Cancelled. Payment status ki shart nahi (document me nahi hai); Payment dropdown se "Sirf PR" chun sakte ho. Phase 1/2 ke baad lagta hai. Sab editable.
 - Process By ki koi aur value (jaise "Price Hold") ke liye koi rule nahi, row jaisi hai waisi rehti hai.
 
-## Step 3 · Last Mile (ALogistics_Logic.docx)
+## Step 5 (tab 5) · Last Mile (ALogistics_Logic.docx)
 Sabse upar **courier / logistics company** chuno (15 courier + 10 aggregators). Us courier ke columns (lookup, A/B/C) update ke baad yaad ho jate hain aur agli baar file upload par apne aap lagte hain. Lookup serial wise (pehla na mile to agla column). Match, DSR date khali ho to hi bharti hai. Date bhari ho (nayi ya purani) aur Final Remark list me ho to:
 - **A Pickup:** → Last Mile Intrasit / Last Mile Intrasit. List: blank, Bulk9…, FM Intrasit, Dispatch Pending…, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH.
 - **B Delivery:** → Delivered to end buyer / Shipment Delivered. List: A wali + **Last Mile Intrasit**.
 - **C RTO:** → Order Cancelled / RTO Received. List: B wali + Delivered to end buyer + Order Cancelled.
 Date khali ho to kuch nahi badalta. Result ke neeche "Jaanch" dikhti hai (logistics column me asli value kitni rows me hai). N/A/NA/null/- khali maane jate hain.
 
-## Step 4 · Invoice (AInvoice_Final_And_Remarks.docx)
+## Step 3 (tab 3) · Invoice (AInvoice_Final_And_Remarks.docx)
 Auto mapping: Shopperr Invoice Number ← invoice number, Invoice Received Date ← Received date, SFC Qty ← QTY, SFC Value ← TOTAL PRICE(RMB), Shopperr Invoice Date ← Invoice Date, Invoice SKU ← SKU. Ek order ki kai invoice rows ho to **SFC Qty / SFC Value jod (sum)** diye jate hain, **Invoice SKU** me alag SKU comma se aate hain. Sirf match hue orders. DSR ke saare Final Remark checkbox me dikhte hain (default: blank, Bulk9…, Dispatch Pending…, Invoice Not Prepared, Not Processed By China, WH Not Assigned). Invoice Number bhara ho aur Final Remark chune hue me ho to → FM Intrasit / FM Intrasit.
 
 ## Download
