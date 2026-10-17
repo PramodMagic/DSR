@@ -2,49 +2,101 @@
 <html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>DSR Updater</title>
 <style>
-:root{--bg:#f4f6f9;--cd:#fff;--tx:#1c2230;--mu:#68718a;--ac:#2f6fed;--bd:#d9dee8;--ok:#188a4a;--er:#c0392b}
-@media(prefers-color-scheme:dark){:root{--bg:#12151b;--cd:#1c2029;--tx:#e7e9f0;--mu:#97a0b5;--ac:#6c9bff;--bd:#323847}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif}
-header{position:sticky;top:0;z-index:5;background:var(--cd);border-bottom:1px solid var(--bd);padding:8px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.sp{flex:1}nav{display:flex;gap:6px;padding:10px 14px 0;overflow-x:auto}
-nav button{background:var(--cd);color:var(--tx);border:1px solid var(--bd);white-space:nowrap}nav button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
-main{max-width:1000px;margin:0 auto;padding:12px 14px 60px}section{display:none}section.on{display:block}
-.card{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}.off{opacity:.4;pointer-events:none}
-h3{margin:0 0 6px;font-size:16px}h4{margin:12px 0 6px;font-size:14px}
-button{font:inherit;background:var(--ac);color:#fff;border:0;border-radius:8px;padding:7px 14px;cursor:pointer}button.g{background:var(--cd);color:var(--tx);border:1px solid var(--bd)}
-select,input[type=text],input[type=file]{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:5px 8px;max-width:100%}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}.mu{color:var(--mu);font-size:12.5px}.ok{color:var(--ok)}.er{color:var(--er)}
-.chips{display:flex;gap:6px;flex-wrap:wrap}.chips label{border:1px solid var(--bd);border-radius:16px;padding:2px 10px;background:var(--bg);cursor:pointer}
-.sc{overflow:auto;max-height:420px}table{border-collapse:collapse;font-size:12.5px}th,td{border:1px solid var(--bd);padding:3px 7px;white-space:nowrap;text-align:left}th{background:var(--bg);position:sticky;top:0}
-.stats{display:flex;gap:8px;flex-wrap:wrap}.stat{flex:1;min-width:110px;border:1px solid var(--bd);border-radius:10px;padding:8px;text-align:center}.stat b{display:block;font-size:20px}
-ul{margin:4px 0;padding-left:20px}
-
-header{box-shadow:0 1px 10px rgba(0,0,0,.07)}.card{box-shadow:0 1px 3px rgba(0,0,0,.05)}
-button{transition:filter .15s}button:hover{filter:brightness(1.08)}
-button.big{background:linear-gradient(135deg,#1e8f5e,#2f6fed);font-weight:600;padding:8px 18px}
-details.sec{border:1px solid var(--bd);border-radius:10px;margin:10px 0;background:var(--cd)}
-details.sec>summary{cursor:pointer;padding:10px 12px;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
-details.sec>summary::-webkit-details-marker{display:none}details.sec>summary::before{content:'▸';transition:transform .15s;color:var(--mu)}details.sec[open]>summary::before{transform:rotate(90deg)}
-details.sec>.in{padding:0 12px 12px}
-details.opt{position:relative}details.opt>summary{cursor:pointer;list-style:none;border:1px solid var(--bd);border-radius:8px;padding:6px 10px;background:var(--cd);font-size:13px}
+:root{--bg:#f3f5fb;--cd:#fff;--cd2:#f7f8fd;--tx:#1b2140;--mu:#6b7394;--bd:#e3e7f3;--ac:#5b5bf0;--ac2:#14b8a6;--acs:#eceeff;--ok:#16a34a;--oks:#e8f8ee;--er:#dc2626;--ers:#fdecec;--sh:0 1px 2px rgba(27,33,64,.05),0 10px 28px rgba(27,33,64,.07);--r:16px;--gl:rgba(255,255,255,.78)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0d1122;--cd:#161c37;--cd2:#1b2244;--tx:#e8ebff;--mu:#98a1c9;--bd:#283056;--ac:#8f8fff;--ac2:#2dd4bf;--acs:#242c5a;--ok:#34d399;--oks:#10301f;--er:#f87171;--ers:#3a1a1f;--sh:0 1px 2px rgba(0,0,0,.3),0 12px 32px rgba(0,0,0,.35);--gl:rgba(22,28,55,.78)}}
+:root[data-theme=dark]{--bg:#0d1122;--cd:#161c37;--cd2:#1b2244;--tx:#e8ebff;--mu:#98a1c9;--bd:#283056;--ac:#8f8fff;--ac2:#2dd4bf;--acs:#242c5a;--ok:#34d399;--oks:#10301f;--er:#f87171;--ers:#3a1a1f;--sh:0 1px 2px rgba(0,0,0,.3),0 12px 32px rgba(0,0,0,.35);--gl:rgba(22,28,55,.78)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;color:var(--tx);font:14px/1.55 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(1100px 520px at 90% -12%,rgba(91,91,240,.17),transparent 60%),radial-gradient(900px 520px at -8% 6%,rgba(20,184,166,.14),transparent 55%),var(--bg);background-attachment:fixed;min-height:100vh}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:10px;border:2px solid transparent;background-clip:content-box}
+#topbar{position:fixed;top:0;left:0;height:3px;width:100%;z-index:60;opacity:0;background:linear-gradient(90deg,transparent,var(--ac),var(--ac2),transparent);background-size:200% 100%;transition:opacity .2s}
+body.busy #topbar{opacity:1;animation:slide 1.1s linear infinite}@keyframes slide{from{background-position:200% 0}to{background-position:-200% 0}}
+header{position:sticky;top:0;z-index:20;background:var(--gl);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--bd);padding:10px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;box-shadow:0 6px 24px rgba(27,33,64,.06)}
+.brand{display:flex;align-items:center;gap:10px}.brand b{font-size:16px;display:block;line-height:1.15}.brand small{color:var(--mu);font-size:11.5px}
+.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:19px;color:#fff;background:linear-gradient(135deg,var(--ac),var(--ac2));box-shadow:0 6px 16px rgba(91,91,240,.35)}
+#st{background:var(--acs);color:var(--ac);padding:4px 12px;border-radius:999px;font-weight:600;font-size:12.5px;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp{flex:1}
+nav{display:flex;gap:8px;padding:16px 18px 4px;overflow-x:auto;max-width:1120px;margin:0 auto}
+nav button{display:flex;align-items:center;gap:9px;background:var(--cd);color:var(--tx);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh);padding:8px 15px 8px 9px;white-space:nowrap;font-weight:600;transition:transform .12s,box-shadow .15s}
+nav button:hover{transform:translateY(-1px)}
+nav button .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--acs);color:var(--ac);font-size:12px;font-weight:800}
+nav button.on{background:linear-gradient(135deg,var(--ac),#7c5cf6);color:#fff;border-color:transparent;box-shadow:0 10px 24px rgba(91,91,240,.35)}
+nav button.on .n{background:rgba(255,255,255,.26);color:#fff}
+nav button.done .n{background:var(--ok);color:#fff;font-size:0}nav button.done .n::before{content:'✓';font-size:13px}
+body:not(.has-master) nav button:not([data-n="1"]){opacity:.55}
+.navnote{max-width:1120px;margin:0 auto;padding:6px 20px 0;color:var(--mu);font-size:12.5px}
+main{max-width:1120px;margin:0 auto;padding:14px 18px 70px}section{display:none}section.on{display:block;animation:fade .25s ease}@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.hero{position:relative;overflow:hidden;display:flex;gap:18px;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:28px 30px;border-radius:24px;margin-bottom:18px;color:#fff;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 48%,#14b8a6 115%);box-shadow:0 20px 50px rgba(79,70,229,.35)}
+.hero::after{content:'';position:absolute;right:-60px;top:-70px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.12)}
+.hero h2{margin:0 0 6px;font-size:25px;line-height:1.25;max-width:560px}.hero p{margin:0;opacity:.93;max-width:560px}
+.feat{position:relative;z-index:1;max-width:420px}.feat span{display:inline-block;background:rgba(255,255,255,.18);padding:6px 13px;border-radius:999px;margin:4px 6px 0 0;font-size:12.5px;font-weight:600}
+body.has-master .hero{display:none}
+.card{position:relative;overflow:hidden;background:var(--cd);border:1px solid var(--bd);border-radius:var(--r);padding:20px 22px;margin-bottom:16px;box-shadow:var(--sh)}
+.card::before{content:'';position:absolute;left:0;top:0;width:100%;height:3px;background:linear-gradient(90deg,var(--ac),var(--ac2))}
+.off{opacity:.5;filter:grayscale(.35);pointer-events:none}
+h3{margin:0 0 8px;font-size:17px;font-weight:800;letter-spacing:.1px}h4{margin:18px 0 8px;font-size:13.5px;font-weight:800}
+button{font:inherit;font-weight:600;background:linear-gradient(135deg,var(--ac),#7c5cf6);color:#fff;border:0;border-radius:12px;padding:9px 16px;cursor:pointer;box-shadow:0 5px 14px rgba(91,91,240,.28);transition:transform .12s,box-shadow .15s,filter .15s}
+button:hover{transform:translateY(-1px);filter:brightness(1.07)}button:active{transform:none}
+button.g{background:var(--cd);color:var(--tx);border:1px solid var(--bd);box-shadow:none}button.g:hover{border-color:var(--ac);color:var(--ac)}
+button:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none;filter:none}
+button.big{background:linear-gradient(135deg,#10b981,#5b5bf0);padding:11px 22px;font-size:15px;box-shadow:0 10px 26px rgba(16,185,129,.35)}
+#dl{background:linear-gradient(135deg,#f59e0b,#ef4444);box-shadow:0 8px 20px rgba(239,68,68,.28)}
+button.ico{padding:8px 11px}
+select,input[type=text],input[type=number],input[type=file]{font:inherit;color:var(--tx);background:var(--cd2);border:1px solid var(--bd);border-radius:10px;padding:7px 10px;max-width:100%;transition:border-color .15s,box-shadow .15s}
+select:focus,input:focus{outline:none;border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
+input[type=file]::file-selector-button{background:var(--acs);color:var(--ac);border:0;border-radius:8px;padding:6px 12px;margin-right:10px;font-weight:700;cursor:pointer}
+input[type=checkbox]{accent-color:var(--ac);width:16px;height:16px;vertical-align:middle}
+label{cursor:pointer}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}.mu{color:var(--mu);font-size:12.5px}.ok{color:var(--ok)}.er{color:var(--er)}
+div.ok{background:var(--oks);border:1px solid rgba(22,163,74,.25);padding:10px 13px;border-radius:12px;font-weight:600}
+div.er{background:var(--ers);border:1px solid rgba(220,38,38,.25);padding:10px 13px;border-radius:12px}
+.pr{background:var(--cd2);border:1px solid var(--bd);padding:8px 10px;border-radius:12px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chips label{border:1px solid var(--bd);border-radius:999px;padding:5px 12px;background:var(--cd2);display:inline-flex;gap:6px;align-items:center;transition:.15s}
+.chips label:hover{border-color:var(--ac)}.chips label:has(input:checked){background:var(--acs);border-color:var(--ac);color:var(--ac);font-weight:700}
+.sc{overflow:auto;max-height:430px;border:1px solid var(--bd);border-radius:12px;background:var(--cd)}
+table{border-collapse:separate;border-spacing:0;font-size:12.5px;width:100%}
+th,td{padding:7px 11px;white-space:nowrap;text-align:left;border-bottom:1px solid var(--bd)}
+th{background:linear-gradient(135deg,#1e6b52,#2a8f6f);color:#fff;font-weight:700;position:sticky;top:0;z-index:1}
+tr:nth-child(even) td{background:var(--cd2)}tr:hover td{background:var(--acs)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:8px 0}
+.stat{border:1px solid var(--bd);border-radius:14px;padding:14px 10px;text-align:center;background:var(--cd2);color:var(--mu);font-weight:600}
+.stat b{display:block;font-size:27px;font-weight:800;color:var(--ac);line-height:1.2}.stat b.ok{color:var(--ok)}.stat b.er{color:var(--er)}
+ul{margin:6px 0;padding-left:20px}li{margin:3px 0}
+details.sec{border:1px solid var(--bd);border-radius:14px;background:var(--cd2);margin:12px 0;overflow:hidden;transition:border-color .15s}
+details.sec[open]{border-color:rgba(91,91,240,.35);background:var(--cd)}
+details.sec>summary{cursor:pointer;padding:12px 15px;font-weight:700;list-style:none;display:flex;align-items:center;gap:9px}
+details.sec>summary:hover{background:var(--acs)}
+details.sec>summary::-webkit-details-marker{display:none}details.sec>summary::before{content:'▸';transition:transform .15s;color:var(--ac)}details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>.in{padding:2px 15px 15px}
+details.opt{position:relative}details.opt>summary{cursor:pointer;list-style:none;border:1px solid var(--bd);border-radius:12px;padding:8px 13px;background:var(--cd);font-size:13px;font-weight:600}
 details.opt>summary::-webkit-details-marker{display:none}
-.optbox{position:absolute;right:0;top:38px;background:var(--cd);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:320px;box-shadow:0 8px 28px rgba(0,0,0,.2);z-index:9}
+.optbox{position:absolute;right:0;top:44px;background:var(--cd);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;min-width:330px;box-shadow:0 14px 40px rgba(0,0,0,.25);z-index:30}
 body:not(.help) .hint{display:none}
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);max-width:780px;width:calc(100% - 28px);background:var(--cd);border:1px solid var(--ok);border-radius:12px;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,.28);z-index:20}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);max-width:800px;width:calc(100% - 28px);background:var(--cd);border:1px solid var(--bd);border-left:5px solid var(--ok);border-radius:16px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.3);z-index:40;animation:up .28s ease}
+@keyframes up{from{transform:translate(-50%,22px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 .toolbar{display:flex;gap:6px}
+a{color:var(--ac);font-weight:600;text-decoration:none}a:hover{text-decoration:underline}
+#toast{font-size:13px;padding-right:56px}#toast #tclose{position:absolute;top:10px;right:12px;padding:3px 10px;float:none}
+header>*{flex-shrink:0}header{gap:8px}header button{padding:8px 13px}header button.big{padding:9px 16px;font-size:14px}#st{flex-shrink:1;min-width:0;max-width:24vw}@media(max-width:1380px){.brand small{display:none}}
+@media(max-width:760px){header{padding:8px 10px}.brand small{display:none}#st{max-width:100%;order:9;flex-basis:100%}main{padding:10px}.card{padding:15px}.hero{padding:20px}.hero h2{font-size:20px}nav{padding:12px 10px 4px}.optbox{right:auto;left:0;min-width:260px}}
 </style></head><body>
-<header><b>📋 DSR Updater</b><span id="st" class="mu">Master upload nahi hui</span><span class="sp"></span>
-<label class="mu" title="Lambi samjhane wali lines dikhao/chhupao"><input type="checkbox" id="hlp"> ℹ️ Help text</label>
+<header>
+<div class="brand"><span class="logo">📋</span><div><b>DSR Updater</b><small>Excel DSR ko smart tareeke se update karo</small></div></div>
+<span id="st">Master upload nahi hui</span><span class="sp"></span>
+<label class="mu" title="Lambi samjhane wali lines dikhao/chhupao"><input type="checkbox" id="hlp"> ℹ️ Help</label>
+<button class="g ico" id="theme" title="Dark / Light mode">🌙</button>
 <button class="g" id="undo">↩ Undo</button>
-<details class="opt"><summary>⚙ Download options</summary><div class="optbox"><label title="Original file ki dusri sheets, summary/pivot aur formulas bache rahte hain"><input type="checkbox" id="keep" checked> Dusri sheets/pivot rakho</label><label><input type="checkbox" id="zf" checked> Khali cells ko 0 se bharo (formula columns chhodkar)</label></div></details>
-<button id="uod" class="big">🔄 Update Order Data</button><button id="dl">⬇ Final DSR Download</button></header>
+<details class="opt"><summary>⚙ Options</summary><div class="optbox"><label title="Original file ki dusri sheets, summary/pivot aur formulas bache rahte hain"><input type="checkbox" id="keep" checked> Dusri sheets/pivot rakho</label><label><input type="checkbox" id="zf" checked> Khali cells ko 0 se bharo (formula columns chhodkar)</label></div></details>
+<button id="uod" class="big">🔄 Update Order Data</button><button id="dl" title="Final DSR download karo">⬇ Download DSR</button></header>
+<div id="topbar"></div>
 <div id="toast" style="display:none"></div>
-<nav id="nav"></nav><div class="mu" style="padding:6px 16px 0">Master ke baad koi bhi step kabhi bhi, kisi bhi order me chala sakte ho (serial zaroori nahi).</div>
+<nav id="nav"></nav><div class="navnote">Master ke baad koi bhi step kabhi bhi, kisi bhi order me chala sakte ho (serial zaroori nahi).</div>
 <main>
-<section id="p1"><div class="card"><h3>Step 1 · Master DSR upload</h3>
+<section id="p1"><div class="hero"><div><h2>DSR ko 3 lakh rows tak, aaram se update karo</h2><p>Master upload karo, phir Order Data, Invoice, FM Mile aur Last Mile se apne aap update. Ek click me poora kaam, aur hari-bhari formatting ke saath download.</p></div><div class="feat"><span>🔒 Data browser me hi rehta hai</span><span>⚡ 3 lakh rows × 75 columns</span><span>🎨 Excel jaisi formatting</span><span>↩ Undo</span><span>📑 Pivot / dusri sheets safe</span></div></div>
+<div class="card"><h3>📁 Step 1 · Master DSR upload</h3>
 <div class="mu hint">Master ka format wahi rahega; baaki sab files isi ko update karengi. (.xlsx / .csv, pehli sheet, header pehli row me; 3 lakh rows × 75 columns tak). Badi file me padhne me 1-2 minute lag sakta hai.</div>
 <div class="row"><input type="file" id="mf" accept=".xlsx,.xlsm,.csv"> <label class="mu">Sheet <select id="msh"><option value="-1">auto (sabse badi sheet)</option></select></label> <label class="mu">Header row no. <input type="number" id="mhr" min="1" placeholder="auto" style="width:80px"></label><button class="g" id="mhb">Dobara padho</button></div><div class="mu hint">Header row apne aap pehchani jati hai (upar filter/title rows ho to bhi). Galat ho to sahi Excel row number likho.</div><div id="mi" class="mu"></div></div>
-<div class="card off" id="cfg"><h3>Important columns (remark rules inhi par chalte hain)</h3>
+<div class="card off" id="cfg"><h3>🎯 Important columns (remark rules inhi par chalte hain)</h3>
 <div class="row">Warehouse <select class="dsr" data-ph="1" id="cw"></select> Payment Status <select class="dsr" data-ph="1" id="cp"></select>
 Final Remark <select class="dsr" data-ph="1" id="cf"></select> Remark <select class="dsr" data-ph="1" id="cr"></select> Courier/AWB <select class="dsr" data-ph="1" id="ca"></select></div>
 <div class="mu">Har column apni file ke hisaab se khud select karo. Remark wale steps chalane se pehle ye select hona zaroori hai. Master ke baad koi bhi step kisi bhi order me chala sakte ho.</div></div></section>
@@ -101,11 +153,11 @@ async function rd(f,x){
 function snap(extra){const c=C(),ix=[...new Set([c.fr,c.rm,...(extra||[])].filter(i=>i>=0&&i<S.d.H.length))];
   S.hist.push({len:S.d.rows.length,hl:S.d.H.length,ns:S.ns,F:{...S.d.F},cf:{...(S.d.colFmt||{})},cols:ix.map(i=>[i,S.d.rows.map(r=>r[i])])});if(S.hist.length>5)S.hist.shift()}
 $('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return alert('Undo ke liye kuch nahi hai');const d=S.d;d.rows.length=h.len;d.H.length=h.hl;d.rows.forEach(r=>r.length=h.hl);h.cols.forEach(([i,a])=>{for(let k=0;k<h.len;k++)d.rows[k][i]=a[k]});S.ns=h.ns;if(h.F)d.F=h.F;d.colFmt=h.cf||{};refresh()};
-function refresh(){$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;fillDsr()}
+function refresh(){document.body.classList.toggle('has-master',!!S.d);$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;fillDsr()}
 function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,(s.dataset.ph?'<option value="-1">— Select karo —</option>':'')+(s.dataset.new?'<option value="new">➕ Naya column</option>':''));if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))})}
 
 /* ---------- Tabs ---------- */
-[['1 Master',1],['2 Order Data',2],['3 Invoice',4],['4 FM Mile',5],['5 Last Mile',3],['6 Dekho & Download',6]].forEach(([t,n])=>{const b=document.createElement('button');b.textContent=t;b.dataset.n=n;b.onclick=()=>show(n);$('#nav').append(b)});
+[['Master',1,'📁'],['Order Data',2,'🧾'],['Invoice',4,'🧮'],['FM Mile',5,'✈️'],['Last Mile',3,'🚚'],['Dekho & Download',6,'⬇️']].forEach(([t,n,ic],i)=>{const b=document.createElement('button');b.innerHTML=`<span class="n">${i+1}</span><span class="t">${ic} ${t}</span>`;b.dataset.n=n;b.onclick=()=>show(n);$('#nav').append(b)});
 function show(n){$$('section').forEach((s,i)=>s.classList.toggle('on',i+1===n));$$('nav button').forEach(b=>b.classList.toggle('on',+b.dataset.n===n));
   if(S.d){fillDsr();if(n===4||n===5)frChips('t'+n);if(n===6)vInit()}}
 const FL={t2:'Order data ke column',t2u:'Order data ke column',t3:'Logistics file ke column',t4:'Invoice file ke column',t5:'FM file ke column'};
@@ -115,7 +167,7 @@ const pb=(p,t)=>`<h4>② ${t||'DSR ke column ke bagal me file ka column chuno (f
 const pb2=p=>`<div class="mu"><b>DSR ke column</b> &nbsp;←&nbsp; <b>Logistics file ke column</b></div><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button></div>`;
 const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
 <div class="row">Naya Final Remark <input type="text" id="${p}nf" placeholder="khali = change nahi"> Naya Remark <input type="text" id="${p}nr"></div>`;
-$('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck" class="g">Dobara check karo</button></div><div id="t2s"></div>
+$('#p2').innerHTML=fb('t2','🧾 Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck" class="g">Dobara check karo</button></div><div id="t2s"></div>
 <div class="row" style="margin-top:12px"><button id="t2all" class="big">🔄 Update Order Data</button><span class="mu hint">Missing orders add → status update → Courier → Remark rules → Order Date columns, sab ek click me</span><span class="sp"></span><span class="toolbar"><button class="g" id="openall">Sab kholo</button><button class="g" id="closeall">Sab band karo</button></span></div>
 <details class="sec"><summary>② Column mapping — missing orders DSR me add karne ke liye <span class="mu" id="t2cnt"></span></summary><div class="in">${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge. Final Remark / Remark yahan mat chuno, wo rules se apne aap bharte hain)')}<div class="row"><button id="t2pre">⚡ Auto mapping lagao</button><button id="t2rs" class="g">Original preset par wapas</button><label class="mu">ya naya mapping file upload karo (2 columns: DSR | Order Data, ye yaad rahegi) <input type="file" id="t2mf" accept=".xlsx,.csv"></label></div><div id="t2am" class="mu"></div><div class="mu hint">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><label><input type="checkbox" id="t2ar" checked> Add karne ke baad Phase 1 Remark rules apne aap lagao (sirf nayi rows par)</label></div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div></div></details>
 <details class="sec"><summary>③ Courier column rule (tracking ho to AWB, warna 0)</summary><div class="in"><div class="row"><label class="mu"><b>DSR ka Courier column</b><br><select class="dsr" data-ph="1" id="t2cc"></select></label> <span>←</span> <label class="mu"><b>DSR ka Tracking column</b><br><select class="dsr" data-ph="1" id="t2ct"></select></label></div><div class="mu hint">Tracking column me koi tracking ID ho to Courier me <b>AWB</b> jayega; tracking nahi (blank ya 0) ho to Courier me <b>0</b>. Dono dropdown auto-select hote hain, chaho to badal lo.</div></div></details>
@@ -124,13 +176,13 @@ $('#p2').innerHTML=fb('t2','Step 2 · Order Data upload','DSR me jo orders nahi 
 <div class="mu hint">Ye rule normal rules ke baad lagta hai. Username match ho aur Final Remark upar ki list me ho (Delivered, Last Mile Intrasit, Order Cancelled jaise remark list me nahi hain, wo jas ke tas rehte hain) to Final Remark / Remark badal jata hai. Column khali chhodo to ye rule band.</div>
 <div class="row">Kaun sa rule: <select id="t2ph"><option value="12">Phase 1 + Phase 2</option><option value="1">Sirf Phase 1 (Final Remark + Remark blank wali rows)</option><option value="2">Sirf Phase 2 (blank ya pending-jaise Final Remark)</option></select></div>
 <div class="row">Kin rows par: <select id="t2sc"><option value="all">Poori DSR</option><option value="new">Sirf abhi add hui rows</option></select><button id="t2ru">Remark rules chalao</button></div><div class="mu hint">Rules: Bulk/India, Bulk9, China/China-CJ (courier ke saath/bina), WH Not Assigned — aapke document ke hisaab se.</div></div></details>`);
-$('#p3').innerHTML='<div class="card"><h3>Pehle courier chuno</h3><div class="row"><label class="mu"><b>Kaun se courier / logistics company ki file daal rahe ho?</b><br><select id="t3co"></select></label><button class="g" id="t3sv">💾 Is courier ki mapping save karo</button></div><div class="mu" id="t3cm">Har courier ki file ke column alag hote hain. Ek baar columns chun lo, wo is courier ke naam se yaad rahte hain aur agli baar apne aap lag jate hain.</div></div>'+fb('t3','Step 5 · Last Mile (Logistics file)','Logistics file se Pickup / Delivery / RTO date DSR me aati hai aur uske hisaab se Final Remark / Remark badalte hain (A → B → C).',`<details class="sec" open><summary>Extra lookup columns (serial wise)</summary><div class="in">${pb2('t3k')}<div class="mu hint">Upar ① me pehla lookup hai. Jis DSR row ka pehle lookup se match na mile, uske liye ye columns upar se neeche ek-ek karke try hote hain.</div></div></details>
+$('#p3').innerHTML='<div class="card"><h3>Pehle courier chuno</h3><div class="row"><label class="mu"><b>Kaun se courier / logistics company ki file daal rahe ho?</b><br><select id="t3co"></select></label><button class="g" id="t3sv">💾 Is courier ki mapping save karo</button></div><div class="mu" id="t3cm">Har courier ki file ke column alag hote hain. Ek baar columns chun lo, wo is courier ke naam se yaad rahte hain aur agli baar apne aap lag jate hain.</div></div>'+fb('t3','🚚 Step 5 · Last Mile (Logistics file)','Logistics file se Pickup / Delivery / RTO date DSR me aati hai aur uske hisaab se Final Remark / Remark badalte hain (A → B → C).',`<details class="sec" open><summary>Extra lookup columns (serial wise)</summary><div class="in">${pb2('t3k')}<div class="mu hint">Upar ① me pehla lookup hai. Jis DSR row ka pehle lookup se match na mile, uske liye ye columns upar se neeche ek-ek karke try hote hain.</div></div></details>
 <details class="sec" open><summary>A · Pickup Date Update</summary><div class="in"><label><input type="checkbox" id="t3ae" checked> Ye step chalao</label>${pb2('t3a')}<div class="mu hint">DSR ka pickup date column ← logistics ka pickup date column. Date sirf tab bharti hai jab DSR me khali ho. Match hui rows me pickup date bhari ho (nayi ya purani) aur Final Remark neeche ki list me ho to Final Remark / Remark badal jata hai. Pickup date khali ho to kuch nahi badalta.</div><div class="row"><label class="mu"><b>Final Remark in me se ho tabhi badlo</b> (comma se alag; blank = khali/0)<br><input type="text" id="t3af" size="95" value="blank, Bulk9 Order Dispatch Pending AT India WH, FM Intrasit, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH"></label></div><div class="row"><label class="mu">Naya Final Remark<br><input type="text" id="t3at" value="Last Mile Intrasit"></label><label class="mu">Naya Remark<br><input type="text" id="t3ar" value="Last Mile Intrasit"></label><label class="mu"><input type="checkbox" id="t3ao"> Pehle se bhari date par bhi overwrite karo</label></div></div></details>
 <details class="sec" open><summary>B · Delivery Date Update</summary><div class="in"><label><input type="checkbox" id="t3be" checked> Ye step chalao</label>${pb2('t3b')}<div class="mu hint">Wahi lookup. Logistics ki delivery date DSR ke delivery column me (khali ho to). Delivery date bhari ho aur Final Remark list me ho to badal jata hai. (Last Mile Intrasit list me isliye hai ki pickup ke baad delivery aane par row Delivered ban sake.)</div><div class="row"><label class="mu"><b>Final Remark in me se ho tabhi badlo</b> (comma se alag; blank = khali/0)<br><input type="text" id="t3bf" size="95" value="blank, Bulk9 Order Dispatch Pending AT India WH, FM Intrasit, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH, Last Mile Intrasit"></label></div><div class="row"><label class="mu">Naya Final Remark<br><input type="text" id="t3bt" value="Delivered to end buyer"></label><label class="mu">Naya Remark<br><input type="text" id="t3br" value="Shipment Delivered"></label><label class="mu"><input type="checkbox" id="t3bo"> Pehle se bhari date par bhi overwrite karo</label></div></div></details>
 <details class="sec" open><summary>C · RTO Mark &amp; RTO Delivered</summary><div class="in"><label><input type="checkbox" id="t3ce" checked> Ye step chalao</label>${pb2('t3c')}<div class="mu hint">Wahi lookup. RTO date (RTO mark aur/ya RTO delivered, jitne columns chaho jodo) bhari ho aur Final Remark list me ho to Order Cancelled / RTO Received ho jata hai. RTO date khali ho to kuch nahi badalta.</div><div class="row"><label class="mu"><b>Final Remark in me se ho tabhi badlo</b> (comma se alag; blank = khali/0)<br><input type="text" id="t3cf" size="95" value="blank, Bulk9 Order Dispatch Pending AT India WH, FM Intrasit, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH, Last Mile Intrasit, Delivered to end buyer, Order Cancelled"></label></div><div class="row"><label class="mu">Naya Final Remark<br><input type="text" id="t3ct" value="Order Cancelled"></label><label class="mu">Naya Remark<br><input type="text" id="t3cr" value="RTO Received"></label><label class="mu"><input type="checkbox" id="t3co"> Pehle se bhari date par bhi overwrite karo</label></div></div></details>
 <div class="row"><button id="t3go" class="big">Last Mile update karo (A → B → C)</button></div><div id="t3r"></div>`);
-$('#p4').innerHTML=fb('t4','Step 3 · Invoice file','Invoice file se Shopperr Invoice Number/Date, Received date, SFC Qty/Value aur Invoice SKU DSR me aate hain; sirf match hue orders ke liye. Phir Final Remark/Remark FM Intrasit hota hai.',`<details class="sec" open><summary>② Columns (DSR ← Invoice file) <span class="mu" id="t4cnt"></span></summary><div class="in">${pb('t4')}<div class="row"><button class="g" id="t4pre">⚡ Auto mapping lagao</button></div><div id="t4am" class="mu"></div><div class="mu hint">Ek order ki invoice file me kai rows hon (kai SKU, ya ek SKU alag-alag rows me split) to <b>Sum</b> wale columns (SFC Qty, SFC Value) jod diye jate hain, aur <b>Comma se joro</b> wale column (Invoice SKU) me saare alag SKU comma se aate hain. Baaki columns me pehla value aata hai.</div></div></details><div class="row"><label class="mu"><b>DSR ka Invoice Number column</b> (ye bhara ho tabhi FM Intrasit lagta hai)<br><select class="dsr" data-ph="1" id="t4in"></select></label></div><h4>Sirf in Final Remark wali DSR rows par remark badlo (DSR ke saare Final Remark yahan dikhte hain)</h4><div id="t4fr"></div><div class="row"><label class="mu">Naya Final Remark<br><input type="text" id="t4nf" value="FM Intrasit"></label><label class="mu">Naya Remark<br><input type="text" id="t4nr" value="FM Intrasit"></label></div><div class="row"><button id="t4go" class="big">Invoice update karo</button></div>`);
-$('#p5').innerHTML=fb('t5','Step 4 · FM Mile file','Invoice ka current status DSR me copy hoga; filter laga kar remark badlo.',`${pb('t5')}<h4>FM status filter (sirf in status wali file rows par)</h4><div class="row">FM status column <select id="t5sc"></select></div><div id="t5st"></div>${frBox('t5')}<div class="row"><button id="t5go">Update karo</button></div>`);
+$('#p4').innerHTML=fb('t4','🧮 Step 3 · Invoice file','Invoice file se Shopperr Invoice Number/Date, Received date, SFC Qty/Value aur Invoice SKU DSR me aate hain; sirf match hue orders ke liye. Phir Final Remark/Remark FM Intrasit hota hai.',`<details class="sec" open><summary>② Columns (DSR ← Invoice file) <span class="mu" id="t4cnt"></span></summary><div class="in">${pb('t4')}<div class="row"><button class="g" id="t4pre">⚡ Auto mapping lagao</button></div><div id="t4am" class="mu"></div><div class="mu hint">Ek order ki invoice file me kai rows hon (kai SKU, ya ek SKU alag-alag rows me split) to <b>Sum</b> wale columns (SFC Qty, SFC Value) jod diye jate hain, aur <b>Comma se joro</b> wale column (Invoice SKU) me saare alag SKU comma se aate hain. Baaki columns me pehla value aata hai.</div></div></details><div class="row"><label class="mu"><b>DSR ka Invoice Number column</b> (ye bhara ho tabhi FM Intrasit lagta hai)<br><select class="dsr" data-ph="1" id="t4in"></select></label></div><h4>Sirf in Final Remark wali DSR rows par remark badlo (DSR ke saare Final Remark yahan dikhte hain)</h4><div id="t4fr"></div><div class="row"><label class="mu">Naya Final Remark<br><input type="text" id="t4nf" value="FM Intrasit"></label><label class="mu">Naya Remark<br><input type="text" id="t4nr" value="FM Intrasit"></label></div><div class="row"><button id="t4go" class="big">Invoice update karo</button></div>`);
+$('#p5').innerHTML=fb('t5','✈️ Step 4 · FM Mile file','Invoice ka current status DSR me copy hoga; filter laga kar remark badlo.',`${pb('t5')}<h4>FM status filter (sirf in status wali file rows par)</h4><div class="row">FM status column <select id="t5sc"></select></div><div id="t5st"></div>${frBox('t5')}<div class="row"><button id="t5go">Update karo</button></div>`);
 $('#t4nr').value='FM Intrasit';$('#t5nf').value='Reached at India WH';$('#t5nr').value='WH Working';
 function frChips4(c,old){const m=new Map();[PH.B9,PH.DP,PH.INP,PH.NPC,PH.WNA].forEach(v=>m.set(canon(v),v));
   if(c.fr>=0)uniq(S.d.rows,c.fr).forEach(v=>{const k=canon(v);if(k&&k!=='0')m.set(k,v)});
@@ -171,7 +223,7 @@ function bind(p,hook){
   $('#'+p+'f').onchange=async e=>{if(!S.d){alert('Pehle Master upload karo');e.target.value='';return}const f=e.target.files[0];if(!f)return;S.fo[p]=f;$('#'+p+'hr').value='';$('#'+p+'sh').value='-1';e.target.value='';await run(f)};
   $('#'+p+'sh').onchange=()=>{if(S.fo[p]){$('#'+p+'hr').value='';run(S.fo[p])}};
   $('#'+p+'hb').onclick=()=>S.fo[p]?run(S.fo[p]):alert('Pehle file chuno')}
-function resetSteps(){['t2','t3','t4','t5'].forEach(p=>{const c=$('#'+p+'c');if(c)c.classList.add('off');['i','r'].forEach(x=>{const e=$('#'+p+x);if(e)e.innerHTML=''});const f=$('#'+p+'f');if(f)f.value='';const hr=$('#'+p+'hr');if(hr)hr.value='';const sh=$('#'+p+'sh');if(sh)sh.value='-1';const fk=$('#'+p+'fk');if(fk)fk.innerHTML=''});
+function resetSteps(){$$('nav button').forEach(b=>b.classList.remove('done'));['t2','t3','t4','t5'].forEach(p=>{const c=$('#'+p+'c');if(c)c.classList.add('off');['i','r'].forEach(x=>{const e=$('#'+p+x);if(e)e.innerHTML=''});const f=$('#'+p+'f');if(f)f.value='';const hr=$('#'+p+'hr');if(hr)hr.value='';const sh=$('#'+p+'sh');if(sh)sh.value='-1';const fk=$('#'+p+'fk');if(fk)fk.innerHTML=''});
   ['t2pb','t2upb','t3kpb','t3apb','t3bpb','t3cpb','t4pb','t5pb','t2s','t2us','t2am','t2uam','t4am','t4fr','t5fr','t5st','fxs'].forEach(id=>{const e=$('#'+id);if(e)e.innerHTML=''});
   ['t2mf','t2umf'].forEach(id=>{const e=$('#'+id);if(e)e.value=''});['t2cnt','t2ucnt','t4cnt'].forEach(id=>{const e=$('#'+id);if(e)e.textContent=''});
   const sc=$('#t5sc');if(sc)sc.innerHTML='';S.miss=[];const a=$('#t2add');if(a)a.disabled=true}
@@ -179,7 +231,7 @@ function resetSteps(){['t2','t3','t4','t5'].forEach(p=>{const c=$('#'+p+'c');if(
 /* ---------- Step 1 ---------- */
 async function loadMaster(f){let D;try{D=await rd(f,'m')}catch(err){alert('Master file padhne me dikkat: '+(err&&err.message||err));st0();return}const F=D.F;S.d={name:f.name,H:D.H,rows:D.rows,F,dateCols:D.dateCols,dataPath:D.dataPath,sheetName:D.sheetName,hdrRow:D.hdrRow};S.hist=[];S.f={};S.fo={};S.ns=0;resetSteps();$$('select.dsr').forEach(s=>s.innerHTML='');fillDsr();
   $('#mi').innerHTML=`✅ ${esc(f.name)} — Sheet <b>${esc(D.sheetName)}</b>, <b>Header row ${D.hdrRow}</b>, ${D.rows.length.toLocaleString()} rows, ${D.H.length} columns.<br>Pehle columns: <i>${D.H.slice(0,8).map(esc).join(' | ')}</i><br>Formula columns: <b>${Object.keys(F).map(i=>esc(D.H[i])).join(', ')||'koi nahi'}</b>`+pvHtml('m',D);
-  $('#cfg').classList.remove('off');refresh();spDefaults();fxDefaults()}
+  $('#cfg').classList.remove('off');refresh();spDefaults();fxDefaults();markDone(1)}
 $('#mf').onchange=e=>{const f=e.target.files[0];if(!f)return;S.mfile=f;$('#mhr').value='';$('#msh').value='-1';e.target.value='';loadMaster(f)};
 $('#msh').onchange=()=>{if(S.mfile){$('#mhr').value='';loadMaster(S.mfile)}};
 $('#mhb').onclick=()=>S.mfile?loadMaster(S.mfile):alert('Pehle Master file chuno');
@@ -406,8 +458,14 @@ async function download(){if(!S.d)return alert('Master upload nahi hui');if($('#
   try{const prog=(i,n)=>{$('#st').textContent=`⏳ Excel ban rahi hai... ${i.toLocaleString()} / ${n.toLocaleString()} rows`};
     const keep=$('#keep').checked&&S.mfile&&S.d.dataPath&&!/\.csv$/i.test(S.mfile.name);
     const parts=keep?await DSRCore.writeXlsxPreserve(S.d,()=>S.mfile.stream(),{zero:$('#zf').checked,onProgress:prog,onCopy:n=>{$('#st').textContent='⏳ Original sheets copy ho rahi hain... '+Math.round(n/1048576)+' MB'}}):await DSRCore.writeXlsx(S.d,{sheet:S.d.sheetName||'DSR',zero:$('#zf').checked,onProgress:prog});
-    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='DSR_Final_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),120000)}
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='DSR_Final_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();markDone(6);setTimeout(()=>URL.revokeObjectURL(a.href),120000)}
   catch(e){alert('Export fail: '+e.message)}refresh()}
 $('#dl').onclick=$('#dl2').onclick=download;
+const markDone=n=>{const b=document.querySelector('nav button[data-n="'+n+'"]');if(b)b.classList.add('done')};
+[['t2s',2],['t2us',2],['t3r',3],['t4r',4],['t5r',5]].forEach(([id,n])=>{const e=$('#'+id);if(e)new MutationObserver(()=>{if(/✅/.test(e.textContent))markDone(n)}).observe(e,{childList:true,subtree:true,characterData:true})});
+new MutationObserver(()=>document.body.classList.toggle('busy',$('#st').textContent.includes('⏳'))).observe($('#st'),{childList:true,characterData:true,subtree:true});
+(function(){const h=document.documentElement,k='dsr_theme',mm=()=>window.matchMedia?matchMedia('(prefers-color-scheme:dark)').matches:false;let t=null;try{t=localStorage.getItem(k)}catch(e){}if(t)h.dataset.theme=t;
+  const dark=()=>h.dataset.theme?h.dataset.theme==='dark':mm(),upd=()=>{$('#theme').textContent=dark()?'☀️':'🌙'};upd();
+  $('#theme').onclick=()=>{h.dataset.theme=dark()?'light':'dark';try{localStorage.setItem(k,h.dataset.theme)}catch(e){}upd()}})();
 show(1);
 </script></body></html>
