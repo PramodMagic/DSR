@@ -8,7 +8,7 @@ Browser: desktop Chrome/Edge, 8 GB RAM. Sirf .xlsx/.xlsm/.csv. Download se pehle
 Naya design: stepper tabs (✓ badge jab step ho jaye), glass header, Light/Dark mode (🌙 button, yaad rehta hai), loading ke waqt upar chalti progress line, collapsible sections aur "ℹ️ Help" se lambi lines hide/show.
 
 ## Flow
-Tabs: **1 Master → 2 Order Data → 3 Invoice → 4 FM Mile → 5 Last Mile → 6 Dekho & Download**. Ye sirf serial hai, zaroori nahi: Master (aur 5 important columns) ke baad koi bhi step kabhi bhi, kisi bhi order me chala sakte ho.
+Tabs: **1 Master → 2 Order Data → 3 Invoice → 4 FM Mile → 5 Last Mile → 6 Dekho & Download → 7 Report Dashboard**. Ye sirf serial hai, zaroori nahi: Master (aur 5 important columns) ke baad koi bhi step kabhi bhi, kisi bhi order me chala sakte ho.
 Galat file upload ho gayi ho to bina refresh kiye dusri file chun lo: purana result/mapping hat jata hai, lookup columns (naam same ho to) wahi rehte hain, aur Step 2 me check apne aap dobara chalta hai. Same naam ki file dobara chun sakte ho. Galat file ka update ho chuka ho to ↩ Undo (pichle 5 steps), ya naya Master upload karo (sab reset ho jata hai).
 Header me **🔄 Update Order Data** = Step 2 ka poora kaam ek click me. Header ka "ℹ️ Help text" lambi lines dikhata/chhupata hai.
 
@@ -43,3 +43,7 @@ Auto mapping: Shopperr Invoice Number ← invoice number, Invoice Received Date 
 
 ## Download
 Hara header, borders, auto column width, freeze + filter. "⚙ Download options": dusri sheets/pivot rakho, khali cells 0 (formula columns chhodkar). Download se pehle Month/Week/Time/Date columns apne aap bharte hain (tab 6 me ⑤).
+
+## Tab 7 · Report Dashboard (nayi sheet, reports ek-ek karke)
+Download hone wali DSR me **Report Dashboard** naam ki nayi sheet judti hai (screen par bhi same dashboard dikhta hai: KPI cards + Month / Week / Date wise table). Dobara download par purani Report Dashboard sheet naye se badal jati hai; baaki sheets/pivot safe. Tab 7 ka checkbox hata do to sheet nahi judegi.
+**1 · Active Orders:** DSR ke **All Order Status** column me value **Open** (tab me badal sakte ho, comma se kai values) = Active. Count **Process By** se: Bulk9 / India / China / China-CJ, baaki sab (Bulk, blank, Price Hold…) **Other** (neeche dikhta hai Other me kya aaya). Month / Week / Date **Order Date** se; Week ka tarika tab 6 ke "Week ka tarika" se. Jis active order ki date samajh na aaye wo "(Order Date nahi mili)" row me aati hai.

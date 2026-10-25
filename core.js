@@ -110,7 +110,7 @@ async function readXlsx(getStream, onProgress, sheetIdx = -1, headerRow = 0) {
     }
   }, onProgress);
   if (H === null) { if (!pre.length) throw new Error('Sheet khali hai'); finalize(headerRow ? (hIdx >= 0 ? hIdx : pre.length - 1) : autoPick()) }
-  return { H, rows, F, dateCols: [...dateCols], hdrRow, preview, dataPath: path, sheets: sheets.map(x => ({ name: x.name, size: x.size })), sheetIdx };
+  return { H, rows, F, dateCols: [...dateCols], hdrRow, preview, dataPath: path, sheets: sheets.map(x => ({ name: x.name, size: x.size, path: x.path })), sheetIdx };
 }
 
 /* ---------- csv ---------- */
@@ -170,26 +170,79 @@ async function sheetPart(zip, d, o) {
   }
   sh.push(enc.encode(`</sheetData><autoFilter ref="A${hdr}:${last}"/></worksheet>`), true);
 }
+
+/* ---------- Report Dashboard sheet (download me nayi sheet) ---------- */
+const DASH_NAME = 'Report Dashboard', DASH_PATH = 'xl/worksheets/dsr_dashboard.xml';
+/* style key: [font, fill(-1 = koi nahi), border(0/1), align, indent, numFmt] */
+const DASH_SPEC = {
+  title: [0, 0, 0, 'left', 1, 0], sub: [1, 0, 0, 'left', 1, 0], kpiL: [6, 4, 0, 'center', 0, 0], kpiV: [5, 4, 0, 'center', 0, 3],
+  rep: [8, -1, 0, 'left', 0, 0], hdr: [2, 0, 1, 'center', 0, 0], hdrL: [2, 0, 1, 'left', 1, 0],
+  secL: [3, 1, 1, 'left', 1, 0], secN: [3, 1, 1, 'center', 0, 197], secT: [3, 3, 1, 'center', 0, 197],
+  rowL: [4, -1, 1, 'left', 2, 0], rowN: [4, -1, 1, 'center', 0, 197], rowLz: [4, 2, 1, 'left', 2, 0], rowNz: [4, 2, 1, 'center', 0, 197], rowT: [3, 2, 1, 'center', 0, 197],
+  note: [7, -1, 0, 'left', 0, 0] };
+function dashStyles(fb, flb, bb) {
+  const F = [['b', 20, 'FFFFFFFF'], ['', 10, 'FFD6EADF'], ['b', 11, 'FFFFFFFF'], ['b', 11, 'FF1F2937'], ['', 11, 'FF1F2937'], ['b', 20, 'FF1E6B52'], ['b', 9, 'FF6B7280'], ['i', 9, 'FF6B7280'], ['b', 13, 'FF1E6B52']];
+  const L = ['FF1E6B52', 'FFE3F1EA', 'FFF6F9F7', 'FFCFE5DA', 'FFEEF4F1'], keys = Object.keys(DASH_SPEC);
+  return {
+    keys, nF: F.length, nFl: L.length, nX: keys.length,
+    fonts: F.map(([b, z, c]) => `<font>${b === 'b' ? '<b/>' : b === 'i' ? '<i/>' : ''}<sz val="${z}"/><color rgb="${c}"/><name val="Calibri"/></font>`).join(''),
+    fills: L.map(c => `<fill><patternFill patternType="solid"><fgColor rgb="${c}"/><bgColor indexed="64"/></patternFill></fill>`).join(''),
+    border: '<border><left style="thin"><color rgb="FFBFD3CA"/></left><right style="thin"><color rgb="FFBFD3CA"/></right><top style="thin"><color rgb="FFBFD3CA"/></top><bottom style="thin"><color rgb="FFBFD3CA"/></bottom><diagonal/></border>',
+    xfs: keys.map(k => { const [f, fl, b, h, ind, nf] = DASH_SPEC[k]; return `<xf numFmtId="${nf}" fontId="${fb + f}" fillId="${fl < 0 ? 0 : flb + fl}" borderId="${b ? bb : 0}" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="center"${ind ? ` indent="${ind}"` : ''}${k === 'note' ? ' wrapText="1"' : ''}/></xf>` }).join('') };
+}
+/* styles.xml me dashboard ke fonts/fills/borders/xfs jodta hai; {t, sid} wapas deta hai (sid = style key -> cellXfs index) */
+function addDashStyles(t) {
+  const gc = tag => { const r = new RegExp('<' + tag + '\\b[^>]*?count="(\\d+)"').exec(t); return r ? +r[1] : null };
+  const fb = gc('fonts'), flb = gc('fills'), bb = gc('borders'), xb = gc('cellXfs');
+  if (fb == null || flb == null || bb == null || xb == null) return null;
+  const s = dashStyles(fb, flb, bb);
+  const bump = (tag, n, xml) => { const c0 = gc(tag); t = t.replace(new RegExp('<' + tag + '\\b([^>]*?)count="\\d+"'), (a, r) => `<${tag}${r}count="${c0 + n}"`).replace('</' + tag + '>', xml + '</' + tag + '>') };
+  bump('fonts', s.nF, s.fonts); bump('fills', s.nFl, s.fills); bump('borders', 1, s.border); bump('cellXfs', s.nX, s.xfs);
+  const nf = '<numFmt numFmtId="197" formatCode="#,##0;\\-#,##0;&quot;–&quot;"/>';
+  if (/<numFmts count="\d+"/.test(t)) t = t.replace(/<numFmts count="(\d+)"([^>]*)>/, (a, c, r) => `<numFmts count="${+c + 1}"${r}>`).replace('</numFmts>', nf + '</numFmts>');
+  else t = t.replace(/(<styleSheet\b[^>]*>)/, `$1<numFmts count="1">${nf}</numFmts>`);
+  const sid = {}; s.keys.forEach((k, i) => { sid[k] = xb + i });
+  return { t, sid };
+}
+const zeroSid = () => Object.fromEntries(Object.keys(DASH_SPEC).map(k => [k, 0]));
+/* m = {widths:[..], rows:[{ht, c:[[value, styleKey], ...]}], merges:['A1:G1']} */
+async function dashPart(zip, m, sid, path) {
+  let s = X + `<worksheet ${NS}><sheetPr><tabColor rgb="FF1E6B52"/></sheetPr><sheetViews><sheetView showGridLines="0" workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="18"/><cols>` +
+    m.widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('') + '</cols><sheetData>';
+  m.rows.forEach((r, i) => {
+    const rn = i + 1; s += `<row r="${rn}"${r.ht ? ` ht="${r.ht}" customHeight="1"` : ''}>`;
+    (r.c || []).forEach(([v, k], ci) => {
+      if (k == null) return; const ref = colName(ci) + rn, sa = ` s="${sid[k] || 0}"`;
+      if (typeof v === 'number' && v === v) s += `<c r="${ref}"${sa}><v>${v}</v></c>`;
+      else if (v == null || v === '') s += `<c r="${ref}"${sa}/>`;
+      else s += `<c r="${ref}"${sa} t="inlineStr"><is><t xml:space="preserve">${esc(String(v))}</t></is></c>`;
+    });
+    s += '</row>';
+  });
+  s += '</sheetData>' + (m.merges && m.merges.length ? `<mergeCells count="${m.merges.length}">` + m.merges.map(x => `<mergeCell ref="${x}"/>`).join('') + '</mergeCells>' : '') + '</worksheet>';
+  const f = new ff.ZipDeflate(path, { level: 1 }); zip.add(f); f.push(new TextEncoder().encode(s), true);
+}
 /* simple: nayi workbook (sirf ek sheet) */
 async function writeXlsx(d, opt = {}) {
   const sheet = opt.sheet || 'DSR', parts = [], zip = mkZip(parts);
-  addText(zip, '[Content_Types].xml', X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+  addText(zip, '[Content_Types].xml', X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' + (opt.dash ? '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' : '') + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
   addText(zip, '_rels/.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
-  addText(zip, 'xl/workbook.xml', X + `<workbook ${NS} ${RNS}><sheets><sheet name="${esc(sheet)}" sheetId="1" r:id="rId1"/></sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
-  addText(zip, 'xl/_rels/workbook.xml.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
-  addText(zip, 'xl/styles.xml', X + `<styleSheet ${NS}><numFmts count="3"><numFmt numFmtId="164" formatCode="dd\\-mmm\\-yyyy"/><numFmt numFmtId="165" formatCode="hh:mm:ss"/><numFmt numFmtId="166" formatCode="dd\\-mm\\-yyyy\\ hh:mm:ss"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E6B52"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`);
-  await sheetPart(zip, d, { path: 'xl/worksheets/sheet1.xml', hdr: 1, ds: 1, hs: 2, t1: 3, t2: 4, bs: 5, zero: opt.zero, onProgress: opt.onProgress }); zip.end();
+  addText(zip, 'xl/workbook.xml', X + `<workbook ${NS} ${RNS}><sheets><sheet name="${esc(sheet)}" sheetId="1" r:id="rId1"/>${opt.dash ? `<sheet name="${DASH_NAME}" sheetId="2" r:id="rId3"/>` : ''}</sheets><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>`);
+  addText(zip, 'xl/_rels/workbook.xml.rels', X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' + (opt.dash ? '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>' : '') + '</Relationships>');
+  let sty = X + `<styleSheet ${NS}><numFmts count="3"><numFmt numFmtId="164" formatCode="dd\\-mmm\\-yyyy"/><numFmt numFmtId="165" formatCode="hh:mm:ss"/><numFmt numFmtId="166" formatCode="dd\\-mm\\-yyyy\\ hh:mm:ss"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E6B52"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf><xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`; let sid = null; if (opt.dash) { const r = addDashStyles(sty); if (r) { sty = r.t; sid = r.sid } } addText(zip, 'xl/styles.xml', sty);
+  await sheetPart(zip, d, { path: 'xl/worksheets/sheet1.xml', hdr: 1, ds: 1, hs: 2, t1: 3, t2: 4, bs: 5, zero: opt.zero, onProgress: opt.onProgress }); if (opt.dash) await dashPart(zip, opt.dash, sid || zeroSid(), 'xl/worksheets/sheet2.xml'); zip.end();
   return parts;
 }
 /* original file ko base bana kar sirf data sheet badalta hai: dusri sheets, formulas, pivot sab bache rahte hain */
 async function writeXlsxPreserve(d, getStream, opt = {}) {
   const parts = [], zip = mkZip(parts), dp = d.dataPath, rel = dp.replace('worksheets/', 'worksheets/_rels/') + '.rels', hdr = d.hdrRow || 1;
-  const last = colName(d.H.length - 1) + (hdr + d.rows.length); let ds = null, t1 = null, t2 = null, hs = null, bs = null;
+  const last = colName(d.H.length - 1) + (hdr + d.rows.length); let ds = null, t1 = null, t2 = null, hs = null, bs = null, dsid = null;
   const patch = (n, t) => {
-    if (n === '[Content_Types].xml') return t.replace(/<Override[^>]*calcChain[^>]*\/>/g, '');
-    if (n === 'xl/_rels/workbook.xml.rels') return t.replace(/<Relationship\b[^>]*calcChain[^>]*\/>/g, '');
+    if (n === '[Content_Types].xml') { t = t.replace(/<Override[^>]*calcChain[^>]*\/>/g, ''); if (opt.dash) { if (d.dashPath) t = t.replace(/<Override\b[^>]*>/g, m => m.includes('PartName="/' + d.dashPath + '"') ? '' : m); t = t.replace('</Types>', '<Override PartName="/' + DASH_PATH + '" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>') } return t }
+    if (n === 'xl/_rels/workbook.xml.rels') { t = t.replace(/<Relationship\b[^>]*calcChain[^>]*\/>/g, ''); if (opt.dash) { if (d.dashPath) { const tg = d.dashPath.replace(/^xl\//, ''); t = t.replace(/<Relationship\b[^>]*>/g, m => (m.includes('Target="' + tg + '"') || m.includes('Target="/' + d.dashPath + '"')) ? '' : m) } t = t.replace('</Relationships>', '<Relationship Id="rIdDsrDash" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/dsr_dashboard.xml"/></Relationships>') } return t }
     if (n === 'xl/workbook.xml') {
       t = t.replace(/<definedName\b[^>]*name="_xlnm\._FilterDatabase"[^>]*>[^<]*<\/definedName>/g, '').replace(/<definedNames>\s*<\/definedNames>/g, '');
+      if (opt.dash) { if (d.dashPath) t = t.replace(/<sheet\b[^>]*name="Report Dashboard"[^>]*\/>/, ''); const ids = [...t.matchAll(/<sheet\b[^>]*sheetId="(\d+)"/g)].map(q => +q[1]); t = t.replace('</sheets>', `<sheet name="${DASH_NAME}" sheetId="${Math.max(0, ...ids) + 1}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="rIdDsrDash"/></sheets>`) }
       if (/<calcPr\b[^>]*\/>/.test(t)) return t.replace(/<calcPr\b([^>]*?)\s*\/>/, (m, a) => /fullCalcOnLoad/.test(a) ? m : `<calcPr${a} fullCalcOnLoad="1"/>`);
       return t.replace('</workbook>', '<calcPr fullCalcOnLoad="1"/></workbook>');
     }
@@ -210,7 +263,9 @@ async function writeXlsxPreserve(d, getStream, opt = {}) {
       const xf = (nfid, extra = '', inner = '') => { const h = extra.includes('H'), at = `<xf numFmtId="${nfid}" fontId="${h ? fN : 0}" fillId="${h ? flN : 0}" borderId="${bid}" xfId="0" applyNumberFormat="1" applyBorder="1"${h ? ' applyFont="1" applyFill="1" applyAlignment="1"' : ''}`; return inner ? at + '>' + inner + '</xf>' : at + '/>' };
       let xs = xf(14) + xf(21) + xf(196);
       if (fancy) { xs += xf(0, 'H', '<alignment horizontal="center" vertical="center" wrapText="1"/>') + xf(0); hs = base + 3; bs = base + 4 }
-      return t.replace(m[0], `<cellXfs count="${base + 3 + (fancy ? 2 : 0)}"`).replace('</cellXfs>', xs + '</cellXfs>');
+      t = t.replace(m[0], `<cellXfs count="${base + 3 + (fancy ? 2 : 0)}"`).replace('</cellXfs>', xs + '</cellXfs>');
+      if (opt.dash && fancy) { const r = addDashStyles(t); if (r) { t = r.t; dsid = r.sid } }
+      return t;
     }
     if (/pivotCacheDefinition\d+\.xml$/.test(n)) {
       t = /refreshOnLoad=/.test(t) ? t : t.replace(/<pivotCacheDefinition\b/, '<pivotCacheDefinition refreshOnLoad="1"');
@@ -222,13 +277,14 @@ async function writeXlsxPreserve(d, getStream, opt = {}) {
   const uz = new ff.Unzip(); uz.register(ff.UnzipInflate); uz.register(ff.UnzipPassThrough);
   uz.onfile = f => {
     if (f.name === dp || f.name === rel || f.name === 'xl/calcChain.xml') return;
+    if (opt.dash && (f.name === DASH_PATH || (d.dashPath && (f.name === d.dashPath || f.name === d.dashPath.replace('worksheets/', 'worksheets/_rels/') + '.rels')))) return;
     if (isPatch(f.name)) { let t = ''; const dec = new TextDecoder(); f.ondata = (err, c, fin) => { if (err) throw err; t += dec.decode(c, { stream: !fin }); if (fin) addText(zip, f.name, patch(f.name, t)) }; f.start(); return }
     const out = new ff.ZipDeflate(f.name, { level: 1 }); zip.add(out); f.ondata = (err, c, fin) => { if (err) throw err; out.push(c, fin) }; f.start();
   };
   let n = 0, ly = 0;
   for await (const c of chunks(getStream())) { uz.push(c, false); n += c.length; if (n - ly > 4194304) { ly = n; opt.onCopy && opt.onCopy(n); await tick() } }
   uz.push(new Uint8Array(0), true);
-  await sheetPart(zip, d, { path: dp, hdr, ds, hs, bs, t1, t2, zero: opt.zero, onProgress: opt.onProgress }); zip.end();
+  await sheetPart(zip, d, { path: dp, hdr, ds, hs, bs, t1, t2, zero: opt.zero, onProgress: opt.onProgress }); if (opt.dash) await dashPart(zip, opt.dash, dsid || zeroSid(), DASH_PATH); zip.end();
   return parts;
 }
 const api = { readXlsx, readCsvText, writeXlsx, writeXlsxPreserve, compileFormula, colName, colIdx };
