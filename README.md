@@ -1,20 +1,20 @@
-# DSR Updater (3 lakh rows × 75 columns tak) — GitHub + Vercel
+# DSR Updater (up to 300,000 rows × 75 columns) — GitHub + Vercel
 
-Static site: `index.html`, `core.js`, `fflate.min.js` (teeno ek hi folder me). Koi build step nahi. Sab kuch browser me chalta hai, data kahin upload nahi hota.
-Deploy: GitHub repo me teeno files commit → Vercel me Import → Framework Preset "Other" → Deploy.
-Browser: desktop Chrome/Edge, 8 GB RAM. Sirf .xlsx/.xlsm/.csv. Download se pehle kaam save nahi hota (page refresh = data gaya).
+Static site: `index.html`, `core.js`, `fflate.min.js` (all three in the same folder). No build step. Everything runs in the browser; no data is uploaded anywhere.
+Deploy: commit the three files to a GitHub repo → Import in Vercel → Framework Preset "Other" → Deploy.
+Browser: desktop Chrome/Edge, 8 GB RAM. Only .xlsx/.xlsm/.csv. Work is not saved before Download (page refresh = data lost).
 
 ## Look & feel
-Naya design: stepper tabs (✓ badge jab step ho jaye), glass header, Light/Dark mode (🌙 button, yaad rehta hai), loading ke waqt upar chalti progress line, collapsible sections aur "ℹ️ Help" se lambi lines hide/show.
+New design: stepper tabs (✓ badge once a step is done), glass header, Light/Dark mode (🌙 button, remembered), a progress line running at the top while loading, collapsible sections, and "ℹ️ Help" to show/hide long explanatory lines.
 
 ## Flow
-Tabs: **1 Master → 2 Order Data → 3 Invoice → 4 FM Mile → 5 Last Mile → 6 Dekho & Download → 7 Report Dashboard**. Ye sirf serial hai, zaroori nahi: Master (aur 5 important columns) ke baad koi bhi step kabhi bhi, kisi bhi order me chala sakte ho.
-Galat file upload ho gayi ho to bina refresh kiye dusri file chun lo: purana result/mapping hat jata hai, lookup columns (naam same ho to) wahi rehte hain, aur Step 2 me check apne aap dobara chalta hai. Same naam ki file dobara chun sakte ho. Galat file ka update ho chuka ho to ↩ Undo (pichle 5 steps), ya naya Master upload karo (sab reset ho jata hai).
-Header me **🔄 Update Order Data** = Step 2 ka poora kaam ek click me. Header ka "ℹ️ Help text" lambi lines dikhata/chhupata hai.
+Tabs: **1 Master → 2 Order Data → 3 Invoice → 4 FM Mile → 5 Last Mile → 6 View & Download → 7 Report Dashboard**. This is only a sequence, not a requirement: after Master (and the 5 important columns), you can run any step at any time, in any order.
+If the wrong file was uploaded, just choose another file without refreshing: the old result/mapping is cleared, lookup columns stay (if the names are the same), and the check in Step 2 runs again automatically. You can choose a file with the same name again. If a wrong file has already updated the DSR, use ↩ Undo (last 5 steps), or upload the Master again (everything resets).
+Header **🔄 Update Order Data** = the whole of Step 2 in one click. The header's "ℹ️ Help text" shows/hides long lines.
 
 ## Step 2 · Order Data (AOrder_Data_Final_Remark_and_Remark_Rules.docx)
-Lookup + column mapping (14 jodiyan auto) → missing orders add → **Phase 1** (nayi rows) → status update (④) → **Phase 2** (order data se match hui nayi+purani rows) → Courier (tracking ho to AWB, warna 0) → Special rule → Order Date se Month/Week/Time/Date.
-Process By × Payment Status × Courier ke targets:
+Lookup + column mapping (14 pairs, automatic) → add missing orders → **Phase 1** (new rows) → status update (④) → **Phase 2** (new + old rows matched with the order data) → Courier (AWB if tracking exists, otherwise 0) → Special rule → Month/Week/Time/Date from Order Date.
+Targets by Process By × Payment Status × Courier:
 | Process By | PD | PR | PU |
 |---|---|---|---|
 | Bulk, India | Dispatch Pending At India WH / WH Working | Order Cancelled / WH Working | Dispatch Pending At India WH / Reseller Payment Not Done |
@@ -22,33 +22,33 @@ Process By × Payment Status × Courier ke targets:
 | China, China-CJ, Courier AWB | Invoice Not Prepared / Processed By China | Order Cancelled / Processed By China | Invoice Not Prepared / Reseller Payment Not Done |
 | China, China-CJ, Courier blank/0 | Not Processed By China / Not Processed By China | Order Cancelled / Cancelled By China | Not Processed By China / Reseller Payment Not Done |
 | Blank/0 | WH Not Assigned / WH Not Assigned | Order Cancelled / WH Not Assigned | WH Not Assigned / Reseller Payment Not Done |
-- **Phase 1:** sirf jahan Final Remark aur Remark dono blank/0.
-- **Phase 2:** Final Remark blank/0 ya in me se: Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned. (Blank Process By me dono blank hone chahiye.) Purana "Bulk9 Order Pending" bhi isi list ka maana jata hai; naam me capital/small ka farq nahi.
-- **Special rule:** Username = onestopbulk aur Final Remark in me se (blank, Bulk9 Order Dispatch Pending AT India WH, FM Intrasit, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH) → Order Cancelled / DF Order Cancelled. Payment status ki shart nahi (document me nahi hai); Payment dropdown se "Sirf PR" chun sakte ho. Phase 1/2 ke baad lagta hai. Sab editable.
-- Process By ki koi aur value (jaise "Price Hold") ke liye koi rule nahi, row jaisi hai waisi rehti hai.
+- **Phase 1:** only where Final Remark and Remark are both blank/0.
+- **Phase 2:** Final Remark is blank/0 or one of: Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned. (For a blank Process By, both must be blank.) The old "Bulk9 Order Pending" is also treated as part of this list; matching is not case-sensitive.
+- **Special rule:** Username = onestopbulk and Final Remark is one of (blank, Bulk9 Order Dispatch Pending AT India WH, FM Intrasit, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH) → Order Cancelled / DF Order Cancelled. There is no payment status condition (it is not in the document); you can choose "PR only" from the Payment dropdown. It is applied after Phase 1/2. Everything is editable.
+- For any other Process By value (such as "Price Hold") there is no rule; the row stays as it is.
 
 ## Step 4 (tab 4) · FM Mile
-FM file ke columns fix hain (auto mapping, "+ Column add" se aur jod sakte ho): pickup date → Pick up from SFC · Recd at SZN WH Dt. → Date of receiving in FW HUB / MCI · HAWB No. → Transporter AWB · date → Flight Connect date · Actual arrival → Date arrival at Indian Customs · customs cleared dt. → Date of Customs clerance · delivery at GGN WH → Arrival in Indian Warehouse.
-Fill ke baad: DSR ke "Arrival in Indian Warehouse" me date bhari ho aur Final Remark list me ho (Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, FM Intrasit, Invoice Not Prepared, Not Processed By China, WH Not Assigned) → Reached AT India WH / WH Working. List me tick hatao = hata do, "+ Jodo" se naya remark jodo. Naya Final Remark/Remark editable. Default: sirf FM file se match hui rows (dropdown se Poori DSR).
+The FM file columns are fixed (auto mapping; you can add more with "+ Column add"): pickup date → Pick up from SFC · Recd at SZN WH Dt. → Date of receiving in FW HUB / MCI · HAWB No. → Transporter AWB · date → Flight Connect date · Actual arrival → Date arrival at Indian Customs · customs cleared dt. → Date of Customs clerance · delivery at GGN WH → Arrival in Indian Warehouse.
+After the fill: if the DSR "Arrival in Indian Warehouse" has a date and Final Remark is in the list (Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, FM Intrasit, Invoice Not Prepared, Not Processed By China, WH Not Assigned) → Reached AT India WH / WH Working. Untick = remove from the list; use "+ Add" to add a new remark. The new Final Remark/Remark are editable. Default: only rows matched with the FM file (choose Whole DSR from the dropdown).
 
 ## Step 5 (tab 5) · Last Mile (ALogistics_Logic.docx)
-Sabse upar **courier / logistics company** chuno (15 courier + 10 aggregators). Us courier ke columns (lookup, A/B/C) update ke baad yaad ho jate hain aur agli baar file upload par apne aap lagte hain. Lookup serial wise (pehla na mile to agla column). Match, DSR date khali ho to hi bharti hai. Date bhari ho (nayi ya purani) aur Final Remark list me ho to:
+First choose the **courier / logistics company** at the top (15 couriers + 10 aggregators). That courier's columns (lookup, A/B/C) are remembered after an update and applied automatically when you upload the file next time. Lookup runs in order (if the first does not match, the next column is tried). A match fills the DSR date only if it is empty. If a date is filled (new or old) and Final Remark is in the list:
 - **A Pickup:** → Last Mile Intrasit / Last Mile Intrasit. List: blank, Bulk9…, FM Intrasit, Dispatch Pending…, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH.
-- **B Delivery:** → Delivered to end buyer / Shipment Delivered. List: A wali + **Last Mile Intrasit**.
-- **C RTO:** → Order Cancelled / RTO Received. List: B wali + Delivered to end buyer + Order Cancelled.
-Date khali ho to kuch nahi badalta. Result ke neeche "Jaanch" dikhti hai (logistics column me asli value kitni rows me hai). N/A/NA/null/- khali maane jate hain.
+- **B Delivery:** → Delivered to end buyer / Shipment Delivered. List: the one from A + **Last Mile Intrasit**.
+- **C RTO:** → Order Cancelled / RTO Received. List: the one from B + Delivered to end buyer + Order Cancelled.
+If the date is empty, nothing changes. Below the result a "Check" is shown (how many rows have a real value in the logistics column). N/A/NA/null/- are treated as empty.
 
 ## Step 3 (tab 3) · Invoice (AInvoice_Final_And_Remarks.docx)
-Auto mapping: Shopperr Invoice Number ← invoice number, Invoice Received Date ← Received (ya Received date), SFC Qty ← QTY, SFC Value ← TOTAL PRICE(RMB), Shopperr Invoice Date ← Date (ya Invoice Date), Invoice SKU ← SKU. Ek order ki kai invoice rows ho to **SFC Qty / SFC Value jod (sum)** diye jate hain, **Invoice SKU** me alag SKU comma se aate hain. Sirf match hue orders. DSR ke saare Final Remark checkbox me dikhte hain (default: blank, Bulk9…, Dispatch Pending…, Invoice Not Prepared, Not Processed By China, WH Not Assigned). Invoice Number bhara ho aur Final Remark chune hue me ho to → FM Intrasit / FM Intrasit.
+Auto mapping: Shopperr Invoice Number ← invoice number, Invoice Received Date ← Received (or Received date), SFC Qty ← QTY, SFC Value ← TOTAL PRICE(RMB), Shopperr Invoice Date ← Date (or Invoice Date), Invoice SKU ← SKU. If one order has several invoice rows, **SFC Qty / SFC Value are added up (sum)**, and the different SKUs go into **Invoice SKU** separated by commas. Matched orders only. All Final Remarks in the DSR are shown as checkboxes (default: blank, Bulk9…, Dispatch Pending…, Invoice Not Prepared, Not Processed By China, WH Not Assigned). If the Invoice Number is filled and the Final Remark is in the selected list → FM Intrasit / FM Intrasit.
 
 ## Download
-Hara header, borders, auto column width, freeze + filter. "⚙ Download options": dusri sheets/pivot rakho, khali cells 0 (formula columns chhodkar). Download se pehle Month/Week/Time/Date columns apne aap bharte hain (tab 6 me ⑤).
+Green header, borders, auto column width, freeze + filter. "⚙ Download options": keep other sheets/pivot, fill empty cells with 0 (except formula columns). Before download, the Month/Week/Time/Date columns are filled automatically (⑤ in tab 6).
 
-## Tab 7 · Report Dashboard (download me nayi sheet "Report Dashboard")
-Sab reports ek sheet me ek ke neeche ek; screen par bhi cards + table (card/button par click se report badalti hai). Dobara download par purani Report Dashboard sheet naye se badal jati hai; baaki sheets/pivot safe. Tab 7 ka checkbox hata do to sheet nahi judegi. Sab columns naam se apne aap select hote hain (badal sakte ho). Count Process By se: Bulk9 / Bulk / India / China / China-CJ, baaki sab Other (neeche dikhta hai Other me kya aaya). Week ka tarika tab 6 ke "Week ka tarika" se.
-1. **Active Orders:** Final Remark list me ho (Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, FM Intrasit, Invoice Not Prepared, Reached AT India WH; "Not Processed By China" Active me nahi ginta). Month/Week/Date = Order Date.
-2. **Shipments Dispatched:** "Dispatch from Indian warehouse" me date bhari ho. 3. **Shipments Delivered:** "Delivery to End Customer" me date. 4. **Shipments RTO:** "RTO Received date" me date. In teeno me Month/Week/Date default usi date column se (dropdown se Order Date bhi chun sakte ho).
-5. **China Not Process:** Process By China / China-CJ aur Final Remark = Not Processed By China / WH Not Assigned ; warehouse wise count.
-6. **FM Mile Report:** Shopperr Invoice Number bhara + Arrival in Indian Warehouse me date = FM Delivered; date khali = FM Intrasit. Month/Week/Date = Pick up from SFC. Invoice number khali wali rows count nahi hoti.
-**Manual add/remove:** Active Orders ki Final Remark list, China Not Process ki Final Remark list aur Warehouse list me checkbox (tick hatao = hata do) aur "+ Jodo" box hai. Default rules code me fix hain, kuch badla ho to refresh par wapas default.
-Jis row ki date khali/samajh na aaye wo "(date nahi mili)" row me aati hai.
+## Tab 7 · Report Dashboard (new sheet "Report Dashboard" added on download)
+All reports in one sheet, one below the other; on screen too there are cards + a table (click a card/button to switch reports). On a repeat download, the old Report Dashboard sheet is replaced by the new one; other sheets/pivots are safe. Untick the tab 7 checkbox and the sheet will not be added. All columns are selected automatically by name (you can change them). Counting is by Process By: Bulk9 / Bulk / India / China / China-CJ, everything else Other (what went into Other is shown below). The week method comes from "Week method" in tab 6.
+1. **Active Orders:** Final Remark is in the list (Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, FM Intrasit, Invoice Not Prepared, Reached AT India WH; "Not Processed By China" is not counted as Active). Month/Week/Date = Order Date.
+2. **Shipments Dispatched:** "Dispatch from Indian warehouse" has a date. 3. **Shipments Delivered:** a date in "Delivery to End Customer". 4. **Shipments RTO:** a date in "RTO Received date". For these three, Month/Week/Date default to that same date column (you can choose Order Date from the dropdown).
+5. **China Not Process:** Process By China / China-CJ and Final Remark = Not Processed By China / WH Not Assigned; warehouse-wise count.
+6. **FM Mile Report:** Shopperr Invoice Number filled + a date in Arrival in Indian Warehouse = FM Delivered; empty date = FM Intrasit. Month/Week/Date = Pick up from SFC. Rows with an empty invoice number are not counted.
+**Manual add/remove:** there are checkboxes (untick = remove) and a "+ Add" box in the Active Orders Final Remark list, the China Not Process Final Remark list and the Warehouse list. The default rules are fixed in the code; any change you make goes back to default on refresh.
+A row whose date is empty or not understood goes into the "(date not found)" row.

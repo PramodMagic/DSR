@@ -1,4 +1,4 @@
-/* DSR core: badi xlsx ko stream karke padhta/likhta hai (3 lakh rows x 75 columns tak). Browser aur Node dono me chalta hai. */
+/* DSR core: reads/writes large xlsx files via streaming (up to 300,000 rows x 75 columns). Runs in both browser and Node. */
 (function () {
 'use strict';
 const root = typeof window !== 'undefined' ? window : globalThis;
@@ -51,9 +51,9 @@ async function readXlsx(getStream, onProgress, sheetIdx = -1, headerRow = 0) {
   const relMap = {};
   for (const m of (txt['xl/_rels/workbook.xml.rels'] || '').matchAll(/<Relationship\b[^>]*>/g)) { const id = /Id="([^"]+)"/.exec(m[0]), t = /Target="([^"]+)"/.exec(m[0]); if (id && t) relMap[id[1]] = t[1][0] === '/' ? t[1].slice(1) : 'xl/' + t[1] }
   const sheets = [...(txt['xl/workbook.xml'] || '').matchAll(/<sheet\b[^>]*>/g)].map(m => { const nm = /name="([^"]*)"/.exec(m[0]), r = /r:id="([^"]+)"/.exec(m[0]); const path = r ? relMap[r[1]] : null; return { name: nm ? un(nm[1]) : 'Sheet', path, size: sizes[path] } });
-  if (!sheets.length) throw new Error('Sheet nahi mili');
+  if (!sheets.length) throw new Error('Sheet not found');
   if (sheetIdx < 0) { sheetIdx = 0; let best = -1; sheets.forEach((x, i) => { if (x.size !== undefined && x.size > best) { best = x.size; sheetIdx = i } }) }
-  if (!sheets[sheetIdx]) throw new Error('Sheet nahi mili');
+  if (!sheets[sheetIdx]) throw new Error('Sheet not found');
   const path = sheets[sheetIdx].path;
   const isDate = parseStyles(txt['xl/styles.xml'] || '');
   let H = null, W = 0, F = {}, buf = '', auto = 0, hdrRow = 0, hIdx = -1, preview = []; const rows = [], pre = [], dateCols = new Set(), K = 30;
@@ -109,7 +109,7 @@ async function readXlsx(getStream, onProgress, sheetIdx = -1, headerRow = 0) {
       const rm = /\br="(\d+)"/.exec(buf.slice(s, k)); handleRow(buf.slice(k + 1, e), rm ? +rm[1] : ++auto); buf = buf.slice(e + 6);
     }
   }, onProgress);
-  if (H === null) { if (!pre.length) throw new Error('Sheet khali hai'); finalize(headerRow ? (hIdx >= 0 ? hIdx : pre.length - 1) : autoPick()) }
+  if (H === null) { if (!pre.length) throw new Error('Sheet is empty'); finalize(headerRow ? (hIdx >= 0 ? hIdx : pre.length - 1) : autoPick()) }
   return { H, rows, F, dateCols: [...dateCols], hdrRow, preview, dataPath: path, sheets: sheets.map(x => ({ name: x.name, size: x.size, path: x.path })), sheetIdx };
 }
 
@@ -171,9 +171,9 @@ async function sheetPart(zip, d, o) {
   sh.push(enc.encode(`</sheetData><autoFilter ref="A${hdr}:${last}"/></worksheet>`), true);
 }
 
-/* ---------- Report Dashboard sheet (download me nayi sheet) ---------- */
+/* ---------- Report Dashboard sheet (new sheet added on download) ---------- */
 const DASH_NAME = 'Report Dashboard', DASH_PATH = 'xl/worksheets/dsr_dashboard.xml';
-/* style key: [font, fill(-1 = koi nahi), border(0/1), align, indent, numFmt] */
+/* style key: [font, fill(-1 = none), border(0/1), align, indent, numFmt] */
 const DASH_SPEC = {
   title: [0, 0, 0, 'left', 1, 0], sub: [1, 0, 0, 'left', 1, 0], kpiL: [6, 4, 0, 'center', 0, 0], kpiV: [5, 4, 0, 'center', 0, 3],
   rep: [8, -1, 0, 'left', 0, 0], hdr: [2, 0, 1, 'center', 0, 0], hdrL: [2, 0, 1, 'left', 1, 0],
@@ -190,7 +190,7 @@ function dashStyles(fb, flb, bb) {
     border: '<border><left style="thin"><color rgb="FFBFD3CA"/></left><right style="thin"><color rgb="FFBFD3CA"/></right><top style="thin"><color rgb="FFBFD3CA"/></top><bottom style="thin"><color rgb="FFBFD3CA"/></bottom><diagonal/></border>',
     xfs: keys.map(k => { const [f, fl, b, h, ind, nf] = DASH_SPEC[k]; return `<xf numFmtId="${nf}" fontId="${fb + f}" fillId="${fl < 0 ? 0 : flb + fl}" borderId="${b ? bb : 0}" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="${h}" vertical="center"${ind ? ` indent="${ind}"` : ''}${k === 'note' ? ' wrapText="1"' : ''}/></xf>` }).join('') };
 }
-/* styles.xml me dashboard ke fonts/fills/borders/xfs jodta hai; {t, sid} wapas deta hai (sid = style key -> cellXfs index) */
+/* adds the dashboard fonts/fills/borders/xfs to styles.xml; returns {t, sid} (sid = style key -> cellXfs index) */
 function addDashStyles(t) {
   const gc = tag => { const r = new RegExp('<' + tag + '\\b[^>]*?count="(\\d+)"').exec(t); return r ? +r[1] : null };
   const fb = gc('fonts'), flb = gc('fills'), bb = gc('borders'), xb = gc('cellXfs');
@@ -222,7 +222,7 @@ async function dashPart(zip, m, sid, path) {
   s += '</sheetData>' + (m.merges && m.merges.length ? `<mergeCells count="${m.merges.length}">` + m.merges.map(x => `<mergeCell ref="${x}"/>`).join('') + '</mergeCells>' : '') + '</worksheet>';
   const f = new ff.ZipDeflate(path, { level: 1 }); zip.add(f); f.push(new TextEncoder().encode(s), true);
 }
-/* simple: nayi workbook (sirf ek sheet) */
+/* simple: new workbook (single sheet only) */
 async function writeXlsx(d, opt = {}) {
   const sheet = opt.sheet || 'DSR', parts = [], zip = mkZip(parts);
   addText(zip, '[Content_Types].xml', X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' + (opt.dash ? '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' : '') + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
@@ -233,7 +233,7 @@ async function writeXlsx(d, opt = {}) {
   await sheetPart(zip, d, { path: 'xl/worksheets/sheet1.xml', hdr: 1, ds: 1, hs: 2, t1: 3, t2: 4, bs: 5, zero: opt.zero, onProgress: opt.onProgress }); if (opt.dash) await dashPart(zip, opt.dash, sid || zeroSid(), 'xl/worksheets/sheet2.xml'); zip.end();
   return parts;
 }
-/* original file ko base bana kar sirf data sheet badalta hai: dusri sheets, formulas, pivot sab bache rahte hain */
+/* uses the original file as base and replaces only the data sheet: other sheets, formulas and pivots are preserved */
 async function writeXlsxPreserve(d, getStream, opt = {}) {
   const parts = [], zip = mkZip(parts), dp = d.dataPath, rel = dp.replace('worksheets/', 'worksheets/_rels/') + '.rels', hdr = d.hdrRow || 1;
   const last = colName(d.H.length - 1) + (hdr + d.rows.length); let ds = null, t1 = null, t2 = null, hs = null, bs = null, dsid = null;
