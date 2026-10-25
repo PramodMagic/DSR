@@ -136,15 +136,15 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 <div class="row">Column <select class="dsr" id="vc"></select> Value <select id="vv"></select> Search <input type="text" id="vq" placeholder="kuch bhi likho"><button id="vb">Filter</button><button id="dl2">⬇ Download</button></div>
 <div id="vm" class="mu"></div><div class="sc"><table id="vt"></table></div></div></section>
 <section id="p7"><div class="card"><h3>📊 Report Dashboard</h3>
-<div class="mu">Download hone wali DSR me ek nayi sheet <b>Report Dashboard</b> judti hai. Reports ek-ek karke add hoti hain. Abhi: <b>1 · Active Orders</b>.</div>
+<div class="mu">Download hone wali DSR me ek nayi sheet <b>Report Dashboard</b> judti hai. Reports ek-ek karke add hoti hain. Abhi: <b>1 · Active Orders</b> (Final Remark ki list se).</div>
 <div class="row"><label><input type="checkbox" id="rdon" checked> Download me "Report Dashboard" sheet jodo</label><span class="mu">(sheet DSR ke data ka snapshot hoti hai; dobara download karoge to purani Report Dashboard sheet naye se badal jati hai)</span></div></div>
 <div class="card"><h3>1 · Active Orders</h3>
-<div class="mu">DSR ke <b>All Order Status</b> column me value <b>Open</b> ho to wo order Active hai. Count <b>Process By</b> ke hisaab se (Bulk9 / India / China / China-CJ, baaki sab Other), Month · Week · Date wise.</div>
+<div class="mu">DSR ke <b>Final Remark</b> column me neeche di list ki value ho to wo order Active hai. Count <b>Process By</b> ke hisaab se (Bulk9 / Bulk / India / China / China-CJ, baaki sab Other), Month · Week · Date wise.</div>
 <div class="grid5" style="margin-top:12px">
-<label class="fld"><span>All Order Status column</span><select class="dsr" data-ph="1" id="rds"></select><small>Isme "Open" wali rows Active maani jayengi</small></label>
-<label class="fld"><span>Active value</span><input type="text" id="rdv" value="Open"><small>Comma se kai value bhi likh sakte ho</small></label>
-<label class="fld"><span>Process By column</span><select class="dsr" data-ph="1" id="rdp"></select><small>Bulk9 / India / China / China-CJ wala column</small></label>
+<label class="fld"><span>Final Remark column</span><select class="dsr" data-ph="1" id="rds"></select><small>Isi column ki value list se match hogi</small></label>
+<label class="fld"><span>Process By column</span><select class="dsr" data-ph="1" id="rdp"></select><small>Bulk9 / Bulk / India / China / China-CJ wala column</small></label>
 <label class="fld"><span>Order Date column</span><select class="dsr" data-ph="1" id="rdo"></select><small>Month / Week / Date iske hisaab se</small></label></div>
+<div class="row"><label class="mu" style="flex:1;min-width:300px"><b>Active Final Remark list</b> (comma se alag, kam/zyada kar sakte ho)<br><input type="text" id="rdv" style="width:100%" value="Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, FM Intrasit, Invoice Not Prepared, Not Processed By China, Reached AT India WH"></label></div>
 <div class="row"><button id="rdgo" class="big">📊 Report banao</button><button id="rddl">⬇ Download DSR (Report Dashboard ke saath)</button><span class="mu">Week ka tarika tab 6 ke "Week ka tarika" se aata hai</span></div>
 <div id="rdout"></div></div></section>
 </main>
@@ -508,29 +508,30 @@ function t5run(){const F=S.f.t5;if(!F||!S.d)return alert('Pehle FM Mile file upl
 $('#t5go').onclick=t5run;
 
 
-/* ---------- Report Dashboard · 1 Active Orders ---------- */
-const RD_COLS=['Bulk9','India','China','China-CJ','Other'],RD_CLR=['#f59e0b','#5b5bf0','#ef4444','#14b8a6','#94a3b8'];
+/* ---------- Report Dashboard · 1 Active Orders (Final Remark list + Process By) ---------- */
+const RD_COLS=['Bulk9','Bulk','India','China','China-CJ','Other'],RD_CLR=['#f59e0b','#8b5cf6','#5b5bf0','#ef4444','#14b8a6','#94a3b8'],NC=RD_COLS.length;
 function rdDefaults(){if(!S.d)return;const H=S.d.H,set=(id,re)=>{if(+$('#'+id).value>=0)return;const i=H.findIndex(h=>re.test(String(h).trim()));if(i>=0)$('#'+id).value=String(i)};
-  set('rds',/^all order status$/i);set('rdp',/^process by$/i);set('rdo',/^order date$/i);if(!(+$('#rdp').value>=0)&&C().wh>=0)$('#rdp').value=String(C().wh)}
+  set('rds',/^final remark$/i);set('rdp',/^process by$/i);set('rdo',/^order date$/i);
+  if(!(+$('#rds').value>=0)&&C().fr>=0)$('#rds').value=String(C().fr);if(!(+$('#rdp').value>=0)&&C().wh>=0)$('#rdp').value=String(C().wh)}
 const isoY=o=>{const t=new Date(Date.UTC(o.y,o.m,o.d)),dn=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-dn+3);return t.getUTCFullYear()};
 function rdCalc(silent){const d=S.d;if(!d)return null;const s=+$('#rds').value,p=+$('#rdp').value,o=+$('#rdo').value;
-  if(!(s>=0)||!(p>=0)){if(!silent)alert('Pehle "All Order Status" aur "Process By" column select karo');return null}
-  const want=new Set($('#rdv').value.split(',').map(canon).filter(Boolean));if(!want.size){if(!silent)alert('Active value likho (jaise Open)');return null}
-  const wm=$('#fxwm').value==='m',bk=v=>{const w=nm(v);return w==='bulk9'?0:w==='india'?1:w==='china'?2:(w==='china-cj'||w==='chinacj')?3:4};
-  const Mo=new Map(),We=new Map(),Da=new Map(),tot=[0,0,0,0,0],nd=[0,0,0,0,0],oth=new Map();let n=0;
-  const put=(m,k,lab,b)=>{let e=m.get(k);if(!e)m.set(k,e={lab,c:[0,0,0,0,0]});e.c[b]++};
+  if(!(s>=0)||!(p>=0)){if(!silent)alert('Pehle "Final Remark" aur "Process By" column select karo');return null}
+  const want=new Set($('#rdv').value.split(',').map(canon).filter(Boolean));if(!want.size){if(!silent)alert('Active Final Remark list likho');return null}
+  const wm=$('#fxwm').value==='m',bk=v=>{const w=nm(v);return w==='bulk9'?0:w==='bulk'?1:w==='india'?2:w==='china'?3:(w==='china-cj'||w==='chinacj')?4:5};
+  const z=()=>new Array(NC).fill(0),Mo=new Map(),We=new Map(),Da=new Map(),tot=z(),nd=z(),oth=new Map();let n=0;
+  const put=(m,k,lab,b)=>{let e=m.get(k);if(!e)m.set(k,e={lab,c:z()});e.c[b]++};
   d.rows.forEach(r=>{if(!want.has(canon(tx(r[s]))))return;const b=bk(r[p]);n++;tot[b]++;
-    if(b===4){const w=rt(r[p])||'(blank / 0)';oth.set(w,(oth.get(w)||0)+1)}
+    if(b===NC-1){const w=rt(r[p])||'(blank / 0)';oth.set(w,(oth.get(w)||0)+1)}
     const sv=o>=0?toSerial(r[o]):null;if(sv==null){nd[b]++;return}
     const q=ymd(sv),day=Math.floor(sv+1e-9),mk=q.y*12+q.m,mn=MONTHS[q.m]+' '+q.y;
     put(Mo,mk,mn,b);
     if(wm){const w=Math.ceil(q.d/7);put(We,mk*10+w,mn+' · Week'+w,b)}else{const iw=isoWeek(q),iy=isoY(q);put(We,iy*100+iw,iy+' · Week '+iw,b)}
     put(Da,day,String(q.d).padStart(2,'0')+'-'+MONTHS[q.m].slice(0,3)+'-'+q.y,b)});
   const sum=a=>a.reduce((x,y)=>x+y,0),rows=m=>[...m.entries()].sort((a,b)=>a[0]-b[0]).map(([,e])=>({lab:e.lab,c:e.c,t:sum(e.c)}));
-  return{n,tot,nd,ndT:sum(nd),oth:[...oth.entries()].sort((a,b)=>b[1]-a[1]),blocks:[['Month Wise',rows(Mo)],['Week Wise',rows(We)],['Date Wise',rows(Da)]],val:$('#rdv').value.trim()}}
+  return{n,tot,nd,ndT:sum(nd),oth:[...oth.entries()].sort((a,b)=>b[1]-a[1]),blocks:[['Month Wise',rows(Mo)],['Week Wise',rows(We)],['Date Wise',rows(Da)]],cnt:want.size}}
 const rdBlockRows=(R,rows)=>{const o=rows.slice();if(R.ndT)o.push({lab:'(Order Date nahi mili)',c:R.nd,t:R.ndT,nodate:1});return o};
 function rdRender(R){const f=x=>x.toLocaleString('en-IN'),mx=(rows)=>Math.max(1,...rows.flatMap(r=>r.c));
-  let h=`<div class="kpis"><div class="kpi t"><span>Total Active</span><b>${f(R.n)}</b><small>All Order Status = ${esc(R.val)}</small></div>`+RD_COLS.map((c,i)=>`<div class="kpi" style="--kc:${RD_CLR[i]}"><span>${c}</span><b>${f(R.tot[i])}</b><i><u style="width:${R.n?Math.round(R.tot[i]*100/R.n):0}%"></u></i></div>`).join('')+'</div>';
+  let h=`<div class="kpis"><div class="kpi t"><span>Total Active</span><b>${f(R.n)}</b><small>Final Remark list (${R.cnt} values)</small></div>`+RD_COLS.map((c,i)=>`<div class="kpi" style="--kc:${RD_CLR[i]}"><span>${c}</span><b>${f(R.tot[i])}</b><i><u style="width:${R.n?Math.round(R.tot[i]*100/R.n):0}%"></u></i></div>`).join('')+'</div>';
   h+=`<div class="rpt"><b>Active Orders</b><span>${f(R.n)} orders</span></div><div class="sc" style="max-height:520px"><table class="rp"><tr><th>Active Orders</th>${RD_COLS.map(c=>`<th>${c}</th>`).join('')}<th>Total</th></tr>`;
   R.blocks.forEach(([name,rows])=>{const all=rdBlockRows(R,rows),m=mx(rows);
     h+=`<tr class="sec"><td>${name}</td>${R.tot.map(v=>`<td class="tt">${f(v)}</td>`).join('')}<td class="tt">${f(R.n)}</td></tr>`;
@@ -539,12 +540,12 @@ function rdRender(R){const f=x=>x.toLocaleString('en-IN'),mx=(rows)=>Math.max(1,
   if(R.oth.length)h+=`<div class="mu" style="margin-top:8px">ℹ️ <b>Other</b> me aaye Process By values: ${R.oth.slice(0,8).map(([k,v])=>esc(k)+' <b>'+f(v)+'</b>').join(' · ')}${R.oth.length>8?' …':''}</div>`;
   if(R.ndT)h+=`<div class="mu">⚠ ${f(R.ndT)} active orders ki Order Date samajh nahi aayi, wo har block me "(Order Date nahi mili)" row me hain.</div>`;
   $('#rdout').innerHTML=h}
-function rdInit(){rdDefaults();const R=rdCalc(true);if(R)rdRender(R);else $('#rdout').innerHTML='<div class="mu" style="margin-top:10px">All Order Status aur Process By column select karke "Report banao" dabao.</div>'}
+function rdInit(){rdDefaults();const R=rdCalc(true);if(R)rdRender(R);else $('#rdout').innerHTML='<div class="mu" style="margin-top:10px">Final Remark aur Process By column select karke "Report banao" dabao.</div>'}
 $('#rdgo').onclick=()=>{if(!S.d)return alert('Pehle Master upload karo');const R=rdCalc();if(R)rdRender(R)};
-function rdModel(R){const f2=['G'],cols=RD_COLS,n7=(a,k)=>a.map(v=>[v,k]);
+function rdModel(R){const cols=RD_COLS,L='H',fl=k=>Array(NC+1).fill(['',k]),n7=(a,k)=>a.map(v=>[v,k]);
   const rows=[],merges=[],blank=ht=>rows.push({ht,c:[]});
-  rows.push({ht:38,c:[['Report Dashboard','title'],...Array(6).fill(['','title'])]});merges.push('A1:G1');
-  rows.push({ht:22,c:[[`DSR: ${S.d.name}  ·  Banayi gayi: ${new Date().toLocaleString('en-GB')}  ·  Active = All Order Status "${R.val}"`,'sub'],...Array(6).fill(['','sub'])]});merges.push('A2:G2');
+  rows.push({ht:38,c:[['Report Dashboard','title'],...fl('title')]});merges.push('A1:'+L+'1');
+  rows.push({ht:22,c:[[`DSR: ${S.d.name}  ·  Banayi gayi: ${new Date().toLocaleString('en-GB')}  ·  Active = Final Remark list (${R.cnt} values)`,'sub'],...fl('sub')]});merges.push('A2:'+L+'2');
   blank(8);
   rows.push({ht:20,c:[['TOTAL ACTIVE','kpiL'],...cols.map(c=>[c.toUpperCase(),'kpiL'])]});
   rows.push({ht:38,c:[[R.n,'kpiV'],...n7(R.tot,'kpiV')]});
@@ -553,8 +554,8 @@ function rdModel(R){const f2=['G'],cols=RD_COLS,n7=(a,k)=>a.map(v=>[v,k]);
   rows.push({ht:24,c:[['Active Orders','hdrL'],...cols.map(c=>[c,'hdr']),['Total','hdr']]});
   R.blocks.forEach(([name,br])=>{rows.push({ht:22,c:[[name,'secL'],...n7(R.tot,'secN'),[R.n,'secT']]});
     rdBlockRows(R,br).forEach((r,i)=>{const z=i%2?'z':'';rows.push({ht:19,c:[[r.lab,'rowL'+z],...n7(r.c,'rowN'+z),[r.t,'rowT']]})})});
-  blank(10);rows.push({ht:32,c:[[`Count = "All Order Status" me "${R.val}" wali rows, Process By ke hisaab se (Bulk9 / India / China / China-CJ, baaki sab Other). Ye sheet download ke waqt ke DSR data ka snapshot hai.`,'note'],...Array(6).fill(['','note'])]});merges.push('A'+rows.length+':G'+rows.length);
-  return{widths:[34,14,14,14,14,14,14],rows,merges}}
+  blank(10);rows.push({ht:46,c:[[`Active = Final Remark in me se ho: ${$('#rdv').value.trim()}. Count Process By ke hisaab se (Bulk9 / Bulk / India / China / China-CJ, baaki sab Other). Ye sheet download ke waqt ke DSR data ka snapshot hai.`,'note'],...fl('note')]});merges.push('A'+rows.length+':'+L+rows.length);
+  return{widths:[34,13,13,13,13,13,13,13],rows,merges}}
 $('#rddl').onclick=()=>download();
 
 /* ---------- View & Download ---------- */
@@ -565,7 +566,7 @@ function vShow(){const d=S.d,c=+$('#vc').value,v=$('#vv').value,q=$('#vq').value
   $('#vt').innerHTML='<tr>'+d.H.map(h=>`<th>${esc(h)}</th>`).join('')+'</tr>'+rows.slice(0,200).map(r=>'<tr>'+r.map(x=>`<td>${x&&x.f&&x.v===undefined?'ƒ':esc(tx(x))}</td>`).join('')+'</tr>').join('')}
 $('#vb').onclick=vShow;
 async function download(){if(!S.d)return alert('Master upload nahi hui');if($('#fxa').checked)fxFill(true);
-  let dash=null;if($('#rdon').checked){const R=rdCalc(true);if(R)dash=rdModel(R);else if(!confirm('Report Dashboard ke liye tab 7 me "All Order Status" aur "Process By" column select nahi hai.\n\nOK = Report Dashboard ke bina download karo\nCancel = ruko, column select karunga'))return}
+  let dash=null;if($('#rdon').checked){const R=rdCalc(true);if(R)dash=rdModel(R);else if(!confirm('Report Dashboard ke liye tab 7 me "Final Remark" aur "Process By" column select nahi hai.\n\nOK = Report Dashboard ke bina download karo\nCancel = ruko, column select karunga'))return}
   try{const prog=(i,n)=>{$('#st').textContent=`⏳ Excel ban rahi hai... ${i.toLocaleString()} / ${n.toLocaleString()} rows`};
     const keep=$('#keep').checked&&S.mfile&&S.d.dataPath&&!/\.csv$/i.test(S.mfile.name);
     const parts=keep?await DSRCore.writeXlsxPreserve(S.d,()=>S.mfile.stream(),{zero:$('#zf').checked,dash,onProgress:prog,onCopy:n=>{$('#st').textContent='⏳ Original sheets copy ho rahi hain... '+Math.round(n/1048576)+' MB'}}):await DSRCore.writeXlsx(S.d,{sheet:S.d.sheetName||'DSR',zero:$('#zf').checked,dash,onProgress:prog});
