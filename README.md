@@ -27,6 +27,10 @@ Process By × Payment Status × Courier ke targets:
 - **Special rule:** Username = onestopbulk aur Final Remark in me se (blank, Bulk9 Order Dispatch Pending AT India WH, FM Intrasit, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH) → Order Cancelled / DF Order Cancelled. Payment status ki shart nahi (document me nahi hai); Payment dropdown se "Sirf PR" chun sakte ho. Phase 1/2 ke baad lagta hai. Sab editable.
 - Process By ki koi aur value (jaise "Price Hold") ke liye koi rule nahi, row jaisi hai waisi rehti hai.
 
+## Step 4 (tab 4) · FM Mile
+FM file ke columns fix hain (auto mapping, "+ Column add" se aur jod sakte ho): pickup date → Pick up from SFC · Recd at SZN WH Dt. → Date of receiving in FW HUB / MCI · HAWB No. → Transporter AWB · date → Flight Connect date · Actual arrival → Date arrival at Indian Customs · customs cleared dt. → Date of Customs clerance · delivery at GGN WH → Arrival in Indian Warehouse.
+Fill ke baad: DSR ke "Arrival in Indian Warehouse" me date bhari ho aur Final Remark list me ho (Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, FM Intrasit, Invoice Not Prepared, Not Processed By China, WH Not Assigned) → Reached AT India WH / WH Working. List me tick hatao = hata do, "+ Jodo" se naya remark jodo. Naya Final Remark/Remark editable. Default: sirf FM file se match hui rows (dropdown se Poori DSR).
+
 ## Step 5 (tab 5) · Last Mile (ALogistics_Logic.docx)
 Sabse upar **courier / logistics company** chuno (15 courier + 10 aggregators). Us courier ke columns (lookup, A/B/C) update ke baad yaad ho jate hain aur agli baar file upload par apne aap lagte hain. Lookup serial wise (pehla na mile to agla column). Match, DSR date khali ho to hi bharti hai. Date bhari ho (nayi ya purani) aur Final Remark list me ho to:
 - **A Pickup:** → Last Mile Intrasit / Last Mile Intrasit. List: blank, Bulk9…, FM Intrasit, Dispatch Pending…, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH.
@@ -35,7 +39,7 @@ Sabse upar **courier / logistics company** chuno (15 courier + 10 aggregators). 
 Date khali ho to kuch nahi badalta. Result ke neeche "Jaanch" dikhti hai (logistics column me asli value kitni rows me hai). N/A/NA/null/- khali maane jate hain.
 
 ## Step 3 (tab 3) · Invoice (AInvoice_Final_And_Remarks.docx)
-Auto mapping: Shopperr Invoice Number ← invoice number, Invoice Received Date ← Received date, SFC Qty ← QTY, SFC Value ← TOTAL PRICE(RMB), Shopperr Invoice Date ← Invoice Date, Invoice SKU ← SKU. Ek order ki kai invoice rows ho to **SFC Qty / SFC Value jod (sum)** diye jate hain, **Invoice SKU** me alag SKU comma se aate hain. Sirf match hue orders. DSR ke saare Final Remark checkbox me dikhte hain (default: blank, Bulk9…, Dispatch Pending…, Invoice Not Prepared, Not Processed By China, WH Not Assigned). Invoice Number bhara ho aur Final Remark chune hue me ho to → FM Intrasit / FM Intrasit.
+Auto mapping: Shopperr Invoice Number ← invoice number, Invoice Received Date ← Received (ya Received date), SFC Qty ← QTY, SFC Value ← TOTAL PRICE(RMB), Shopperr Invoice Date ← Date (ya Invoice Date), Invoice SKU ← SKU. Ek order ki kai invoice rows ho to **SFC Qty / SFC Value jod (sum)** diye jate hain, **Invoice SKU** me alag SKU comma se aate hain. Sirf match hue orders. DSR ke saare Final Remark checkbox me dikhte hain (default: blank, Bulk9…, Dispatch Pending…, Invoice Not Prepared, Not Processed By China, WH Not Assigned). Invoice Number bhara ho aur Final Remark chune hue me ho to → FM Intrasit / FM Intrasit.
 
 ## Download
 Hara header, borders, auto column width, freeze + filter. "⚙ Download options": dusri sheets/pivot rakho, khali cells 0 (formula columns chhodkar). Download se pehle Month/Week/Time/Date columns apne aap bharte hain (tab 6 me ⑤).

@@ -79,6 +79,9 @@ a{color:var(--ac);font-weight:600;text-decoration:none}a:hover{text-decoration:u
 #toast{font-size:13px;padding-right:56px}#toast #tclose{position:absolute;top:10px;right:12px;padding:3px 10px;float:none}
 header>*{flex-shrink:0}header{gap:8px}header button{padding:8px 13px}header button.big{padding:9px 16px;font-size:14px}#st{flex-shrink:1;min-width:0;max-width:24vw}@media(max-width:1380px){.brand small{display:none}}
 @media(max-width:760px){header{padding:8px 10px}.brand small{display:none}#st{max-width:100%;order:9;flex-basis:100%}main{padding:10px}.card{padding:15px}.hero{padding:20px}.hero h2{font-size:20px}nav{padding:12px 10px 4px}.optbox{right:auto;left:0;min-width:260px}}
+
+.grid5{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:14px;margin-top:6px}
+.fld{display:flex;flex-direction:column;gap:5px}.fld>span{font-weight:700;font-size:13px}.fld select,.fld input{width:100%}.fld small{color:var(--mu);font-size:11.5px;line-height:1.35}
 </style></head><body>
 <header>
 <div class="brand"><span class="logo">📋</span><div><b>DSR Updater</b><small>Excel DSR ko smart tareeke se update karo</small></div></div>
@@ -97,9 +100,13 @@ header>*{flex-shrink:0}header{gap:8px}header button{padding:8px 13px}header butt
 <div class="mu hint">Master ka format wahi rahega; baaki sab files isi ko update karengi. (.xlsx / .csv, pehli sheet, header pehli row me; 3 lakh rows × 75 columns tak). Badi file me padhne me 1-2 minute lag sakta hai.</div>
 <div class="row"><input type="file" id="mf" accept=".xlsx,.xlsm,.csv"> <label class="mu">Sheet <select id="msh"><option value="-1">auto (sabse badi sheet)</option></select></label> <label class="mu">Header row no. <input type="number" id="mhr" min="1" placeholder="auto" style="width:80px"></label><button class="g" id="mhb">Dobara padho</button></div><div class="mu hint">Header row apne aap pehchani jati hai (upar filter/title rows ho to bhi). Galat ho to sahi Excel row number likho.</div><div id="mi" class="mu"></div></div>
 <div class="card off" id="cfg"><h3>🎯 Important columns (remark rules inhi par chalte hain)</h3>
-<div class="row">Warehouse <select class="dsr" data-ph="1" id="cw"></select> Payment Status <select class="dsr" data-ph="1" id="cp"></select>
-Final Remark <select class="dsr" data-ph="1" id="cf"></select> Remark <select class="dsr" data-ph="1" id="cr"></select> Courier/AWB <select class="dsr" data-ph="1" id="ca"></select></div>
-<div class="mu">Har column apni file ke hisaab se khud select karo. Remark wale steps chalane se pehle ye select hona zaroori hai. Master ke baad koi bhi step kisi bhi order me chala sakte ho.</div></div></section>
+<div class="grid5">
+<label class="fld"><span>Warehouse</span><select class="dsr" data-ph="1" id="cw"></select><small>Jis column me Bulk / India / China jaisa warehouse ho (jaise Process By)</small></label>
+<label class="fld"><span>Payment Status</span><select class="dsr" data-ph="1" id="cp"></select><small>PD / PR / PU wala column</small></label>
+<label class="fld"><span>Final Remark</span><select class="dsr" data-ph="1" id="cf"></select><small>Final Remark wala column</small></label>
+<label class="fld"><span>Remark</span><select class="dsr" data-ph="1" id="cr"></select><small>Remark wala column</small></label>
+<label class="fld"><span>Courier / AWB</span><select class="dsr" data-ph="1" id="ca"></select><small>"Courier" wala column (tracking ho to AWB, warna 0)</small></label></div>
+<div class="mu" style="margin-top:10px">Har column apni file ke hisaab se khud select karo. Remark wale steps chalane se pehle ye select hona zaroori hai. Master ke baad koi bhi step kisi bhi order me chala sakte ho.</div></div></section>
 
 <section id="p2"></section><section id="p3"></section><section id="p4"></section><section id="p5"></section>
 
@@ -165,8 +172,6 @@ const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu hint">${d}</d
 <div class="card off" id="${p}c"><h4 style="margin-top:0">① Lookup (kis column se match karein)</h4><div class="row"><label class="mu"><b>DSR ke column</b><br><select class="dsr" data-ph="1" id="${p}dk"></select></label> <span>↔</span> <label class="mu"><b>${FL[p]}</b><br><select id="${p}fk"></select></label></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
 const pb=(p,t)=>`<h4>② ${t||'DSR ke column ke bagal me file ka column chuno (file ke us column se DSR ka column fill hoga)'}</h4><div class="mu"><b>DSR ke column</b> &nbsp;←&nbsp; <b>${FL[p]}</b></div><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button><button class="g" id="${p}au">Same naam wale auto jodo</button></div>`;
 const pb2=p=>`<div class="mu"><b>DSR ke column</b> &nbsp;←&nbsp; <b>Logistics file ke column</b></div><div id="${p}pb"></div><div class="row"><button class="g" id="${p}ap">+ Column add</button></div>`;
-const frBox=p=>`<h4>Sirf in Final Remark wali DSR rows par remark badlo</h4><div id="${p}fr"></div>
-<div class="row">Naya Final Remark <input type="text" id="${p}nf" placeholder="khali = change nahi"> Naya Remark <input type="text" id="${p}nr"></div>`;
 $('#p2').innerHTML=fb('t2','🧾 Step 2 · Order Data upload','DSR me jo orders nahi hain sirf wahi add honge. Match column dynamic hai.',`<div class="row"><button id="t2ck" class="g">Dobara check karo</button></div><div id="t2s"></div>
 <div class="row" style="margin-top:12px"><button id="t2all" class="big">🔄 Update Order Data</button><span class="mu hint">Missing orders add → status update → Courier → Remark rules → Order Date columns, sab ek click me</span><span class="sp"></span><span class="toolbar"><button class="g" id="openall">Sab kholo</button><button class="g" id="closeall">Sab band karo</button></span></div>
 <details class="sec"><summary>② Column mapping — missing orders DSR me add karne ke liye <span class="mu" id="t2cnt"></span></summary><div class="in">${pb('t2','DSR ke column ke bagal me Order file ka column chuno (missing orders add hone par ye columns file se fill honge. Final Remark / Remark yahan mat chuno, wo rules se apne aap bharte hain)')}<div class="row"><button id="t2pre">⚡ Auto mapping lagao</button><button id="t2rs" class="g">Original preset par wapas</button><label class="mu">ya naya mapping file upload karo (2 columns: DSR | Order Data, ye yaad rahegi) <input type="file" id="t2mf" accept=".xlsx,.csv"></label></div><div id="t2am" class="mu"></div><div class="mu hint">Jo DSR columns yahan nahi chune: 0 se fill hote hain; formula wale columns me formula; Final Remark / Remark blank.</div><div class="row"><label><input type="checkbox" id="t2ar" checked> Add karne ke baad Phase 1 Remark rules apne aap lagao (sirf nayi rows par)</label></div><div class="row"><button id="t2add" disabled>Missing rows DSR me add karo</button></div></div></details>
@@ -182,15 +187,26 @@ $('#p3').innerHTML='<div class="card"><h3>Pehle courier chuno</h3><div class="ro
 <details class="sec" open><summary>C · RTO Mark &amp; RTO Delivered</summary><div class="in"><label><input type="checkbox" id="t3ce" checked> Ye step chalao</label>${pb2('t3c')}<div class="mu hint">Wahi lookup. RTO date (RTO mark aur/ya RTO delivered, jitne columns chaho jodo) bhari ho aur Final Remark list me ho to Order Cancelled / RTO Received ho jata hai. RTO date khali ho to kuch nahi badalta.</div><div class="row"><label class="mu"><b>Final Remark in me se ho tabhi badlo</b> (comma se alag; blank = khali/0)<br><input type="text" id="t3cf" size="95" value="blank, Bulk9 Order Dispatch Pending AT India WH, FM Intrasit, Dispatch Pending At India WH, Invoice Not Prepared, Not Processed By China, WH Not Assigned, Reached AT India WH, Last Mile Intrasit, Delivered to end buyer, Order Cancelled"></label></div><div class="row"><label class="mu">Naya Final Remark<br><input type="text" id="t3ct" value="Order Cancelled"></label><label class="mu">Naya Remark<br><input type="text" id="t3cr" value="RTO Received"></label><label class="mu"><input type="checkbox" id="t3co"> Pehle se bhari date par bhi overwrite karo</label></div></div></details>
 <div class="row"><button id="t3go" class="big">Last Mile update karo (A → B → C)</button></div><div id="t3r"></div>`);
 $('#p4').innerHTML=fb('t4','🧮 Step 3 · Invoice file','Invoice file se Shopperr Invoice Number/Date, Received date, SFC Qty/Value aur Invoice SKU DSR me aate hain; sirf match hue orders ke liye. Phir Final Remark/Remark FM Intrasit hota hai.',`<details class="sec" open><summary>② Columns (DSR ← Invoice file) <span class="mu" id="t4cnt"></span></summary><div class="in">${pb('t4')}<div class="row"><button class="g" id="t4pre">⚡ Auto mapping lagao</button></div><div id="t4am" class="mu"></div><div class="mu hint">Ek order ki invoice file me kai rows hon (kai SKU, ya ek SKU alag-alag rows me split) to <b>Sum</b> wale columns (SFC Qty, SFC Value) jod diye jate hain, aur <b>Comma se joro</b> wale column (Invoice SKU) me saare alag SKU comma se aate hain. Baaki columns me pehla value aata hai.</div></div></details><div class="row"><label class="mu"><b>DSR ka Invoice Number column</b> (ye bhara ho tabhi FM Intrasit lagta hai)<br><select class="dsr" data-ph="1" id="t4in"></select></label></div><h4>Sirf in Final Remark wali DSR rows par remark badlo (DSR ke saare Final Remark yahan dikhte hain)</h4><div id="t4fr"></div><div class="row"><label class="mu">Naya Final Remark<br><input type="text" id="t4nf" value="FM Intrasit"></label><label class="mu">Naya Remark<br><input type="text" id="t4nr" value="FM Intrasit"></label></div><div class="row"><button id="t4go" class="big">Invoice update karo</button></div>`);
-$('#p5').innerHTML=fb('t5','✈️ Step 4 · FM Mile file','Invoice ka current status DSR me copy hoga; filter laga kar remark badlo.',`${pb('t5')}<h4>FM status filter (sirf in status wali file rows par)</h4><div class="row">FM status column <select id="t5sc"></select></div><div id="t5st"></div>${frBox('t5')}<div class="row"><button id="t5go">Update karo</button></div>`);
-$('#t4nr').value='FM Intrasit';$('#t5nf').value='Reached at India WH';$('#t5nr').value='WH Working';
-function frChips4(c,old){const m=new Map();[PH.B9,PH.DP,PH.INP,PH.NPC,PH.WNA].forEach(v=>m.set(canon(v),v));
+$('#p5').innerHTML=fb('t5','✈️ Step 4 · FM Mile file','FM file se pickup / receive / flight / customs / arrival dates aur HAWB (Transporter AWB) DSR me aati hain. Phir "Arrival in Indian Warehouse" me date bhari ho aur Final Remark list me ho to Final Remark / Remark badal jata hai.',`
+<details class="sec" open><summary>② Columns (DSR ← FM file) <span class="mu" id="t5cnt"></span></summary><div class="in">${pb('t5')}<div class="row"><button class="g" id="t5pre">⚡ Auto mapping lagao</button></div><div id="t5am" class="mu"></div></div></details>
+<div class="row"><label class="fld" style="max-width:520px"><span>DSR ka "Arrival in Indian Warehouse" column (iski date par remark badlega)</span><select class="dsr" data-ph="1" id="t5ar"></select></label></div>
+<h4>Final Remark list: in me se ho tabhi remark badlo</h4><div id="t5fr"></div>
+<div class="row"><label class="mu">Naya Final Remark<br><input type="text" id="t5nf" value="Reached AT India WH"></label><label class="mu">Naya Remark<br><input type="text" id="t5nr" value="WH Working"></label><label class="mu">Kin rows par<br><select id="t5sc2"><option value="m">Sirf FM file se match hui rows</option><option value="a">Poori DSR</option></select></label></div>
+<div class="row"><button id="t5go" class="big">FM Mile update karo</button></div>`);
+$('#t4nr').value='FM Intrasit';
+const FRDEF={t4:{list:[PH.B9,PH.DP,PH.INP,PH.NPC,PH.WNA],blank:true},t5:{list:[PH.B9,PH.DP,'FM Intrasit',PH.INP,PH.NPC,PH.WNA],blank:false}};
+function frChips(p){const c=C(),cd=FRDEF[p];if(!cd||!S.d)return;
+  const exist=$('#'+p+'fr-i')?[...$$('#'+p+'fr-i input')].map(i=>i.value):null,old=exist?chk(p+'fr-i'):null,m=new Map();
+  cd.list.forEach(v=>m.set(canon(v),v));
   if(c.fr>=0)uniq(S.d.rows,c.fr).forEach(v=>{const k=canon(v);if(k&&k!=='0')m.set(k,v)});
-  $('#t4fr').innerHTML=chips('t4fr-i',['(blank / 0)',...m.values()],v=>old?old.includes(v.toLowerCase()):(v==='(blank / 0)'||LIST5.has(canon(v))))}
-function frChips(p){const c=C(),old=$('#'+p+'fr input')?chk(p+'fr'):null;if(p==='t4')return frChips4(c,old);const def=['Bulk9 Order Pending','Dispatch Pending at india wh','Invoice Not Prepared','WH Not Assigned'];
-  const vals=[...new Set([...def,...uniq(S.d.rows,c.fr)])];$('#'+p+'fr').innerHTML=chips(p+'fr-i',vals,v=>old?old.includes(v.toLowerCase()):def.includes(v));$('#'+p+'fr').firstChild.id=p+'fr-i';$('#'+p+'fr').dataset.k=1}
-/* frChips wrapper: chk uses id p+'fr-i' */
-const frSel=p=>chk(p+'fr-i');
+  (exist||[]).forEach(v=>{const k=canon(v);if(k&&k!=='(blank / 0)'&&!m.has(k))m.set(k,v)});
+  const def=new Set(cd.list.map(canon));
+  $('#'+p+'fr').innerHTML=chips(p+'fr-i',['(blank / 0)',...m.values()],v=>old?old.includes(v.toLowerCase()):(v==='(blank / 0)'?cd.blank:def.has(canon(v))))
+    +`<div class="row"><input type="text" id="${p}fradd" placeholder="Naya Final Remark jodo (jo list me nahi hai)" size="40"><button class="g" id="${p}fraddb">+ Jodo</button><span class="mu">Tick hatao = list se hata do</span></div>`;
+  $('#'+p+'fraddb').onclick=()=>{const t=$('#'+p+'fradd').value.trim();if(!t)return;const k=canon(t);
+    const ex=$$('#'+p+'fr-i input').find(i=>canon(i.value)===k);if(ex){ex.checked=true;$('#'+p+'fradd').value='';return}
+    const l=document.createElement('label');l.innerHTML=`<input type="checkbox" value="${esc(t)}" checked> ${esc(t)} <b class="x" title="Hatao" style="cursor:pointer">✕</b>`;
+    l.querySelector('.x').onclick=ev=>{ev.preventDefault();l.remove()};$('#'+p+'fr-i').append(l);$('#'+p+'fradd').value=''}}
 
 /* ---------- pairs ---------- */
 function addPair(p){const F=S.f[p],d=document.createElement('div');d.className='row pr';
@@ -406,14 +422,8 @@ function t3diag(F,lk,secs,matched){const N=F.rows.length,L=[];
   return `<div class="${bad?'er':'mu'}" style="margin-top:8px"><b>${bad?'⚠ Jaanch — logistics file me hi data nahi mil raha:':'Jaanch:'}</b><ul>${L.map(l=>`<li class="${l[0]===0?'er':''}">${esc(l[1])}${l[0]===0?' (N/A ya khali: yahan se kuch bhi DSR me nahi aa sakta)':''}</li>`).join('')}</ul>${bad?'Sahi report download karo jisme AWB Code aur dates bhari hon, ya lookup ke liye wo column chuno jisme DSR jaisi value ho.':''}</div>`}
 $('#t3go').onclick=t3run;
 
-/* ---------- Step 4 & 5 ---------- */
-function fileStage(p,useSt){const F=S.f[p];if(!F||!need('fr','rm')||!keyOk(p))return;snap(gp(p).map(x=>x.d));const dk=+$('#'+p+'dk').value,fk=+$('#'+p+'fk').value,q=gp(p),{fr,rm}=C();ensure(q);
-  const sel=frSel(p),sc=useSt?+$('#'+p+'sc').value:-1,st=useSt?chk(p+'st-i'):null,a=$('#'+p+'nf').value.trim(),b=$('#'+p+'nr').value.trim();
-  const map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k)map.set(k,r)});let m=0,u=0;const hit=new Set();
-  S.d.rows.forEach(r=>{const k=nm(r[dk]),x=map.get(k);if(!x)return;m++;hit.add(k);q.forEach(y=>{const v=gv(x[y.s]);if(v!==''&&v!=null&&!isNA(v))r[y.d]=v});
-    if(sel.includes(rt(r[fr]).toLowerCase())&&(!st||st.includes(tx(x[sc]).toLowerCase()))){if(a)r[fr]=a;if(b)r[rm]=b;u++}});
-  $('#'+p+'r').innerHTML=`<div class="ok">✅ ${m} rows match hui, ${u} rows ka remark update hua.</div><div class="mu">File ke ${map.size-hit.size} keys DSR me nahi mile.</div>`;refresh()}
-const PRESET_INV=[['Shopperr Invoice Number',['invoice number','invoice no','invoice no.'],'first'],['Invoice Received Date',['received date','receive date','received on'],'first'],['SFC Qty',['qty','quantity'],'sum'],['SFC Value',['total price(rmb)','total price (rmb)','total price','total value'],'sum'],['Shopperr Invoice Date',['invoice date'],'first'],['Invoice SKU',['sku','product sku','item sku','sku code','seller sku'],'join']];
+/* ---------- Step 3 Invoice / Step 4 FM Mile ---------- */
+const PRESET_INV=[['Shopperr Invoice Number',['invoice number','invoice no','invoice no.'],'first'],['Invoice Received Date',['received date','receive date','received on','received'],'first'],['SFC Qty',['qty','quantity'],'sum'],['SFC Value',['total price(rmb)','total price (rmb)','total price','total value'],'sum'],['Shopperr Invoice Date',['invoice date','date'],'first'],['Invoice SKU',['sku','product sku','item sku','sku code','seller sku'],'join']];
 function applyInv(){const F=S.f.t4;if(!F||!S.d)return;$$('#t4pb .pr').forEach(d=>d.remove());const miss=[];let ok=0;
   PRESET_INV.forEach(([dn,alts,ag])=>{const i=S.d.H.findIndex(h=>nk(h)===nk(dn)),j=F.H.findIndex(h=>alts.includes(nk(h)));
     if(i<0||j<0){miss.push(`${dn} ← ${alts[0]} (${i<0?'DSR me column nahi mila':'Invoice file me column nahi mila'})`);return}
@@ -443,9 +453,31 @@ function t4run(){const F=S.f.t4;if(!F||!S.d)return alert('Pehle Invoice file upl
     if(sel.has(f===''?'(blank / 0)':canon(f))){const a=nf||rt(r[fr]),b=nr||rt(r[rm]);if(rt(r[fr])!==a||rt(r[rm])!==b){r[fr]=a;r[rm]=b;ch++}}});
   $('#t4r').innerHTML=`<div class="ok">✅ ${m.toLocaleString()} DSR rows invoice file se match hui${multi?` (${multi.toLocaleString()} orders ki 1 se zyada invoice rows thi: Sum/SKU jod diye gaye)`:''}.</div><ul><li>Update hua: ${q.map((y,j)=>esc(d.H[y.d])+' <b>'+per[j].toLocaleString()+'</b>').join(' · ')}</li><li>Final Remark/Remark ${esc(nf||'(same)')} / ${esc(nr||'(same)')} hua: <b>${ch.toLocaleString()}</b> rows (sirf jinme Invoice Number bhara hai aur Final Remark chuni hui list me hai)</li><li>Invoice file ke ${(grp.size-hit.size).toLocaleString()} orders DSR me nahi mile</li></ul>`;refresh()}
 $('#t4go').onclick=t4run;
-bind('t5',F=>{$('#t5sc').innerHTML=op(F.H,gi(F.H,/status/i));t5st();$('#t5sc').onchange=t5st});
-function t5st(){$('#t5st').innerHTML=chips('t5st-i',uniq(S.f.t5.rows,+$('#t5sc').value),()=>true)}
-$('#t5go').onclick=()=>fileStage('t5',true);
+const PRESET_FM=[['Pick up from SFC',['pickup date','pick up date']],['Date of receiving in FW HUB / MCI',['recd at szn wh dt.','recd at szn wh dt','recd at szn wh date']],['Transporter AWB',['hawb no.','hawb no','hawb']],['Flight Connect date',['date']],['Date arrival at Indian Customs',['actual arrival']],['Date of Customs clerance',['customs cleared dt.','customs cleared dt','customs cleared date']],['Arrival in Indian Warehouse',['delivery at ggn wh']]];
+function applyFm(){const F=S.f.t5;if(!F||!S.d)return;$$('#t5pb .pr').forEach(d=>d.remove());const miss=[];let ok=0;
+  PRESET_FM.forEach(([dn,alts])=>{const i=S.d.H.findIndex(h=>nk(h)===nk(dn)),j=F.H.findIndex(h=>alts.includes(nk(h)));
+    if(i<0||j<0){miss.push(`${dn} ← ${alts[0]} (${i<0?'DSR me column nahi mila':'FM file me column nahi mila'})`);return}
+    const d=addPair('t5');d.querySelector('.d').value=String(i);d.querySelector('.s').value=String(j);ok++});
+  if(!$$('#t5pb .pr').length)addPair('t5');
+  const ai=S.d.H.findIndex(h=>nk(h)==='arrival in indian warehouse');if(ai>=0)$('#t5ar').value=String(ai);
+  $('#t5cnt').textContent=`(${ok} jodiyan)`;
+  $('#t5am').innerHTML=`✅ Auto mapping: ${ok} jodiyan lag gayi.`+(miss.length?`<br><span class="er">Nahi mili (manual chuno): ${miss.map(esc).join('; ')}</span>`:'')}
+bind('t5',applyFm);$('#t5pre').onclick=()=>S.f.t5?applyFm():alert('Pehle FM Mile file upload karo');
+function t5run(){const F=S.f.t5;if(!F||!S.d)return alert('Pehle FM Mile file upload karo');if(!need('fr','rm')||!keyOk('t5'))return;
+  const q=gp('t5');if(!q.length)return alert('Kam se kam ek DSR ← FM file jodi chuno');const ar=+$('#t5ar').value;if(!(ar>=0))return alert('DSR ka "Arrival in Indian Warehouse" column chuno');
+  const d=S.d,{fr,rm}=C(),dk=+$('#t5dk').value,fk=+$('#t5fk').value;
+  snap(q.map(x=>x.d).concat([ar]));ensure(q);
+  const map=new Map();F.rows.forEach(r=>{const k=nm(r[fk]);if(k&&k!=='0'&&!NAV.has(k))map.set(k,r)});
+  const sel=new Set(chk('t5fr-i').map(canon)),nf=$('#t5nf').value.trim(),nr=$('#t5nr').value.trim(),all=$('#t5sc2').value==='a';
+  let m=0,ch=0,chk2=0;const per=q.map(()=>0),hit=new Set();
+  d.rows.forEach(r=>{const x=map.get(nm(r[dk]));
+    if(x){m++;hit.add(nm(r[dk]));q.forEach((y,j)=>{let v=gv(x[y.s]);if(v==null||v===''||isNA(v))return;const isD=/date|dt\b|arrival|pick ?up|receiving|clerance/i.test(d.H[y.d]);
+      if(isD&&typeof v==='string'){const n=toSerial(v);if(n!=null)v=n}if(isD&&typeof v==='number'&&!d.dateCols.includes(y.d))d.dateCols.push(y.d);
+      if(tx(r[y.d])!==tx(v)){r[y.d]=v;per[j]++}})}
+    if(!x&&!all)return;if(!isFilled(r[ar]))return;chk2++;const f=rt(r[fr]);
+    if(sel.has(f===''?'(blank / 0)':canon(f))){const a=nf||rt(r[fr]),b=nr||rt(r[rm]);if(rt(r[fr])!==a||rt(r[rm])!==b){r[fr]=a;r[rm]=b;ch++}}});
+  $('#t5r').innerHTML=`<div class="ok">✅ ${m.toLocaleString()} DSR rows FM file se match hui.</div><ul><li>Update hua: ${q.map((y,j)=>esc(d.H[y.d])+' <b>'+per[j].toLocaleString()+'</b>').join(' · ')}</li><li>"${esc(d.H[ar])}" me date wali rows jo check hui: <b>${chk2.toLocaleString()}</b> → Final Remark/Remark ${esc(nf||'(same)')} / ${esc(nr||'(same)')} hua: <b>${ch.toLocaleString()}</b> rows</li><li>FM file ke ${(map.size-hit.size).toLocaleString()} orders DSR me nahi mile</li></ul>`;refresh()}
+$('#t5go').onclick=t5run;
 
 /* ---------- View & Download ---------- */
 function vInit(){$('#vc').onchange=()=>{$('#vv').innerHTML='<option value="">(sab)</option>'+uniq(S.d.rows,+$('#vc').value).slice(0,500).map(v=>`<option>${esc(v)}</option>`).join('')};$('#vc').onchange();vShow()}
