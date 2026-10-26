@@ -152,7 +152,7 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 <div class="rdset" data-r="fm"><div class="mu">Counts <b>Shopperr Invoice Number</b> (filled) by the <b>Pick up from SFC</b> date. No order count.</div>
 <div class="row"><label class="mu"><b>Invoice Number column</b><br><select class="dsr" data-ph="1" id="rdi"></select></label><label class="mu"><b>Arrival in Indian Warehouse column</b><br><select class="dsr" data-ph="1" id="rda"></select></label><label class="mu"><b>Pick up from SFC column</b><br><select class="dsr" data-ph="1" id="rdk"></select></label></div></div>
 
-<div class="rdset" data-r="osb"><div class="mu">Rows where <b>Process By</b> = China / China-CJ and <b>Username</b> = onestopbulk. FM Delivered = Invoice Number filled + Arrival in Indian Warehouse date; FM Intrasit = Invoice filled, no arrival date; Not Processed By China = Final Remark "Not Processed By China". Days Taken (Order Date − Arrival in Indian Warehouse) comes as a column only in the Export details file, order wise. Uses the Invoice / Arrival columns chosen in FM Mile Report.</div></div>
+<div class="rdset" data-r="osb"><div class="mu">Rows where <b>Process By</b> = China / China-CJ and <b>Username</b> = onestopbulk. FM Delivered = Invoice Number filled + Arrival in Indian Warehouse date; FM Intrasit = Invoice filled, no arrival date; Not Processed By China = Final Remark "Not Processed By China". Days Taken (Arrival in Indian Warehouse − Order Date) comes as a column only in the Export details file, order wise. Uses the Invoice / Arrival columns chosen in FM Mile Report.</div></div>
 <div id="rdout"></div></div></section>
 <section id="p7"><div class="card"><h3>⑤ Fill columns from Order Date (Month / Week / Time / Date)</h3>
 <div class="mu">From Order Date: <b>Month</b> = month name (October), <b>Week</b> = like Week1, <b>Time of order</b> = time only, <b>Payment by reseller</b> = date only. Applies to all rows (new + old). If these columns had a formula earlier, it now becomes a plain value.</div>
@@ -591,7 +591,7 @@ function rdOne(id){const def=RD_DEF.find(x=>x[0]===id),res={id,title:def[1],head
   if(id==='osb'){const u=rdG('rdu'),o=rdG('rdo'),i=rdG('rdi'),a=rdG('rda'),s=rdG('rds');if(!(u>=0)||!(p>=0)||!(o>=0)||!(i>=0)||!(a>=0))return err('Select Username, Process By, Order Date, Invoice Number and Arrival in Indian Warehouse columns');
     const ok=r=>{const w=rdNW(r[p]);return(w==='china'||w==='chinacj')&&nm(r[u])==='onestopbulk'},ad=r=>isFilled(r[a])?rdSerial(r[a]):null;
     const cls=r=>{if(!ok(r))return-1;if(s>=0&&canon(tx(r[s]))===canon(PH.NPC))return 2;return isFilled(r[i])?(ad(r)!=null?0:1):-1};
-    const ext=r=>{const c=cls(r);if(c!==0&&c!==1)return null;const od=rdDt(o)(r),x=ad(r);return od==null||x==null?null:Math.floor(od+1e-9)-Math.floor(x+1e-9)};
+    const ext=r=>{const c=cls(r);if(c!==0&&c!==1)return null;const od=rdDt(o)(r),x=ad(r);return od==null||x==null?null:Math.floor(x+1e-9)-Math.floor(od+1e-9)};
     return{...res,...rdAgg(3,cls,rdDt(o)),cols:['FM Delivered','FM Intrasit','Not Processed By China'],clr:['#10b981','#8b5cf6','#ef4444'],rule:'Process By China / China-CJ + Username onestopbulk; Invoice filled + Arrival date = FM Delivered, no date = FM Intrasit; Final Remark Not Processed By China',dtl:'Order Date',days:ext}}}
 const rdAll=()=>{rdDefaults();rdLists();return RD_DEF.map(d=>rdOne(d[0]))};
 const rdTiles=Rs=>{const o=[];Rs.forEach(R=>{if(R.err)return;o.push([R.head==='Pick up from SFC'?'FM Mile':R.head,R.n,R.color,R.id])});return o};
@@ -644,7 +644,7 @@ function rdModelAll(Rs){const L='H',cf=[],fl=(k,n=7)=>Array(n).fill(['',k]),rows
   return{widths:[38,17,17,17,17,17,17,17],rows,merges,cf}}
 $('#rddl').onclick=()=>download();
 $('#rdx').onclick=async()=>{if(!S.d)return alert('Upload the Master first');const R=rdAll().find(x=>x.id===rdSel);if(!R||R.err||!R.sel||!R.sel.length)return alert(R&&R.err?R.err:'No rows in this report');
-  const D=R.days?{...S.d,H:[...S.d.H,'Days Taken (Order Date - Arrival)'],rows:R.sel.map(r=>{const x=R.days(r);return[...r,x==null?'':x]})}:{...S.d,rows:R.sel};
+  const D=R.days?{...S.d,H:[...S.d.H,'Days Taken (Arrival - Order Date)'],rows:R.sel.map(r=>{const x=R.days(r);return[...r,x==null?'':x]})}:{...S.d,rows:R.sel};
   try{const parts=await DSRCore.writeXlsx(D,{sheet:R.head.replace(/[\\\/?*\[\]:]/g,' ').slice(0,31),zero:false});const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download=R.head.replace(/\W+/g,'_')+'_details_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),120000)}catch(e){alert('Export fail: '+e.message)}};
 
 /* ---------- View & Download ---------- */
