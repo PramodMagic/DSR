@@ -131,7 +131,7 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 
 <section id="p6"><div class="card"><h3>📊 Report Dashboard</h3>
 <div class="mu">One click on <b>Create Reports</b> builds all reports together and adds a new sheet called <b>Report Dashboard</b> to the DSR (every report one below the other). Click a card or a report button to view it on screen.</div>
-<div class="row"><button id="rdgo" class="big">📊 Create Reports (add all to DSR)</button><button id="rdrm" class="g">✖ Remove from DSR</button><button id="rddl">⬇ Download DSR</button><label class="mu">View <select id="rdview"><option value="m">Month wise</option><option value="w">Week wise</option><option value="d">Date wise</option><option value="all">Month + Week + Date</option></select></label><button class="g" id="rdx" title="Exports the full DSR rows of this report into a new Excel file (new sheet)">⬇ Export details (this report)</button></div><div id="rdst" class="mu"></div>
+<div class="row"><button id="rdgo" class="big">📊 Create Reports (add all to DSR)</button><button id="rdrm" class="g">✖ Remove from DSR</button><button id="rddl">⬇ Download DSR</button><label class="mu">View <select id="rdview"><option value="m">Month wise</option><option value="w">Week wise</option><option value="d">Date wise</option><option value="all" selected>Month + Week + Date</option></select></label><button class="g" id="rdx" title="Exports the full DSR rows of this report into a new Excel file (new sheet)">⬇ Export details (this report)</button></div><div id="rdst" class="mu"></div>
 <div class="grid5" style="margin-top:8px">
 <label class="fld"><span>Process By column</span><select class="dsr" data-ph="1" id="rdp"></select><small>Bulk9 / Bulk / India / China / China-CJ</small></label>
 <label class="fld"><span>Order Date column</span><select class="dsr" data-ph="1" id="rdo"></select><small>Active Orders (and wherever you choose "From Order Date") is used for Month/Week/Date</small></label>
@@ -152,7 +152,7 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 <div class="rdset" data-r="fm"><div class="mu">Counts <b>Shopperr Invoice Number</b> (filled) by the <b>Pick up from SFC</b> date. No order count.</div>
 <div class="row"><label class="mu"><b>Invoice Number column</b><br><select class="dsr" data-ph="1" id="rdi"></select></label><label class="mu"><b>Arrival in Indian Warehouse column</b><br><select class="dsr" data-ph="1" id="rda"></select></label><label class="mu"><b>Pick up from SFC column</b><br><select class="dsr" data-ph="1" id="rdk"></select></label></div></div>
 
-<div class="rdset" data-r="osb"><div class="mu">Rows where <b>Process By</b> = China / China-CJ and <b>Username</b> = onestopbulk. FM Delivered = Invoice Number filled + Arrival in Indian Warehouse date; FM Intrasit = Invoice filled, no arrival date; Not Processed By China = Final Remark "Not Processed By China". Days Taken = Order Date − Arrival in Indian Warehouse (average). Uses the Invoice / Arrival columns chosen in FM Mile Report.</div></div>
+<div class="rdset" data-r="osb"><div class="mu">Rows where <b>Process By</b> = China / China-CJ and <b>Username</b> = onestopbulk. FM Delivered = Invoice Number filled + Arrival in Indian Warehouse date; FM Intrasit = Invoice filled, no arrival date; Not Processed By China = Final Remark "Not Processed By China". Days Taken (Order Date − Arrival in Indian Warehouse) comes as a column only in the Export details file, order wise. Uses the Invoice / Arrival columns chosen in FM Mile Report.</div></div>
 <div id="rdout"></div></div></section>
 <section id="p7"><div class="card"><h3>⑤ Fill columns from Order Date (Month / Week / Time / Date)</h3>
 <div class="mu">From Order Date: <b>Month</b> = month name (October), <b>Week</b> = like Week1, <b>Time of order</b> = time only, <b>Payment by reseller</b> = date only. Applies to all rows (new + old). If these columns had a formula earlier, it now becomes a plain value.</div>
@@ -592,7 +592,7 @@ function rdOne(id){const def=RD_DEF.find(x=>x[0]===id),res={id,title:def[1],head
     const ok=r=>{const w=rdNW(r[p]);return(w==='china'||w==='chinacj')&&nm(r[u])==='onestopbulk'},ad=r=>isFilled(r[a])?rdSerial(r[a]):null;
     const cls=r=>{if(!ok(r))return-1;if(s>=0&&canon(tx(r[s]))===canon(PH.NPC))return 2;return isFilled(r[i])?(ad(r)!=null?0:1):-1};
     const ext=r=>{const c=cls(r);if(c!==0&&c!==1)return null;const od=rdDt(o)(r),x=ad(r);return od==null||x==null?null:Math.floor(od+1e-9)-Math.floor(x+1e-9)};
-    return{...res,...rdAgg(4,cls,rdDt(o),ext),cols:['FM Delivered','FM Intrasit','Not Processed By China','Days Taken (avg)'],clr:['#10b981','#8b5cf6','#ef4444','#f59e0b'],rule:'Process By China / China-CJ + Username onestopbulk; Invoice filled + Arrival date = FM Delivered, no date = FM Intrasit; Final Remark Not Processed By China; Days Taken = Order Date − Arrival in Indian Warehouse',dtl:'Order Date'}}}
+    return{...res,...rdAgg(3,cls,rdDt(o)),cols:['FM Delivered','FM Intrasit','Not Processed By China'],clr:['#10b981','#8b5cf6','#ef4444'],rule:'Process By China / China-CJ + Username onestopbulk; Invoice filled + Arrival date = FM Delivered, no date = FM Intrasit; Final Remark Not Processed By China',dtl:'Order Date',days:ext}}}
 const rdAll=()=>{rdDefaults();rdLists();return RD_DEF.map(d=>rdOne(d[0]))};
 const rdTiles=Rs=>{const o=[];Rs.forEach(R=>{if(R.err)return;o.push([R.head==='Pick up from SFC'?'FM Mile':R.head,R.n,R.color,R.id])});return o};
 function rdTable(R,f){const mx=rows=>Math.max(1,...rows.flatMap(r=>r.c)),NCc=R.cols.length;
@@ -626,24 +626,26 @@ $('#rdrm').onclick=()=>{S.rdAdded=false;rdStatus()};
 document.addEventListener('click',e=>{const b=e.target.closest('#rdtabs button,.kpi[data-r]');if(!b||!S.d)return;rdSel=b.dataset.r;rdRender(rdAll())});
 $('#p6').addEventListener('change',e=>{if(e.isTrusted&&S.d)rdInit()});
 $('#p6').addEventListener('click',e=>{if(e.target.closest('a[data-all],a[data-none]')&&S.d)setTimeout(rdInit,0)});
-function rdModelAll(Rs){const L='H',fl=(k,n=7)=>Array(n).fill(['',k]),rows=[],merges=[],blank=ht=>rows.push({ht,c:[]}),ok=Rs.filter(r=>!r.err),tl=rdTiles(ok);
+function rdModelAll(Rs){const L='H',cf=[],fl=(k,n=7)=>Array(n).fill(['',k]),rows=[],merges=[],blank=ht=>rows.push({ht,c:[]}),ok=Rs.filter(r=>!r.err),tl=rdTiles(ok);
   rows.push({ht:38,c:[['Report Dashboard','title'],...fl('title')]});merges.push('A1:'+L+'1');
   rows.push({ht:22,c:[[`DSR: ${S.d.name}  ·  Created: ${new Date().toLocaleString('en-GB')}`,'sub'],...fl('sub')]});merges.push('A2:'+L+'2');
   blank(8);
-  rows.push({ht:20,c:tl.map(t=>[t[0].toUpperCase(),'kpiL'])});rows.push({ht:38,c:tl.map(t=>[t[1],'kpiV'])});blank(12);
-  ok.forEach(R=>{const nc=R.cols.length;rows.push({ht:26,c:[[R.title,'rep']]});
+  rows.push({ht:22,c:tl.map((t,i)=>[t[0].toUpperCase(),'kL'+(i%7)])});rows.push({ht:44,c:tl.map((t,i)=>[t[1],'kV'+(i%7)])});blank(12);
+  ok.forEach(R=>{const nc=R.cols.length;rows.push({ht:30,c:[[R.title,'rep'],...Array(nc+1).fill(['','rep'])]});
     rows.push({ht:24,c:[[R.head,'hdrL'],...R.cols.map(c=>[c,'hdr']),['Total','hdr']]});
     if(R.kind==='flat'){R.rows.forEach((r,i)=>{const z=i%2?'z':'';rows.push({ht:19,c:[[r.lab,'rowL'+z],...r.c.map(v=>[v,'rowN'+z]),[r.t,'rowT']]})});rows.push({ht:22,c:[['Total','secL'],...R.tot.map(v=>[v,'secN']),[R.n,'secT']]})}
-    else rdBl(R).forEach(([name,br])=>{rows.push({ht:22,c:[[name,'secL'],...R.tot.map(v=>[v,'secN']),[R.n,'secT']]});
+    else [R.blocks[0]].forEach(([name,br])=>{cf.push([rows.length+2,rows.length+1+br.length+(R.ndT?1:0),nc+1,R.color]);rows.push({ht:22,c:[[name,'secL'],...R.tot.map(v=>[v,'secN']),[R.n,'secT']]});
       rdBlockRows(R,br).forEach((r,i)=>{const z=i%2?'z':'';rows.push({ht:19,c:[[r.lab,'rowL'+z],...r.c.map(v=>[v,'rowN'+z]),[r.t,'rowT']]})})});
+    {const br=R.blocks?R.blocks[0][1]:[];if(br.length){const pk=br.reduce((a,b)=>b.t>a.t?b:a,{t:-1,lab:''});rows.push({ht:21,c:[[`▲ Peak: ${pk.lab} (${pk.t.toLocaleString('en-IN')})   ·   Total: ${R.n.toLocaleString('en-IN')}`,'hl']]})}}
     blank(14)});
   const notes=['Rules:',...ok.map(R=>'• '+R.head.replace('Pick up from SFC','FM Mile Report')+': '+R.rule+(R.dtl?' · Month/Week/Date = '+R.dtl:''))];
   notes.push('Counted by Process By: Bulk9 / Bulk / India / China / China-CJ, everything else Other. This sheet is a snapshot of the DSR data at the time of download.');
   rows.push({ht:Math.max(46,16*notes.length),c:[[notes.join('\n'),'note'],...fl('note')]});merges.push('A'+rows.length+':'+L+rows.length);
-  return{widths:[36,14,14,14,14,14,14,14],rows,merges}}
+  return{widths:[38,17,17,17,17,17,17,17],rows,merges,cf}}
 $('#rddl').onclick=()=>download();
 $('#rdx').onclick=async()=>{if(!S.d)return alert('Upload the Master first');const R=rdAll().find(x=>x.id===rdSel);if(!R||R.err||!R.sel||!R.sel.length)return alert(R&&R.err?R.err:'No rows in this report');
-  try{const parts=await DSRCore.writeXlsx({...S.d,rows:R.sel},{sheet:R.head.replace(/[\\\/?*\[\]:]/g,' ').slice(0,31),zero:false});const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download=R.head.replace(/\W+/g,'_')+'_details_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),120000)}catch(e){alert('Export fail: '+e.message)}};
+  const D=R.days?{...S.d,H:[...S.d.H,'Days Taken (Order Date - Arrival)'],rows:R.sel.map(r=>{const x=R.days(r);return[...r,x==null?'':x]})}:{...S.d,rows:R.sel};
+  try{const parts=await DSRCore.writeXlsx(D,{sheet:R.head.replace(/[\\\/?*\[\]:]/g,' ').slice(0,31),zero:false});const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download=R.head.replace(/\W+/g,'_')+'_details_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),120000)}catch(e){alert('Export fail: '+e.message)}};
 
 /* ---------- View & Download ---------- */
 function vInit(){$('#vc').onchange=()=>{$('#vv').innerHTML='<option value="">(all)</option>'+uniq(S.d.rows,+$('#vc').value).slice(0,500).map(v=>`<option>${esc(v)}</option>`).join('')};$('#vc').onchange();vShow()}

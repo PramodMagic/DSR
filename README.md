@@ -55,3 +55,6 @@ A row whose date is empty or not understood goes into the "(date not found)" row
 
 ## v7 changes (Changes.docx)
 Tab 6 = Report Dashboard, tab 7 = View & Download. Language selector in header (English default, Hindi, Chinese for main labels). Dashboard shows Month wise by default (View dropdown for Week / Date). "Export details" button downloads the full DSR rows of the selected report. Delivered/Dispatched/RTO count only rows with a valid date in their own column (no "date not found" row). China Not Process is now by Order Date (month/week/date, warehouse columns). FM Mile Report = Shopperr Invoice Number count by Pick up from SFC date. New report 7: OneStopBulk (China/China-CJ + Username onestopbulk): FM Delivered, FM Intrasit, Not Processed By China, Days Taken (avg of Order Date − Arrival in Indian Warehouse).
+
+## v8
+Excel Report Dashboard sheet: month wise only, colourful KPI cards, report banners, data bars on totals, peak-month line. On-screen tool shows Month + Week + Date as before. OneStopBulk report: Days Taken removed from the table; it is added order-wise as a column in "Export details".

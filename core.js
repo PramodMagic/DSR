@@ -176,13 +176,14 @@ const DASH_NAME = 'Report Dashboard', DASH_PATH = 'xl/worksheets/dsr_dashboard.x
 /* style key: [font, fill(-1 = none), border(0/1), align, indent, numFmt] */
 const DASH_SPEC = {
   title: [0, 0, 0, 'left', 1, 0], sub: [1, 0, 0, 'left', 1, 0], kpiL: [6, 4, 0, 'center', 0, 0], kpiV: [5, 4, 0, 'center', 0, 3],
-  rep: [8, -1, 0, 'left', 0, 0], hdr: [2, 0, 1, 'center', 0, 0], hdrL: [2, 0, 1, 'left', 1, 0],
+  rep: [11, 0, 0, 'left', 1, 0], hdr: [2, 0, 1, 'center', 0, 0], hdrL: [2, 0, 1, 'left', 1, 0],
   secL: [3, 1, 1, 'left', 1, 0], secN: [3, 1, 1, 'center', 0, 197], secT: [3, 3, 1, 'center', 0, 197],
   rowL: [4, -1, 1, 'left', 2, 0], rowN: [4, -1, 1, 'center', 0, 197], rowLz: [4, 2, 1, 'left', 2, 0], rowNz: [4, 2, 1, 'center', 0, 197], rowT: [3, 2, 1, 'center', 0, 197],
-  note: [7, -1, 0, 'left', 0, 0] };
+  note: [7, -1, 0, 'left', 0, 0], hl: [3, 4, 0, 'left', 1, 0] };
+for (let i = 0; i < 7; i++) { DASH_SPEC['kL' + i] = [9, 5 + i, 0, 'center', 0, 0]; DASH_SPEC['kV' + i] = [10, 5 + i, 0, 'center', 0, 3]; }
 function dashStyles(fb, flb, bb) {
-  const F = [['b', 20, 'FFFFFFFF'], ['', 10, 'FFD6EADF'], ['b', 11, 'FFFFFFFF'], ['b', 11, 'FF1F2937'], ['', 11, 'FF1F2937'], ['b', 20, 'FF1E6B52'], ['b', 9, 'FF6B7280'], ['i', 9, 'FF6B7280'], ['b', 13, 'FF1E6B52']];
-  const L = ['FF1E6B52', 'FFE3F1EA', 'FFF6F9F7', 'FFCFE5DA', 'FFEEF4F1'], keys = Object.keys(DASH_SPEC);
+  const F = [['b', 20, 'FFFFFFFF'], ['', 10, 'FFD6EADF'], ['b', 11, 'FFFFFFFF'], ['b', 11, 'FF1F2937'], ['', 11, 'FF1F2937'], ['b', 20, 'FF1E6B52'], ['b', 9, 'FF6B7280'], ['i', 9, 'FF6B7280'], ['b', 13, 'FF1E6B52'], ['b', 9, 'FFFFFFFF'], ['b', 24, 'FFFFFFFF'], ['b', 14, 'FFFFFFFF']];
+  const L = ['FF1E6B52', 'FFE3F1EA', 'FFF6F9F7', 'FFCFE5DA', 'FFEEF4F1', 'FF0F766E', 'FF4F46E5', 'FF10B981', 'FFDC2626', 'FFD97706', 'FF0284C7', 'FF7C3AED'], keys = Object.keys(DASH_SPEC);
   return {
     keys, nF: F.length, nFl: L.length, nX: keys.length,
     fonts: F.map(([b, z, c]) => `<font>${b === 'b' ? '<b/>' : b === 'i' ? '<i/>' : ''}<sz val="${z}"/><color rgb="${c}"/><name val="Calibri"/></font>`).join(''),
@@ -219,7 +220,7 @@ async function dashPart(zip, m, sid, path) {
     });
     s += '</row>';
   });
-  s += '</sheetData>' + (m.merges && m.merges.length ? `<mergeCells count="${m.merges.length}">` + m.merges.map(x => `<mergeCell ref="${x}"/>`).join('') + '</mergeCells>' : '') + '</worksheet>';
+  s += '</sheetData>' + (m.merges && m.merges.length ? `<mergeCells count="${m.merges.length}">` + m.merges.map(x => `<mergeCell ref="${x}"/>`).join('') + '</mergeCells>' : '') + (m.cf || []).map(([r1, r2, ci, col], i) => `<conditionalFormatting sqref="${colName(ci)}${r1}:${colName(ci)}${r2}"><cfRule type="dataBar" priority="${i + 1}"><dataBar><cfvo type="num" val="0"/><cfvo type="max"/><color rgb="FF${col.slice(1)}"/></dataBar></cfRule></conditionalFormatting>`).join('') + '</worksheet>';
   const f = new ff.ZipDeflate(path, { level: 1 }); zip.add(f); f.push(new TextEncoder().encode(s), true);
 }
 /* simple: new workbook (single sheet only) */
