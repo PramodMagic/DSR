@@ -105,6 +105,7 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 <div class="brand"><span class="logo">📋</span><div><b>DSR Updater</b><small>Update your Excel DSR the smart way</small></div></div>
 <span id="st">Master not uploaded</span><span class="sp"></span>
 <label class="mu" title="Show/hide the long explanatory lines"><input type="checkbox" id="hlp"> ℹ️ Help</label>
+<select id="lang" title="Language"><option value="en">English</option><option value="hi">हिन्दी</option><option value="zh">中文</option></select>
 <button class="g ico" id="theme" title="Dark / Light mode">🌙</button>
 <button class="g" id="undo">↩ Undo</button>
 <details class="opt"><summary>⚙ Options</summary><div class="optbox"><label title="Keeps the original file's other sheets, summary/pivot and formulas"><input type="checkbox" id="keep" checked> Keep other sheets/pivot</label><label><input type="checkbox" id="zf" checked> Fill empty cells with 0 (except formula columns)</label></div></details>
@@ -128,7 +129,32 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 
 <section id="p2"></section><section id="p3"></section><section id="p4"></section><section id="p5"></section>
 
-<section id="p6"><div class="card"><h3>⑤ Fill columns from Order Date (Month / Week / Time / Date)</h3>
+<section id="p6"><div class="card"><h3>📊 Report Dashboard</h3>
+<div class="mu">One click on <b>Create Reports</b> builds all reports together and adds a new sheet called <b>Report Dashboard</b> to the DSR (every report one below the other). Click a card or a report button to view it on screen.</div>
+<div class="row"><button id="rdgo" class="big">📊 Create Reports (add all to DSR)</button><button id="rdrm" class="g">✖ Remove from DSR</button><button id="rddl">⬇ Download DSR</button><label class="mu">View <select id="rdview"><option value="m">Month wise</option><option value="w">Week wise</option><option value="d">Date wise</option><option value="all">Month + Week + Date</option></select></label><button class="g" id="rdx" title="Exports the full DSR rows of this report into a new Excel file (new sheet)">⬇ Export details (this report)</button></div><div id="rdst" class="mu"></div>
+<div class="grid5" style="margin-top:8px">
+<label class="fld"><span>Process By column</span><select class="dsr" data-ph="1" id="rdp"></select><small>Bulk9 / Bulk / India / China / China-CJ</small></label>
+<label class="fld"><span>Order Date column</span><select class="dsr" data-ph="1" id="rdo"></select><small>Active Orders (and wherever you choose "From Order Date") is used for Month/Week/Date</small></label>
+<label class="fld"><span>Final Remark column</span><select class="dsr" data-ph="1" id="rds"></select><small>Used in Active Orders and China Not Process</small></label>
+<label class="fld"><span>Username column</span><select class="dsr" data-ph="1" id="rdu"></select><small>Used in OneStopBulk Report</small></label></div>
+<div id="rdkpi"></div></div>
+<div class="card"><div class="rdtabs" id="rdtabs"></div>
+<div class="rdset" data-r="act"><div class="mu">The order is Active if its Final Remark is in the list. Counted by Process By: Bulk9 / Bulk / India / China / China-CJ, everything else Other. Month/Week/Date = Order Date.</div>
+<h4 style="margin-top:12px">Active Final Remark list <span class="mu">(ticked = counted; you can add a new one below)</span></h4><div id="rdv-box"></div></div>
+<div class="rdset" data-r="dsp"><div class="mu">If the DSR <b>Dispatch from Indian warehouse</b> column has a date, the shipment is Dispatched; counted by Process By.</div>
+<div class="row"><label class="mu"><b>Dispatch date column</b><br><select class="dsr" data-ph="1" id="rdc_dsp"></select></label><label class="mu"><b>Month / Week / Date based on</b><br><select id="rdb_dsp"><option value="e">From Dispatch date</option><option value="o">From Order Date</option></select></label></div></div>
+<div class="rdset" data-r="del"><div class="mu">If the DSR <b>Delivery to End Customer</b> column has a date, the shipment is Delivered; counted by Process By.</div>
+<div class="row"><label class="mu"><b>Delivery date column</b><br><select class="dsr" data-ph="1" id="rdc_del"></select></label><label class="mu"><b>Month / Week / Date based on</b><br><select id="rdb_del"><option value="e">From Delivery date</option><option value="o">From Order Date</option></select></label></div></div>
+<div class="rdset" data-r="rto"><div class="mu">If the DSR <b>RTO Received date</b> column has a date, the shipment is RTO; counted by Process By.</div>
+<div class="row"><label class="mu"><b>RTO date column</b><br><select class="dsr" data-ph="1" id="rdc_rto"></select></label><label class="mu"><b>Month / Week / Date based on</b><br><select id="rdb_rto"><option value="e">From RTO date</option><option value="o">From Order Date</option></select></label></div></div>
+<div class="rdset" data-r="cnp"><div class="mu">Counted when Process By is one of the warehouses below and Final Remark is in the list below; shown warehouse-wise. (Default: China, China-CJ · Not Processed By China, WH Not Assigned)</div>
+<h4 style="margin-top:12px">Final Remark list</h4><div id="rdn-box"></div><h4>Warehouse (Process By)</h4><div id="rdw-box"></div></div>
+<div class="rdset" data-r="fm"><div class="mu">Counts <b>Shopperr Invoice Number</b> (filled) by the <b>Pick up from SFC</b> date. No order count.</div>
+<div class="row"><label class="mu"><b>Invoice Number column</b><br><select class="dsr" data-ph="1" id="rdi"></select></label><label class="mu"><b>Arrival in Indian Warehouse column</b><br><select class="dsr" data-ph="1" id="rda"></select></label><label class="mu"><b>Pick up from SFC column</b><br><select class="dsr" data-ph="1" id="rdk"></select></label></div></div>
+
+<div class="rdset" data-r="osb"><div class="mu">Rows where <b>Process By</b> = China / China-CJ and <b>Username</b> = onestopbulk. FM Delivered = Invoice Number filled + Arrival in Indian Warehouse date; FM Intrasit = Invoice filled, no arrival date; Not Processed By China = Final Remark "Not Processed By China". Days Taken = Order Date − Arrival in Indian Warehouse (average). Uses the Invoice / Arrival columns chosen in FM Mile Report.</div></div>
+<div id="rdout"></div></div></section>
+<section id="p7"><div class="card"><h3>⑤ Fill columns from Order Date (Month / Week / Time / Date)</h3>
 <div class="mu">From Order Date: <b>Month</b> = month name (October), <b>Week</b> = like Week1, <b>Time of order</b> = time only, <b>Payment by reseller</b> = date only. Applies to all rows (new + old). If these columns had a formula earlier, it now becomes a plain value.</div>
 <div class="row"><label class="mu"><b>DSR Order Date column</b><br><select class="dsr" data-ph="1" id="fxo"></select></label></div>
 <div class="row"><label class="mu"><b>Month</b><br><select class="dsr" data-ph="1" id="fxm"></select></label> <label class="mu"><b>Week</b><br><select class="dsr" data-ph="1" id="fxw"></select></label> <label class="mu"><b>Time of order</b><br><select class="dsr" data-ph="1" id="fxt"></select></label> <label class="mu"><b>Payment by reseller</b><br><select class="dsr" data-ph="1" id="fxp"></select></label></div>
@@ -137,29 +163,6 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 <div class="card"><h3>View DSR (Excel-like filter)</h3>
 <div class="row">Column <select class="dsr" id="vc"></select> Value <select id="vv"></select> Search <input type="text" id="vq" placeholder="type anything"><button id="vb">Filter</button><button id="dl2">⬇ Download</button></div>
 <div id="vm" class="mu"></div><div class="sc"><table id="vt"></table></div></div></section>
-<section id="p7"><div class="card"><h3>📊 Report Dashboard</h3>
-<div class="mu">One click on <b>Create Reports</b> builds all reports together and adds a new sheet called <b>Report Dashboard</b> to the DSR (every report one below the other). Click a card or a report button to view it on screen.</div>
-<div class="row"><button id="rdgo" class="big">📊 Create Reports (add all to DSR)</button><button id="rdrm" class="g">✖ Remove from DSR</button><button id="rddl">⬇ Download DSR</button></div><div id="rdst" class="mu"></div>
-<div class="grid5" style="margin-top:8px">
-<label class="fld"><span>Process By column</span><select class="dsr" data-ph="1" id="rdp"></select><small>Bulk9 / Bulk / India / China / China-CJ</small></label>
-<label class="fld"><span>Order Date column</span><select class="dsr" data-ph="1" id="rdo"></select><small>Active Orders (and wherever you choose "From Order Date") is used for Month/Week/Date</small></label>
-<label class="fld"><span>Final Remark column</span><select class="dsr" data-ph="1" id="rds"></select><small>Used in Active Orders and China Not Process</small></label></div>
-<div id="rdkpi"></div></div>
-<div class="card"><div class="rdtabs" id="rdtabs"></div>
-<div class="rdset" data-r="act"><div class="mu">The order is Active if its Final Remark is in the list. Counted by Process By: Bulk9 / Bulk / India / China / China-CJ, everything else Other. Month/Week/Date = Order Date.</div>
-<h4 style="margin-top:12px">Active Final Remark list <span class="mu">(ticked = counted; you can add a new one below)</span></h4><div id="rdv-box"></div></div>
-<div class="rdset" data-r="dsp"><div class="mu">If the DSR <b>Dispatch from Indian warehouse</b> column has a date, the shipment is Dispatched; counted by Process By.</div>
-<div class="row"><label class="mu"><b>Dispatch date column</b><br><select class="dsr" data-ph="1" id="rdc_dsp"></select></label><label class="mu"><b>Month / Week / Date based on</b><br><select id="rdb_dsp"><option value="e">From Dispatch date</option><option value="o">From Order Date</option></select></label><label class="mu"><b>What counts as filled</b><br><select id="rdm_dsp"><option value="date">Only valid dates (default)</option><option value="any">Any value except 0 / N/A / blank</option><option value="raw">Every non-empty cell (including 0)</option></select></label></div></div>
-<div class="rdset" data-r="del"><div class="mu">If the DSR <b>Delivery to End Customer</b> column has a date, the shipment is Delivered; counted by Process By.</div>
-<div class="row"><label class="mu"><b>Delivery date column</b><br><select class="dsr" data-ph="1" id="rdc_del"></select></label><label class="mu"><b>Month / Week / Date based on</b><br><select id="rdb_del"><option value="e">From Delivery date</option><option value="o">From Order Date</option></select></label><label class="mu"><b>What counts as filled</b><br><select id="rdm_del"><option value="date">Only valid dates (default)</option><option value="any">Any value except 0 / N/A / blank</option><option value="raw">Every non-empty cell (including 0)</option></select></label></div></div>
-<div class="rdset" data-r="rto"><div class="mu">If the DSR <b>RTO Received date</b> column has a date, the shipment is RTO; counted by Process By.</div>
-<div class="row"><label class="mu"><b>RTO date column</b><br><select class="dsr" data-ph="1" id="rdc_rto"></select></label><label class="mu"><b>Month / Week / Date based on</b><br><select id="rdb_rto"><option value="e">From RTO date</option><option value="o">From Order Date</option></select></label><label class="mu"><b>What counts as filled</b><br><select id="rdm_rto"><option value="date">Only valid dates (default)</option><option value="any">Any value except 0 / N/A / blank</option><option value="raw">Every non-empty cell (including 0)</option></select></label></div></div>
-<div class="rdset" data-r="cnp"><div class="mu">Counted when Process By is one of the warehouses below and Final Remark is in the list below; shown warehouse-wise. (Default: China, China-CJ · Not Processed By China, WH Not Assigned)</div>
-<h4 style="margin-top:12px">Final Remark list</h4><div id="rdn-box"></div><h4>Warehouse (Process By)</h4><div id="rdw-box"></div></div>
-<div class="rdset" data-r="fm"><div class="mu">If <b>Shopperr Invoice Number</b> is filled and <b>Arrival in Indian Warehouse</b> has a date, it is <b>FM Delivered</b>; if the date is empty, it is <b>FM Intrasit</b>. Month/Week/Date = <b>Pick up from SFC</b> date.</div>
-<div class="row"><label class="mu"><b>Invoice Number column</b><br><select class="dsr" data-ph="1" id="rdi"></select></label><label class="mu"><b>Arrival in Indian Warehouse column</b><br><select class="dsr" data-ph="1" id="rda"></select></label><label class="mu"><b>Pick up from SFC column</b><br><select class="dsr" data-ph="1" id="rdk"></select></label></div></div>
-
-<div id="rdout"></div></div></section>
 </main>
 <script src="fflate.min.js"></script><script src="core.js"></script>
 <script>
@@ -205,9 +208,9 @@ function refresh(){document.body.classList.toggle('has-master',!!S.d);$('#st').t
 function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,(s.dataset.ph?'<option value="-1">— Select —</option>':'')+(s.dataset.new?'<option value="new">➕ New column</option>':''));if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))})}
 
 /* ---------- Tabs ---------- */
-[['Master',1,'📁'],['Order Data',2,'🧾'],['Invoice',4,'🧮'],['FM Mile',5,'✈️'],['Last Mile',3,'🚚'],['View & Download',6,'⬇️'],['Report Dashboard',7,'📊']].forEach(([t,n,ic],i)=>{const b=document.createElement('button');b.innerHTML=`<span class="n">${i+1}</span><span class="t">${ic} ${t}</span>`;b.dataset.n=n;b.onclick=()=>show(n);$('#nav').append(b)});
+[['Master',1,'📁'],['Order Data',2,'🧾'],['Invoice',4,'🧮'],['FM Mile',5,'✈️'],['Last Mile',3,'🚚'],['Report Dashboard',6,'📊'],['View & Download',7,'⬇️']].forEach(([t,n,ic],i)=>{const b=document.createElement('button');b.innerHTML=`<span class="n">${i+1}</span><span class="t">${ic} ${t}</span>`;b.dataset.n=n;b.onclick=()=>show(n);$('#nav').append(b)});
 function show(n){$$('section').forEach((s,i)=>s.classList.toggle('on',i+1===n));$$('nav button').forEach(b=>b.classList.toggle('on',+b.dataset.n===n));
-  if(S.d){fillDsr();if(n===4||n===5)frChips('t'+n);if(n===6)vInit();if(n===7)rdInit()}}
+  if(S.d){fillDsr();if(n===4||n===5)frChips('t'+n);if(n===7)vInit();if(n===6)rdInit()}}
 const FL={t2:'Order data column',t2u:'Order data column',t3:'Logistics file column',t4:'Invoice file column',t5:'FM file column'};
 const fb=(p,t,d,x)=>`<div class="card"><h3>${t}</h3><div class="mu hint">${d}</div><div class="row"><input type="file" id="${p}f" accept=".xlsx,.xlsm,.csv"> <label class="mu">Sheet <select id="${p}sh"><option value="-1">auto (largest sheet)</option></select></label> <label class="mu">Header row no. <input type="number" id="${p}hr" min="1" placeholder="auto" style="width:80px"></label><button class="g" id="${p}hb">Re-read</button></div><div id="${p}i" class="mu"></div></div>
 <div class="card off" id="${p}c"><h4 style="margin-top:0">① Lookup (which column to match on)</h4><div class="row"><label class="mu"><b>DSR column</b><br><select class="dsr" data-ph="1" id="${p}dk"></select></label> <span>↔</span> <label class="mu"><b>${FL[p]}</b><br><select id="${p}fk"></select></label></div>${x}<div id="${p}r" style="margin-top:8px"></div></div>`;
@@ -523,10 +526,10 @@ $('#t5go').onclick=t5run;
 
 /* ---------- Report Dashboard ---------- */
 const RD_PB=['Bulk9','Bulk','India','China','China-CJ','Other'],RD_CLR=['#f59e0b','#8b5cf6','#5b5bf0','#ef4444','#14b8a6','#94a3b8'],RD_CLR2=['#10b981','#f59e0b'];
-const RD_DEF=[['act','1 · Active Orders','Active Orders','#1e6b52'],['dsp','2 · Shipments Dispatched','Shipments Dispatched','#5b5bf0'],['del','3 · Shipments Delivered','Shipments Delivered','#10b981'],['rto','4 · Shipments RTO','Shipments RTO','#ef4444'],['cnp','5 · China Not Process','China Not Process','#f59e0b'],['fm','6 · FM Mile Report','Pick up from SFC','#14b8a6']];
+const RD_DEF=[['act','1 · Active Orders','Active Orders','#1e6b52'],['dsp','2 · Shipments Dispatched','Shipments Dispatched','#5b5bf0'],['del','3 · Shipments Delivered','Shipments Delivered','#10b981'],['rto','4 · Shipments RTO','Shipments RTO','#ef4444'],['cnp','5 · China Not Process','China Not Process','#f59e0b'],['fm','6 · FM Mile Report','Pick up from SFC','#14b8a6'],['osb','7 · OneStopBulk Report','OneStopBulk Report','#0ea5e9']];
 let rdSel='act';
 function rdDefaults(){if(!S.d)return;const H=S.d.H,f=(id,...res)=>{if(+$('#'+id).value>=0)return;for(const re of res){const i=H.findIndex(h=>re.test(String(h).trim()));if(i>=0){$('#'+id).value=String(i);return}}};
-  f('rds',/^final remark$/i);f('rdp',/^process by$/i);f('rdo',/^order date$/i);
+  f('rds',/^final remark$/i);f('rdu',/^user ?name$/i);f('rdp',/^process by$/i);f('rdo',/^order date$/i);
   f('rdc_dsp',/^dispatch from indian warehouse$/i,/dispatch.*(india|warehouse)/i);f('rdc_del',/^delivery to end customer$/i,/delivery.*(end|customer)/i);f('rdc_rto',/^rto received date$/i,/rto.*receiv/i);
   f('rdi',/^shopperr invoice number$/i,/invoice number/i);f('rda',/^arrival in indian warehouse$/i,/arrival.*warehouse/i);f('rdk',/^pick ?up from sfc$/i,/pick ?up.*sfc/i);
   if(!(+$('#rds').value>=0)&&C().fr>=0)$('#rds').value=String(C().fr);if(!(+$('#rdp').value>=0)&&C().wh>=0)$('#rdp').value=String(C().wh)}
@@ -561,42 +564,47 @@ const isoY=o=>{const t=new Date(Date.UTC(o.y,o.m,o.d)),dn=(t.getUTCDay()+6)%7;t.
 const rdG=k=>+$('#'+k).value,rdSum=a=>a.reduce((x,y)=>x+y,0);
 const rdPb=(p,oth)=>r=>{const w=nm(r[p]),b=w==='bulk9'?0:w==='bulk'?1:w==='india'?2:w==='china'?3:(w==='china-cj'||w==='chinacj')?4:5;if(b===5){const k=rt(r[p])||'(blank / 0)';oth.set(k,(oth.get(k)||0)+1)}return b};
 const rdDt=c=>r=>c>=0&&isFilled(r[c])?rdSerial(r[c]):null;
-function rdAgg(ncol,cls,dt){const wm=$('#fxwm').value==='m',z=()=>new Array(ncol).fill(0),Mo=new Map(),We=new Map(),Da=new Map(),tot=z(),nd=z();let n=0;
-  const put=(m,k,lab,b)=>{let e=m.get(k);if(!e)m.set(k,e={lab,c:z()});e.c[b]++};
-  S.d.rows.forEach(r=>{const b=cls(r);if(b<0)return;n++;tot[b]++;const sv=dt(r);if(sv==null){nd[b]++;return}
+function rdAgg(ncol,cls,dt,ext){const wm=$('#fxwm').value==='m',av=!!ext,nc=av?ncol-1:ncol,z=()=>new Array(ncol).fill(0),Mo=new Map(),We=new Map(),Da=new Map(),tot=z(),nd=z(),sel=[];let n=0,TS=0,TK=0;
+  const put=(m,k,lab,b,x)=>{let e=m.get(k);if(!e)m.set(k,e={lab,c:z(),s:0,k:0});if(b<nc)e.c[b]++;if(x!=null){e.s+=x;e.k++}};
+  S.d.rows.forEach(r=>{const b=cls(r);if(b<0)return;n++;tot[b]++;sel.push(r);const x=av?ext(r):null;if(x!=null){TS+=x;TK++}const sv=dt(r);if(sv==null){nd[b]++;return}
     const q=ymd(sv),day=Math.floor(sv+1e-9),mk=q.y*12+q.m,mn=MONTHS[q.m]+' '+q.y;
-    put(Mo,mk,mn,b);
-    if(wm){const w=Math.ceil(q.d/7);put(We,mk*10+w,mn+' · Week'+w,b)}else{const iw=isoWeek(q),iy=isoY(q);put(We,iy*100+iw,iy+' · Week '+iw,b)}
-    put(Da,day,String(q.d).padStart(2,'0')+'-'+MONTHS[q.m].slice(0,3)+'-'+q.y,b)});
-  const rows=m=>[...m.entries()].sort((a,b)=>a[0]-b[0]).map(([,e])=>({lab:e.lab,c:e.c,t:rdSum(e.c)}));
-  return{kind:'blocks',n,tot,nd,ndT:rdSum(nd),blocks:[['Month Wise',rows(Mo)],['Week Wise',rows(We)],['Date Wise',rows(Da)]]}}
+    put(Mo,mk,mn,b,x);
+    if(wm){const w=Math.ceil(q.d/7);put(We,mk*10+w,mn+' · Week'+w,b,x)}else{const iw=isoWeek(q),iy=isoY(q);put(We,iy*100+iw,iy+' · Week '+iw,b,x)}
+    put(Da,day,String(q.d).padStart(2,'0')+'-'+MONTHS[q.m].slice(0,3)+'-'+q.y,b,x)});
+  if(av)tot[nc]=TK?Math.round(TS/TK*10)/10:0;
+  const rows=m=>[...m.entries()].sort((a,b)=>a[0]-b[0]).map(([,e])=>{if(av)e.c[nc]=e.k?Math.round(e.s/e.k*10)/10:0;return{lab:e.lab,c:e.c,t:rdSum(e.c.slice(0,nc))}});
+  return{kind:'blocks',n,tot,nd,ndT:rdSum(nd.slice(0,nc)),sel,blocks:[['Month Wise',rows(Mo)],['Week Wise',rows(We)],['Date Wise',rows(Da)]]}}
 function rdOne(id){const def=RD_DEF.find(x=>x[0]===id),res={id,title:def[1],head:def[2],color:def[3]},err=m=>({...res,err:m});
   const p=rdG('rdp'),oth=new Map(),pbFix=o=>({...o,oth:[...oth.entries()].sort((a,b)=>b[1]-a[1])});
-  if(id==='act'){const s=rdG('rds'),o=rdG('rdo');if(!(s>=0)||!(p>=0))return err('Select the Final Remark and Process By columns');
+  if(id==='act'){const s=rdG('rds'),o=rdG('rdo');if(!(s>=0)||!(p>=0)||!(o>=0))return err('Select the Final Remark, Process By and Order Date columns');
     const pk=rdPicked('rdv-box'),want=new Set(pk.map(canon));if(!want.size)return err('Tick at least one remark in the Active Final Remark list');const pb=rdPb(p,oth);
     return{...res,...pbFix(rdAgg(6,r=>want.has(canon(tx(r[s])))?pb(r):-1,rdDt(o))),cols:RD_PB,clr:RD_CLR,cnt:want.size,rule:`Final Remark in list: ${pk.join(', ')}`,dtl:'Order Date'}}
   if(id==='dsp'||id==='del'||id==='rto'){const c=rdG('rdc_'+id),o=rdG('rdo'),bo=$('#rdb_'+id).value==='o';
-    if(!(c>=0)||!(p>=0)||(bo&&!(o>=0)))return err('Select the Date column, Process By'+(bo?' and Order Date':'')+' columns');const pb=rdPb(p,oth),nmc=S.d.H[c],md=$('#rdm_'+id).value,fill=rdFillFn(md);
+    if(!(c>=0)||!(p>=0)||(bo&&!(o>=0)))return err('Select the Date column, Process By'+(bo?' and Order Date':'')+' columns');const pb=rdPb(p,oth),nmc=S.d.H[c],md='date',fill=rdFillFn(md);
     return{...res,...pbFix(rdAgg(6,r=>fill(r[c])?pb(r):-1,rdDt(bo?o:c))),cols:RD_PB,clr:RD_CLR,rule:`"${nmc}" has a date (${md==='date'?'valid dates only':md==='raw'?'every non-empty cell':'any value except 0 / N/A / blank'})`,dtl:bo?'Order Date':nmc,diag:rdDiag(c)}}
-  if(id==='cnp'){const s=rdG('rds');if(!(s>=0)||!(p>=0))return err('Select the Final Remark and Process By columns');
+  if(id==='cnp'){const s=rdG('rds'),o=rdG('rdo');if(!(s>=0)||!(p>=0)||!(o>=0))return err('Select the Final Remark, Process By and Order Date columns');
     const items=rdPicked('rdn-box'),whs=rdPicked('rdw-box');if(!items.length||!whs.length)return err('Tick at least one item in the Final Remark list and in Warehouse');
-    const idx=new Map(items.map((x,i)=>[canon(x),i])),wi=new Map(whs.map((x,i)=>[rdNW(x),i])),rows=items.map(x=>({lab:x,c:whs.map(()=>0),t:0}));let n=0;const tot=whs.map(()=>0);
-    S.d.rows.forEach(r=>{const ci=wi.get(rdNW(r[p]));if(ci===undefined)return;const i=idx.get(canon(tx(r[s])));if(i===undefined)return;rows[i].c[ci]++;rows[i].t++;tot[ci]++;n++});
-    const pal=['#ef4444','#14b8a6','#f59e0b','#5b5bf0','#8b5cf6','#10b981'];
-    return{...res,kind:'flat',n,tot,rows,cols:whs,clr:whs.map((_,i)=>pal[i%pal.length]),rule:`Process By: ${whs.join(', ')} · Final Remark: ${items.join(', ')}`}}
-  if(id==='fm'){const i=rdG('rdi'),a=rdG('rda'),k=rdG('rdk');if(!(i>=0)||!(a>=0)||!(k>=0))return err('Select the Invoice Number, Arrival in Indian Warehouse and Pick up from SFC columns');
-    return{...res,...rdAgg(2,r=>isFilled(r[i])?(isFilled(r[a])?0:1):-1,rdDt(k)),cols:['FM Delivered','FM Intrasit'],clr:RD_CLR2,rule:`"${S.d.H[i]}" filled; if "${S.d.H[a]}" has a date then FM Delivered, otherwise FM Intrasit`,dtl:S.d.H[k]}}}
+    const idx=new Set(items.map(canon)),wi=new Map(whs.map((x,i)=>[rdNW(x),i])),pal=['#ef4444','#14b8a6','#f59e0b','#5b5bf0','#8b5cf6','#10b981'];
+    return{...res,...rdAgg(whs.length,r=>{const ci=wi.get(rdNW(r[p]));return ci!==undefined&&idx.has(canon(tx(r[s])))?ci:-1},rdDt(o)),cols:whs,clr:whs.map((_,i)=>pal[i%pal.length]),rule:`Process By: ${whs.join(', ')} · Final Remark: ${items.join(', ')}`,dtl:'Order Date'}}
+  if(id==='fm'){const i=rdG('rdi'),k=rdG('rdk');if(!(i>=0)||!(k>=0))return err('Select the Invoice Number and Pick up from SFC columns');
+    return{...res,...rdAgg(1,r=>isFilled(r[i])?0:-1,rdDt(k)),cols:['Invoice Number Count'],clr:['#14b8a6'],rule:`Count of "${S.d.H[i]}" (filled), by "${S.d.H[k]}" date`,dtl:S.d.H[k]}}
+  if(id==='osb'){const u=rdG('rdu'),o=rdG('rdo'),i=rdG('rdi'),a=rdG('rda'),s=rdG('rds');if(!(u>=0)||!(p>=0)||!(o>=0)||!(i>=0)||!(a>=0))return err('Select Username, Process By, Order Date, Invoice Number and Arrival in Indian Warehouse columns');
+    const ok=r=>{const w=rdNW(r[p]);return(w==='china'||w==='chinacj')&&nm(r[u])==='onestopbulk'},ad=r=>isFilled(r[a])?rdSerial(r[a]):null;
+    const cls=r=>{if(!ok(r))return-1;if(s>=0&&canon(tx(r[s]))===canon(PH.NPC))return 2;return isFilled(r[i])?(ad(r)!=null?0:1):-1};
+    const ext=r=>{const c=cls(r);if(c!==0&&c!==1)return null;const od=rdDt(o)(r),x=ad(r);return od==null||x==null?null:Math.floor(od+1e-9)-Math.floor(x+1e-9)};
+    return{...res,...rdAgg(4,cls,rdDt(o),ext),cols:['FM Delivered','FM Intrasit','Not Processed By China','Days Taken (avg)'],clr:['#10b981','#8b5cf6','#ef4444','#f59e0b'],rule:'Process By China / China-CJ + Username onestopbulk; Invoice filled + Arrival date = FM Delivered, no date = FM Intrasit; Final Remark Not Processed By China; Days Taken = Order Date − Arrival in Indian Warehouse',dtl:'Order Date'}}}
 const rdAll=()=>{rdDefaults();rdLists();return RD_DEF.map(d=>rdOne(d[0]))};
-const rdTiles=Rs=>{const o=[];Rs.forEach(R=>{if(R.err)return;if(R.id==='fm'){o.push(['FM Delivered',R.tot[0],'#10b981','fm'],['FM Intrasit',R.tot[1],'#8b5cf6','fm'])}else o.push([R.head==='Pick up from SFC'?'FM Mile':R.head,R.n,R.color,R.id])});return o};
+const rdTiles=Rs=>{const o=[];Rs.forEach(R=>{if(R.err)return;o.push([R.head==='Pick up from SFC'?'FM Mile':R.head,R.n,R.color,R.id])});return o};
 function rdTable(R,f){const mx=rows=>Math.max(1,...rows.flatMap(r=>r.c)),NCc=R.cols.length;
   let h=`<div class="sc" style="max-height:520px"><table class="rp"><tr><th>${esc(R.head)}</th>${R.cols.map(c=>`<th>${esc(c)}</th>`).join('')}<th>Total</th></tr>`;
   const cell=(v,i,m,nodate)=>`<td class="n${v?'':' z'}"${v&&!nodate?` style="background:${R.clr[i]}${Math.round(24+v/m*150).toString(16).padStart(2,'0')}"`:''}>${v?f(v):'–'}</td>`;
   if(R.kind==='flat'){const m=mx(R.rows);R.rows.forEach(r=>{h+=`<tr class="det"><td>${esc(r.lab)}</td>${r.c.map((v,i)=>cell(v,i,m)).join('')}<td class="tt">${f(r.t)}</td></tr>`});
     h+=`<tr class="sec"><td>Total</td>${R.tot.map(v=>`<td class="tt">${f(v)}</td>`).join('')}<td class="tt">${f(R.n)}</td></tr>`}
-  else R.blocks.forEach(([name,rows])=>{const all=rdBlockRows(R,rows),m=mx(rows);
+  else rdBl(R).forEach(([name,rows])=>{const all=rdBlockRows(R,rows),m=mx(rows);
     h+=`<tr class="sec"><td>${name}</td>${R.tot.map(v=>`<td class="tt">${f(v)}</td>`).join('')}<td class="tt">${f(R.n)}</td></tr>`;
     all.forEach(r=>{h+=`<tr class="det"><td>${r.nodate?'<i>'+esc(r.lab)+'</i>':esc(r.lab)}</td>${r.c.map((v,i)=>cell(v,i,m,r.nodate)).join('')}<td class="tt">${f(r.t)}</td></tr>`})});
   return h+'</table></div>'}
+const rdBl=R=>R.blocks.filter((b,i)=>{const v=($('#rdview')||{}).value||'m';return v==='all'||'mwd'[i]===v});
 const rdBlockRows=(R,rows)=>{const o=rows.slice();if(R.ndT)o.push({lab:'(date not found)',c:R.nd,t:R.ndT,nodate:1});return o};
 function rdRender(Rs){const f=x=>x.toLocaleString('en-IN'),R=Rs.find(x=>x.id===rdSel)||Rs[0],tl=rdTiles(Rs);
   $('#rdtabs').innerHTML=RD_DEF.map(d=>`<button class="g${d[0]===rdSel?' on':''}" data-r="${d[0]}">${esc(d[1])}</button>`).join('');
@@ -616,8 +624,8 @@ $('#rdgo').onclick=()=>{if(!S.d)return alert('Upload the Master first');const Rs
   S.rdAdded=true;rdStatus();if(bad.length)$('#rdst').innerHTML+='<div class="er" style="margin-top:6px">⚠ Skipped (columns not selected): '+bad.map(r=>esc(r.title)).join(', ')+'</div>'};
 $('#rdrm').onclick=()=>{S.rdAdded=false;rdStatus()};
 document.addEventListener('click',e=>{const b=e.target.closest('#rdtabs button,.kpi[data-r]');if(!b||!S.d)return;rdSel=b.dataset.r;rdRender(rdAll())});
-$('#p7').addEventListener('change',e=>{if(e.isTrusted&&S.d)rdInit()});
-$('#p7').addEventListener('click',e=>{if(e.target.closest('a[data-all],a[data-none]')&&S.d)setTimeout(rdInit,0)});
+$('#p6').addEventListener('change',e=>{if(e.isTrusted&&S.d)rdInit()});
+$('#p6').addEventListener('click',e=>{if(e.target.closest('a[data-all],a[data-none]')&&S.d)setTimeout(rdInit,0)});
 function rdModelAll(Rs){const L='H',fl=(k,n=7)=>Array(n).fill(['',k]),rows=[],merges=[],blank=ht=>rows.push({ht,c:[]}),ok=Rs.filter(r=>!r.err),tl=rdTiles(ok);
   rows.push({ht:38,c:[['Report Dashboard','title'],...fl('title')]});merges.push('A1:'+L+'1');
   rows.push({ht:22,c:[[`DSR: ${S.d.name}  ·  Created: ${new Date().toLocaleString('en-GB')}`,'sub'],...fl('sub')]});merges.push('A2:'+L+'2');
@@ -626,7 +634,7 @@ function rdModelAll(Rs){const L='H',fl=(k,n=7)=>Array(n).fill(['',k]),rows=[],me
   ok.forEach(R=>{const nc=R.cols.length;rows.push({ht:26,c:[[R.title,'rep']]});
     rows.push({ht:24,c:[[R.head,'hdrL'],...R.cols.map(c=>[c,'hdr']),['Total','hdr']]});
     if(R.kind==='flat'){R.rows.forEach((r,i)=>{const z=i%2?'z':'';rows.push({ht:19,c:[[r.lab,'rowL'+z],...r.c.map(v=>[v,'rowN'+z]),[r.t,'rowT']]})});rows.push({ht:22,c:[['Total','secL'],...R.tot.map(v=>[v,'secN']),[R.n,'secT']]})}
-    else R.blocks.forEach(([name,br])=>{rows.push({ht:22,c:[[name,'secL'],...R.tot.map(v=>[v,'secN']),[R.n,'secT']]});
+    else rdBl(R).forEach(([name,br])=>{rows.push({ht:22,c:[[name,'secL'],...R.tot.map(v=>[v,'secN']),[R.n,'secT']]});
       rdBlockRows(R,br).forEach((r,i)=>{const z=i%2?'z':'';rows.push({ht:19,c:[[r.lab,'rowL'+z],...r.c.map(v=>[v,'rowN'+z]),[r.t,'rowT']]})})});
     blank(14)});
   const notes=['Rules:',...ok.map(R=>'• '+R.head.replace('Pick up from SFC','FM Mile Report')+': '+R.rule+(R.dtl?' · Month/Week/Date = '+R.dtl:''))];
@@ -634,6 +642,8 @@ function rdModelAll(Rs){const L='H',fl=(k,n=7)=>Array(n).fill(['',k]),rows=[],me
   rows.push({ht:Math.max(46,16*notes.length),c:[[notes.join('\n'),'note'],...fl('note')]});merges.push('A'+rows.length+':'+L+rows.length);
   return{widths:[36,14,14,14,14,14,14,14],rows,merges}}
 $('#rddl').onclick=()=>download();
+$('#rdx').onclick=async()=>{if(!S.d)return alert('Upload the Master first');const R=rdAll().find(x=>x.id===rdSel);if(!R||R.err||!R.sel||!R.sel.length)return alert(R&&R.err?R.err:'No rows in this report');
+  try{const parts=await DSRCore.writeXlsx({...S.d,rows:R.sel},{sheet:R.head.replace(/[\\\/?*\[\]:]/g,' ').slice(0,31),zero:false});const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download=R.head.replace(/\W+/g,'_')+'_details_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),120000)}catch(e){alert('Export fail: '+e.message)}};
 
 /* ---------- View & Download ---------- */
 function vInit(){$('#vc').onchange=()=>{$('#vv').innerHTML='<option value="">(all)</option>'+uniq(S.d.rows,+$('#vc').value).slice(0,500).map(v=>`<option>${esc(v)}</option>`).join('')};$('#vc').onchange();vShow()}
@@ -649,7 +659,7 @@ async function download(){if(!S.d)return alert('Master not uploaded');if($('#fxa
   try{const prog=(i,n)=>{$('#st').textContent=`⏳ Building Excel... ${i.toLocaleString()} / ${n.toLocaleString()} rows`};
     const keep=$('#keep').checked&&S.mfile&&S.d.dataPath&&!/\.csv$/i.test(S.mfile.name);
     const parts=keep?await DSRCore.writeXlsxPreserve(S.d,()=>S.mfile.stream(),{zero:$('#zf').checked,dash,onProgress:prog,onCopy:n=>{$('#st').textContent='⏳ Copying original sheets... '+Math.round(n/1048576)+' MB'}}):await DSRCore.writeXlsx(S.d,{sheet:S.d.sheetName||'DSR',zero:$('#zf').checked,dash,onProgress:prog});
-    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='DSR_Final_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();markDone(6);setTimeout(()=>URL.revokeObjectURL(a.href),120000)}
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='DSR_Final_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();markDone(7);setTimeout(()=>URL.revokeObjectURL(a.href),120000)}
   catch(e){alert('Export fail: '+e.message)}refresh()}
 $('#dl').onclick=$('#dl2').onclick=download;
 const markDone=n=>{const b=document.querySelector('nav button[data-n="'+n+'"]');if(b)b.classList.add('done')};
@@ -658,5 +668,11 @@ new MutationObserver(()=>document.body.classList.toggle('busy',$('#st').textCont
 (function(){const h=document.documentElement,k='dsr_theme',mm=()=>window.matchMedia?matchMedia('(prefers-color-scheme:dark)').matches:false;let t=null;try{t=localStorage.getItem(k)}catch(e){}if(t)h.dataset.theme=t;
   const dark=()=>h.dataset.theme?h.dataset.theme==='dark':mm(),upd=()=>{$('#theme').textContent=dark()?'☀️':'🌙'};upd();
   $('#theme').onclick=()=>{h.dataset.theme=dark()?'light':'dark';try{localStorage.setItem(k,h.dataset.theme)}catch(e){}upd()}})();
-show(1);
+/* ---------- Language (default English) ---------- */
+const I18N={hi:{"Master": "मास्टर", "Order Data": "ऑर्डर डेटा", "Invoice": "इनवॉइस", "FM Mile": "FM माइल", "Last Mile": "लास्ट माइल", "Report Dashboard": "रिपोर्ट डैशबोर्ड", "View & Download": "देखें और डाउनलोड", "↩ Undo": "↩ वापस", "⚙ Options": "⚙ विकल्प", "🔄 Update Order Data": "🔄 ऑर्डर डेटा अपडेट", "⬇ Download DSR": "⬇ DSR डाउनलोड", "📊 Report Dashboard": "📊 रिपोर्ट डैशबोर्ड", "📊 Create Reports (add all to DSR)": "📊 रिपोर्ट बनाएं (सभी DSR में जोड़ें)", "✖ Remove from DSR": "✖ DSR से हटाएं", "⬇ Export details (this report)": "⬇ विवरण एक्सपोर्ट (यह रिपोर्ट)", "View": "व्यू", "Month wise": "महीना-वार", "Week wise": "हफ्ता-वार", "Date wise": "तारीख-वार", "Month + Week + Date": "महीना + हफ्ता + तारीख", "Month Wise": "महीना-वार", "Week Wise": "हफ्ता-वार", "Date Wise": "तारीख-वार", "Total": "कुल", "Fill now": "अभी भरें", "Filter": "फ़िल्टर", "⬇ Download": "⬇ डाउनलोड", "Re-read": "दोबारा पढ़ें", "+ Add": "+ जोड़ें", "View DSR (Excel-like filter)": "DSR देखें (Excel जैसा फ़िल्टर)", "📁 Step 1 · Master DSR upload": "📁 स्टेप 1 · मास्टर DSR अपलोड", "Warehouse": "वेयरहाउस", "Payment Status": "पेमेंट स्टेटस", "Final Remark": "फाइनल रिमार्क", "Remark": "रिमार्क", "Process By column": "Process By कॉलम", "Order Date column": "ऑर्डर डेट कॉलम", "Username column": "Username कॉलम", "1 · Active Orders": "1 · एक्टिव ऑर्डर", "2 · Shipments Dispatched": "2 · भेजे गए शिपमेंट", "3 · Shipments Delivered": "3 · डिलीवर शिपमेंट", "4 · Shipments RTO": "4 · RTO शिपमेंट", "5 · China Not Process": "5 · चाइना नॉट प्रोसेस", "6 · FM Mile Report": "6 · FM माइल रिपोर्ट", "7 · OneStopBulk Report": "7 · OneStopBulk रिपोर्ट"},zh:{"Master": "主文件", "Order Data": "订单数据", "Invoice": "发票", "FM Mile": "头程", "Last Mile": "末端配送", "Report Dashboard": "报表看板", "View & Download": "查看与下载", "↩ Undo": "↩ 撤销", "⚙ Options": "⚙ 选项", "🔄 Update Order Data": "🔄 更新订单数据", "⬇ Download DSR": "⬇ 下载DSR", "📊 Report Dashboard": "📊 报表看板", "📊 Create Reports (add all to DSR)": "📊 生成报表（全部加入DSR）", "✖ Remove from DSR": "✖ 从DSR移除", "⬇ Export details (this report)": "⬇ 导出明细（本报表）", "View": "视图", "Month wise": "按月", "Week wise": "按周", "Date wise": "按日", "Month + Week + Date": "月+周+日", "Month Wise": "按月", "Week Wise": "按周", "Date Wise": "按日", "Total": "合计", "Fill now": "立即填充", "Filter": "筛选", "⬇ Download": "⬇ 下载", "Re-read": "重新读取", "+ Add": "+ 添加", "View DSR (Excel-like filter)": "查看DSR（类Excel筛选）", "📁 Step 1 · Master DSR upload": "📁 步骤1 · 上传主DSR", "Warehouse": "仓库", "Payment Status": "付款状态", "Final Remark": "最终备注", "Remark": "备注", "1 · Active Orders": "1 · 活跃订单", "2 · Shipments Dispatched": "2 · 已发货", "3 · Shipments Delivered": "3 · 已送达", "4 · Shipments RTO": "4 · RTO退回", "5 · China Not Process": "5 · 中国未处理", "6 · FM Mile Report": "6 · 头程报表", "7 · OneStopBulk Report": "7 · OneStopBulk报表"}};let LG='en';const ORIG=new WeakMap();let trT=0;
+function trAll(){const D=I18N[LG]||{},w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode()){const o=ORIG.has(n)?ORIG.get(n):n.nodeValue,k=o.trim();if(LG==='en'){if(ORIG.has(n)&&n.nodeValue!==o)n.nodeValue=o}else if(D[k]){ORIG.set(n,o);n.nodeValue=o.replace(k,D[k])}}document.documentElement.lang=LG}
+new MutationObserver(()=>{if(LG==='en')return;clearTimeout(trT);trT=setTimeout(trAll,60)}).observe(document.body,{childList:true,subtree:true});
+$('#lang').onchange=()=>{LG=$('#lang').value;try{localStorage.setItem('dsr_lang',LG)}catch(e){}trAll()};
+try{const l=localStorage.getItem('dsr_lang');if(l&&I18N[l]){LG=l;$('#lang').value=l}}catch(e){}
+show(1);if(LG!=='en')trAll();
 </script></body></html>
