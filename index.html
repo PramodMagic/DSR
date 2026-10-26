@@ -152,7 +152,7 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 <div class="rdset" data-r="fm"><div class="mu">Counts <b>Shopperr Invoice Number</b> (filled) by the <b>Pick up from SFC</b> date. No order count.</div>
 <div class="row"><label class="mu"><b>Invoice Number column</b><br><select class="dsr" data-ph="1" id="rdi"></select></label><label class="mu"><b>Arrival in Indian Warehouse column</b><br><select class="dsr" data-ph="1" id="rda"></select></label><label class="mu"><b>Pick up from SFC column</b><br><select class="dsr" data-ph="1" id="rdk"></select></label></div></div>
 
-<div class="rdset" data-r="osb"><div class="mu">Rows where <b>Process By</b> = China / China-CJ and <b>Username</b> = onestopbulk. FM Delivered = Invoice Number filled + Arrival in Indian Warehouse date; FM Intrasit = Invoice filled, no arrival date; Not Processed By China = Final Remark "Not Processed By China". Days Taken (Arrival in Indian Warehouse − Order Date) comes as a column only in the Export details file, order wise. Uses the Invoice / Arrival columns chosen in FM Mile Report.</div></div>
+<div class="rdset" data-r="osb"><div class="mu">Rows where <b>Process By</b> = China / China-CJ and <b>Username</b> = onestopbulk. FM Delivered = Invoice Number filled + Arrival in Indian Warehouse date; FM Intrasit = Invoice filled, no arrival date; Not Processed By China = Invoice Number and Arrival in Indian Warehouse both empty. Days Taken (Arrival in Indian Warehouse − Order Date) comes as a column only in the Export details file, order wise. Uses the Invoice / Arrival columns chosen in FM Mile Report.</div></div>
 <div id="rdout"></div></div></section>
 <section id="p7"><div class="card"><h3>⑤ Fill columns from Order Date (Month / Week / Time / Date)</h3>
 <div class="mu">From Order Date: <b>Month</b> = month name (October), <b>Week</b> = like Week1, <b>Time of order</b> = time only, <b>Payment by reseller</b> = date only. Applies to all rows (new + old). If these columns had a formula earlier, it now becomes a plain value.</div>
@@ -590,9 +590,9 @@ function rdOne(id){const def=RD_DEF.find(x=>x[0]===id),res={id,title:def[1],head
     return{...res,...rdAgg(1,r=>isFilled(r[i])?0:-1,rdDt(k)),cols:['Invoice Number Count'],clr:['#14b8a6'],rule:`Count of "${S.d.H[i]}" (filled), by "${S.d.H[k]}" date`,dtl:S.d.H[k]}}
   if(id==='osb'){const u=rdG('rdu'),o=rdG('rdo'),i=rdG('rdi'),a=rdG('rda'),s=rdG('rds');if(!(u>=0)||!(p>=0)||!(o>=0)||!(i>=0)||!(a>=0))return err('Select Username, Process By, Order Date, Invoice Number and Arrival in Indian Warehouse columns');
     const ok=r=>{const w=rdNW(r[p]);return(w==='china'||w==='chinacj')&&nm(r[u])==='onestopbulk'},ad=r=>isFilled(r[a])?rdSerial(r[a]):null;
-    const cls=r=>{if(!ok(r))return-1;if(s>=0&&canon(tx(r[s]))===canon(PH.NPC))return 2;return isFilled(r[i])?(ad(r)!=null?0:1):-1};
+    const cls=r=>{if(!ok(r))return-1;if(isFilled(r[i]))return ad(r)!=null?0:1;return isFilled(r[a])?-1:2};
     const ext=r=>{const c=cls(r);if(c!==0&&c!==1)return null;const od=rdDt(o)(r),x=ad(r);return od==null||x==null?null:Math.floor(x+1e-9)-Math.floor(od+1e-9)};
-    return{...res,...rdAgg(3,cls,rdDt(o)),cols:['FM Delivered','FM Intrasit','Not Processed By China'],clr:['#10b981','#8b5cf6','#ef4444'],rule:'Process By China / China-CJ + Username onestopbulk; Invoice filled + Arrival date = FM Delivered, no date = FM Intrasit; Final Remark Not Processed By China',dtl:'Order Date',days:ext}}}
+    return{...res,...rdAgg(3,cls,rdDt(o)),cols:['FM Delivered','FM Intrasit','Not Processed By China'],clr:['#10b981','#8b5cf6','#ef4444'],rule:'Process By China / China-CJ + Username onestopbulk; Invoice filled + Arrival date = FM Delivered, no date = FM Intrasit; Invoice Number and Arrival in Indian Warehouse both empty = Not Processed By China',dtl:'Order Date',days:ext}}}
 const rdAll=()=>{rdDefaults();rdLists();return RD_DEF.map(d=>rdOne(d[0]))};
 const rdTiles=Rs=>{const o=[];Rs.forEach(R=>{if(R.err)return;o.push([R.head==='Pick up from SFC'?'FM Mile':R.head,R.n,R.color,R.id])});return o};
 function rdTable(R,f){const mx=rows=>Math.max(1,...rows.flatMap(r=>r.c)),NCc=R.cols.length;
