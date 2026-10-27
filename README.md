@@ -58,3 +58,6 @@ Tab 6 = Report Dashboard, tab 7 = View & Download. Language selector in header (
 
 ## v8
 Excel Report Dashboard sheet: month wise only, colourful KPI cards, report banners, data bars on totals, peak-month line. On-screen tool shows Month + Week + Date as before. OneStopBulk report: Days Taken removed from the table; it is added order-wise as a column in "Export details".
+
+## v12
+Phase 2 now also updates rows whose (Final Remark, Remark) is a pair the rules generated earlier (e.g. Order Cancelled / WH Working, WH Not Assigned / WH Not Assigned), so Payment Status flips PD/PR/PU change the remarks. New dropdown "Overwrite: ANY Final Remark" for matched rows.
