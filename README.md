@@ -61,3 +61,6 @@ Excel Report Dashboard sheet: month wise only, colourful KPI cards, report banne
 
 ## v12
 Phase 2 now also updates rows whose (Final Remark, Remark) is a pair the rules generated earlier (e.g. Order Cancelled / WH Working, WH Not Assigned / WH Not Assigned), so Payment Status flips PD/PR/PU change the remarks. New dropdown "Overwrite: ANY Final Remark" for matched rows.
+
+## v13
+Phase 1 / Phase 2 / Special rule follow AOrder_Data_Final_Remark_and_Remark_Rules.docx exactly (Phase 2 only where Final Remark is blank/0 or one of the 5 pending-like values; blank Process By needs both blank). Step 1 important columns (Process By, Payment Status, Final Remark, Remark, Courier) are auto-selected by header name when not chosen. Optional "ANY Final Remark" override remains.
