@@ -408,14 +408,16 @@ function ruleTarget(g,hc,p){const T={'Bulk/India':{PD:[PH.DP,'WH Working'],PR:[P
 /* Phase 1: new rows (Final Remark + Remark both blank/0). Phase 2: rows matched with order data (Final Remark blank/0 or one of the 5 "pending-like" values). Special: Username rule, applied last. */
 function rules(start,mask,o){o=o||{};const ph=String(o.phase||'12'),{fr,rm,wh,pay,awb}=C(),out={},R=S.d.rows,SP=o.special===false?null:spCfg();
   const add=k=>{out[k]=(out[k]||0)+1};
-  for(let i=start;i<R.length;i++){if(mask&&!mask[i])continue;const r=R[i],w0=nm(r[wh]),w=w0==='0'?'':w0,p=tx(r[pay]).toUpperCase();let f=rt(r[fr]),m=rt(r[rm]);
-    const set=(a,b,k)=>{if(f!==a||m!==b)add(k);r[fr]=a;r[rm]=b;f=a;m=b};
+  for(let i=start;i<R.length;i++){if(mask&&!mask[i])continue;const r=R[i],w0=nm(r[wh]),w=w0==='0'?'':w0,p=tx(r[pay]).toUpperCase().replace(/[^A-Z]/g,'');let f=rt(r[fr]),m=rt(r[rm]),hit=false;
+    const set=(a,b,k)=>{hit=true;if(f!==a||m!==b)add(k);r[fr]=a;r[rm]=b;f=a;m=b};
     const g=(w==='bulk'||w==='india')?'Bulk/India':w==='bulk9'?'Bulk9':(w==='china'||w==='china-cj'||w==='chinacj')?'China':w===''?'NoWH':null;
     if(!g)add('Unknown warehouse — no rule');
     else{const hc=isFilled(r[awb]),t=ruleTarget(g,hc,p);
       if(t){const tag=g+(g==='China'?(hc?' (courier AWB)':' (no courier)'):'')+' '+p+' → '+t[0]+' / '+t[1];
         if(ph.includes('1')&&!f&&!m)set(t[0],t[1],'Phase 1 · '+tag);
-        if(ph.includes('2')){const ok=g==='NoWH'?(!f&&!m):(!f||LIST5.has(canon(f)));if(ok)set(t[0],t[1],'Phase 2 · '+tag)}}}
+        if(ph.includes('2')){const ok=g==='NoWH'?(!f&&!m):(!f||LIST5.has(canon(f)));if(ok)set(t[0],t[1],'Phase 2 · '+tag)}
+        if(!hit)add('ℹ Skipped · '+g+' · Final Remark "'+(f||'blank')+'" / Remark "'+(m||'blank')+'" is not blank or pending-like')}
+      else add('⚠ No rule · '+g+' · payment status "'+(p||'blank')+'" (only PD / PR / PU are handled)')}
     if(SP&&nm(r[SP.c])===SP.v&&(!SP.p||p===SP.p)&&inList(SP.x,rt(r[fr])))set(SP.f,SP.r,'Special · Username = '+SP.vr+' → '+SP.f+' / '+SP.r)}
   return out}
 $('#t2ru').onclick=()=>{if(!S.d)return alert('Upload the Master');if(!need('wh','pay','fr','rm','awb'))return;snap();const o=rules($('#t2sc').value==='new'?S.ns:0,null,{phase:$('#t2ph').value}),k=Object.keys(o).sort();
