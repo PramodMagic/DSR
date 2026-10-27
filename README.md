@@ -64,3 +64,6 @@ Phase 2 now also updates rows whose (Final Remark, Remark) is a pair the rules g
 
 ## v13
 Phase 1 / Phase 2 / Special rule follow AOrder_Data_Final_Remark_and_Remark_Rules.docx exactly (Phase 2 only where Final Remark is blank/0 or one of the 5 pending-like values; blank Process By needs both blank). Step 1 important columns (Process By, Payment Status, Final Remark, Remark, Courier) are auto-selected by header name when not chosen. Optional "ANY Final Remark" override remains.
+
+## v15 (this_one.docx)
+PR rule runs before Phase 1/2 targets: Payment Status PR and Final Remark blank/0 or one of (Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, FM Intrasit, Invoice Not Prepared, Not Processed By China, Reached AT India WH, WH Not Assigned) → Order Cancelled / WH Working (Bulk, India, Bulk9); China + AWB + Shopperr Invoice Number filled → Cancelled During FM Intrasit; China + AWB + invoice blank/0 → Processed By China; China + no courier + invoice blank/0 → Cancelled By China (courier blank + invoice filled: falls back to Phase 1/2). New Step 1 column: Shopperr Invoice Number.
