@@ -416,6 +416,7 @@ function rules(start,mask,o){o=o||{};const ph=String(o.phase||'12'),{fr,rm,wh,pa
   const add=k=>{out[k]=(out[k]||0)+1};
   for(let i=start;i<R.length;i++){if(mask&&!mask[i])continue;const r=R[i],w0=nm(r[wh]),w=w0==='0'?'':w0,p=tx(r[pay]).toUpperCase().replace(/[^A-Z]/g,'');let f=rt(r[fr]),m=rt(r[rm]),hit=false;
     const set=(a,b,k)=>{hit=true;if(f!==a||m!==b)add(k);r[fr]=a;r[rm]=b;f=a;m=b};
+    if(ph.includes('2')&&p==='PR'&&canon(f)==='last mile intrasit'&&canon(m)==='last mile intrasit'){set(PH.OC,'Cancelled During LM Intrasit','PR rule · any Process By / Courier · Last Mile Intrasit / Last Mile Intrasit → Order Cancelled / Cancelled During LM Intrasit');continue}
     const g=(w==='bulk'||w==='india')?'Bulk/India':w==='bulk9'?'Bulk9':(w==='china'||w==='china-cj'||w==='chinacj')?'China':w===''?'NoWH':null;
     if(!g)add('Unknown warehouse — no rule');
     else{const hc=isFilled(r[awb]),t=ruleTarget(g,hc,p);let done=false;
