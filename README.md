@@ -70,3 +70,11 @@ PR rule runs before Phase 1/2 targets: Payment Status PR and Final Remark blank/
 
 ## v17
 PR + Final Remark = Last Mile Intrasit and Remark = Last Mile Intrasit (any Process By, any Courier) → Order Cancelled / Cancelled During LM Intrasit.
+
+## v18
+Last Mile: only Pickup/Delivery/RTO dates are filled (no Final Remark/Remark change); new D step fills "Courier Remark" for matched orders. New tab "Order Shipped" (before Last Mile): fills a chosen date into "Dispatch from Indian warehouse" by Order Serial / Tracking Number / Market Place Order ID, then sets Last Mile Intrasit where Final Remark is eligible. The loaded DSR is saved in the browser (IndexedDB) and restored after refresh.
+
+## v19 · Cloud save (Vercel Hobby + Upstash free)
+1. Upstash: create a free Redis database, copy REST URL + REST token.
+2. Vercel project -> Settings -> Environment Variables: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN (or the KV_REST_API_URL / KV_REST_API_TOKEN that the Vercel-Upstash integration adds) and DSR_KEY (any long password you choose). Redeploy.
+3. Open the site, Step 1 -> "Cloud save": enter DSR_KEY, Save key, then Save / Load. The function is api/dsr.js (requests are ~600 KB each, under Hobby's 4.5 MB body limit).
