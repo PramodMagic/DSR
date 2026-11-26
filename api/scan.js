@@ -24,6 +24,11 @@ module.exports = async (req, res) => {
       if (typeof b.data !== 'string' || b.data.length > 20000) return res.status(400).json({ error: 'Bad meta' });
       await cmd(['SET', 'scan:meta', b.data]); return res.json({ ok: true });
     }
+    if (b.op === 'addr-get') { const m = await cmd(['GET', 'scan:addr']); return res.json({ list: m ? JSON.parse(m) : null }); }
+    if (b.op === 'addr-set') {
+      if (typeof b.data !== 'string' || b.data.length > 50000) return res.status(400).json({ error: 'Bad list' });
+      await cmd(['SET', 'scan:addr', b.data]); return res.json({ ok: true });
+    }
     if (b.op === 'add') {
       if (!okId || typeof b.data !== 'string' || b.data.length > 900000) return res.status(400).json({ error: 'Bad chunk' });
       await cmd(['SET', 'scan:c:' + id, b.data]); await cmd(['RPUSH', 'scan:idx', id]); return res.json({ ok: true });

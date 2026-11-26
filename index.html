@@ -845,11 +845,13 @@ const adBook=()=>LS.g('mn_addr',[]);
 function adFill(){const a=adBook();if(MN.ad&&!a.includes(MN.ad)){a.push(MN.ad);LS.s('mn_addr',a)}
   $('#mn_adsel').innerHTML='<option value="">— Select saved address —</option>'+a.map((x,i)=>`<option value="${i}">${esc(x.slice(0,80))}</option>`).join('');
   $('#mn_adsel').value=MN.ad?String(a.indexOf(MN.ad)):'';$('#mn_adshow').innerHTML=MN.ad?'📍 <b>Manifest address:</b> '+esc(MN.ad):'<span class="er">No pickup address selected</span>'}
+async function adPull(){if(!key())return;try{const l=(await api('addr-get')).list;if(l){LS.s('mn_addr',l);adFill()}else if(adBook().length)await api('addr-set',{data:JSON.stringify(adBook())})}catch(e){}}
+async function adPush(){if(!key())return;try{await api('addr-set',{data:JSON.stringify(adBook())})}catch(e){}}
 $('#mn_adsel').onchange=()=>{const v=$('#mn_adsel').value;MN.ad=v===''?'':(adBook()[+v]||'');cfgSave();adFill()};
 $('#mn_adnew').onclick=()=>{$('#mn_adbox').style.display='block';$('#mn_adtx').focus()};
 $('#mn_adcn').onclick=()=>{$('#mn_adbox').style.display='none';$('#mn_adtx').value=''};
-$('#mn_adsv').onclick=()=>{const v=$('#mn_adtx').value.trim().replace(/\s*\n\s*/g,', ');if(!v)return alert('Type the pickup address first');const a=adBook();if(!a.includes(v)){a.push(v);LS.s('mn_addr',a)}MN.ad=v;cfgSave();adFill();$('#mn_adtx').value='';$('#mn_adbox').style.display='none'};
-$('#mn_addl').onclick=()=>{const i=$('#mn_adsel').value;if(i==='')return alert('Select a saved address first');if(!confirm('Delete this saved address?'))return;const a=adBook();const gone=a.splice(+i,1)[0];LS.s('mn_addr',a);if(MN.ad===gone){MN.ad='';cfgSave()}adFill()};
+$('#mn_adsv').onclick=()=>{const v=$('#mn_adtx').value.trim().replace(/\s*\n\s*/g,', ');if(!v)return alert('Type the pickup address first');(async()=>{await adPull();const a=adBook();if(!a.includes(v)){a.push(v);LS.s('mn_addr',a)}MN.ad=v;cfgSave();adFill();adPush();$('#mn_adtx').value='';$('#mn_adbox').style.display='none'})()};
+$('#mn_addl').onclick=()=>{const i=$('#mn_adsel').value;if(i==='')return alert('Select a saved address first');if(!confirm('Delete this saved address?'))return;const a=adBook();const gone=a.splice(+i,1)[0];LS.s('mn_addr',a);if(MN.ad===gone){MN.ad='';cfgSave()}adFill();adPush()};
 
 /* ---------- lookup + rules ---------- */
 function index(){const a=col('awb');if(MN.ix&&MN.ix.d===S.d&&MN.ix.a===a&&MN.ix.n===S.d.rows.length)return MN.ix.m;
@@ -1024,7 +1026,7 @@ $('#mnmf').onclick=()=>{const L=MN.sc.filter(r=>r.pop==='ship');if(!L.length)ret
 /* ---------- open / init ---------- */
 function autoDsr(){if(S.d||!key()||MN.autoTried)return;MN.autoTried=1;const b=$('#cld');if(b){st('⏳ Loading DSR from cloud…');b.click()}}
 setTimeout(autoDsr,3000);
-function mnOpen(){if(!S.d)setTimeout(()=>{autoDsr();fillSel()},1200);fillSel();adFill();render();if(key()&&!MN.pulled){MN.pulled=1;pull().then(()=>{render();st('☁ Cloud checked')}).catch(e=>st('❌ '+esc(e.message)))}if(!MN.cam)setTimeout(()=>$('#mnin').focus(),50)}
+function mnOpen(){adPull();if(!S.d)setTimeout(()=>{autoDsr();fillSel()},1200);fillSel();adFill();render();if(key()&&!MN.pulled){MN.pulled=1;pull().then(()=>{render();st('☁ Cloud checked')}).catch(e=>st('❌ '+esc(e.message)))}if(!MN.cam)setTimeout(()=>$('#mnin').focus(),50)}
 cfgLoad();adFill();restore().then(()=>{render()});render();
 window.addEventListener('beforeunload',()=>{});
 })();

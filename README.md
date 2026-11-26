@@ -93,3 +93,5 @@ Mobile ↔ computer: add file `api/scan.js` (same Upstash env vars + DSR_KEY as 
 
 ## v23 (Manifest Scan)
 Pickup boy / mobile / time / vehicle fields removed (blank on the manifest, fill by hand). Pickup addresses are added once ("➕ Add new address"), saved in the browser and selected from a list. Pop-up replaced by an inline result banner + a scan log (latest on top, no need to close anything). If no DSR is stored in the browser, it is loaded automatically from the cloud copy (when the access key is saved). Mobile: header is no longer sticky and the tab menu wraps, so all tabs are visible without sideways scrolling.
+
+Addresses are also synced through the cloud (api/scan.js ops addr-get/addr-set), so an address added on one device shows on the others (key must be saved on each).
