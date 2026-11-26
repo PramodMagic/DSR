@@ -782,6 +782,7 @@ $('#p9').innerHTML=`
 <div class="card"><h3>📷 Manifest Scan</h3>
 <div class="mu hint">Scan the AWB of every packet. The pop-up comes from the DSR (Payment Status + Final Remark + User Name). Everything scanned is saved on this device and can be downloaded any time as one Excel (separate sheet for each pop-up) and as the Courier Manifest (Please Ship only). Works with a USB/Bluetooth scanner, the keyboard, and the mobile camera (Chrome on Android).</div>
 <div id="mnwarn" class="row"></div>
+<div class="row"><input type="password" id="mnkey" placeholder="Access key (DSR_KEY)" size="18"><button id="mnkb">☁ Save key &amp; load DSR from cloud</button></div><div class="mu" id="mnld"></div>
 <details class="sec"><summary>⚙ DSR columns used for scanning (auto-selected by name — check once)</summary><div class="in"><div class="grid5">
 <label class="fld"><span>AWB / Tracking Number</span><select class="mns" id="mn_awb"></select></label>
 <label class="fld"><span>Payment Status</span><select class="mns" id="mn_pay"></select></label>
@@ -866,8 +867,8 @@ function classify(r){const pay=tx(r[col('pay')]).toUpperCase(),fr=canon(tx(r[col
 const snapV=v=>v instanceof Date?v.getTime()/86400000+25569:(v&&typeof v==='object'?gv(v):v);
 const rebuildSeen=()=>{MN.seen=new Map();MN.sc.forEach(r=>{if(r.pop!=='dup'&&!MN.seen.has(r.k))MN.seen.set(r.k,r)})};
 function doScan(raw,src){const awb=String(raw||'').trim();if(!awb)return;
-  if(!S.d){alert('DSR is not loaded. Upload the Master (Step 1) or use "Load DSR from cloud" first.');return}
-  if(col('awb')<0||col('pay')<0||col('fr')<0){alert('First select the AWB, Payment Status and Final Remark columns (⚙ DSR columns used for scanning).');return}
+  if(!S.d||col('awb')<0||col('pay')<0||col('fr')<0){const m=!S.d?'DSR is not loaded. Save the access key above and press "Load DSR from cloud" (or upload the Master in Step 1).':'Select the AWB, Payment Status and Final Remark columns first (⚙ DSR columns used for scanning).';
+    $('#mnlast').innerHTML=`<div style="background:#dc2626;color:#fff;border-radius:14px;padding:14px 16px;margin:8px 0;font-weight:700">⚠ ${esc(m)}<div style="font-weight:400;margin-top:4px">Scanned: ${esc(awb)} (not saved)</div></div>`;beep('na');return}
   const k=nm(awb),t=new Date().toISOString();let rec;
   if(!MN.bid){{const d=new Date(),q=n=>String(n).padStart(2,'0');MN.bid='MF-'+d.getFullYear()+q(d.getMonth()+1)+q(d.getDate())+'-'+q(d.getHours())+q(d.getMinutes())+q(d.getSeconds())}MN.H=S.d.H.slice();const cf={};Object.keys(S.d.colFmt||{}).forEach(c=>cf[c]=S.d.colFmt[c]);MN.fmt={dc:[...(S.d.dateCols||[])],cf}}
   const first=MN.seen.get(k);
@@ -876,7 +877,10 @@ function doScan(raw,src){const awb=String(raw||'').trim();if(!awb)return;
   MN.sc.push(rec);persist();render();popup(rec);metaPush();pushSoon()}
 
 /* ---------- popup / sound ---------- */
-let audio;function beep(p){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.connect(g);g.connect(audio.destination);o.type='sine';o.frequency.value=p==='ship'?880:p==='dup'||p==='na'?330:220;g.gain.value=.12;o.start();o.stop(audio.currentTime+(p==='ship'?.12:.4))}catch(e){}try{navigator.vibrate&&navigator.vibrate(p==='ship'?60:[120,60,120])}catch(e){}}
+let audio;function audioOn(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume()}catch(e){}}
+['click','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,audioOn,{passive:true}));
+function tone(f,t0,d,type){const o=audio.createOscillator(),g=audio.createGain();o.type=type||'square';o.frequency.value=f;o.connect(g);g.connect(audio.destination);const T=audio.currentTime+t0;g.gain.setValueAtTime(.0001,T);g.gain.exponentialRampToValueAtTime(.7,T+.01);g.gain.setValueAtTime(.7,T+d-.02);g.gain.exponentialRampToValueAtTime(.0001,T+d);o.start(T);o.stop(T+d+.02)}
+function beep(p){try{audioOn();if(p==='ship'){tone(1200,0,.18)}else if(p==='na'||p==='dup'||p==='shp'){tone(600,0,.2);tone(600,.3,.2)}else{tone(300,0,.35);tone(300,.45,.35);tone(300,.9,.35)}}catch(e){}try{navigator.vibrate&&navigator.vibrate(p==='ship'?80:[200,80,200,80,200])}catch(e){}}
 function popup(rec){const P=POP[rec.pop],r=rec.row;
   const info=r?[['Payment',tx(r[col('pay')])],['Final Remark',tx(r[col('fr')])],col('usr')>=0?['User',tx(r[col('usr')])]:null].filter(Boolean).map(x=>x[0]+': '+esc(x[1]||'-')).join(' · '):(rec.pop==='dup'?'First result: '+esc((POP[rec.fp]||{}).t||''):'');
   $('#mnlast').innerHTML=`<div style="background:${P.c};color:#fff;border-radius:14px;padding:14px 16px;margin:8px 0"><div style="font-size:clamp(22px,6vw,34px);font-weight:800;line-height:1.2">${esc(P.t)}</div><div style="font-size:clamp(15px,4vw,20px);font-weight:700;word-break:break-all;margin-top:4px">${esc(rec.awb)}</div><div style="font-size:13px;opacity:.92;margin-top:4px">${info}</div></div>`;beep(rec.pop)}
@@ -1026,6 +1030,10 @@ $('#mnmf').onclick=()=>{const L=MN.sc.filter(r=>r.pop==='ship');if(!L.length)ret
 /* ---------- open / init ---------- */
 function autoDsr(){if(S.d||!key()||MN.autoTried)return;MN.autoTried=1;const b=$('#cld');if(b){st('⏳ Loading DSR from cloud…');b.click()}}
 setTimeout(autoDsr,3000);
+$('#mnkey').value=key();
+$('#mnkb').onclick=()=>{const v=$('#mnkey').value.trim();if(!v)return alert('Type the access key first');try{localStorage.setItem('dsr_cloud_key',v)}catch(e){}const k=$('#ck');if(k)k.value=v;
+  $('#mnld').textContent='⏳ Loading DSR from cloud…';$('#cld').click();adPull();
+  let n=0;const iv=setInterval(()=>{n++;const c=$('#cst');$('#mnld').innerHTML=c?c.innerHTML:'';if(S.d||n>240){clearInterval(iv);if(S.d){fillSel();adPull();mnOpen()}}},700)};
 function mnOpen(){adPull();if(!S.d)setTimeout(()=>{autoDsr();fillSel()},1200);fillSel();adFill();render();if(key()&&!MN.pulled){MN.pulled=1;pull().then(()=>{render();st('☁ Cloud checked')}).catch(e=>st('❌ '+esc(e.message)))}if(!MN.cam)setTimeout(()=>$('#mnin').focus(),50)}
 cfgLoad();adFill();restore().then(()=>{render()});render();
 window.addEventListener('beforeunload',()=>{});
