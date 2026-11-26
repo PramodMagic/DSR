@@ -84,3 +84,9 @@ Cloud save is no longer done after every step. It runs (a) when you press "Save 
 
 ## v21
 The Master Excel is copied into memory when selected (no more dependence on the file staying unchanged on disk). If copying the original sheets fails during download, a plain DSR is downloaded instead of an error. Auto cloud save no longer pops an alert when no key is set.
+
+## v22 · Manifest Scan (new tab 9, nothing else changed)
+New tab **📷 Manifest Scan** (rules from Manifest_Rules.docx, format from Manisfest_Fomat.xlsx). Pop-ups, checked in this order: Already Scanned (duplicate) → NA (AWB not in DSR) → Payment PR = Refunded (any Final Remark / user) → User Name onestopbulk = DF Order → PD + (Bulk9 Order Dispatch Pending AT India WH, Dispatch Pending At India WH, FM Intrasit, Invoice Not Prepared, Not Processed By China, Reached AT India WH, WH Not Assigned) = Please Ship → PD + (Last Mile Intrasit, Delivered to end buyer) = Already Shipped → PU + same list as Please Ship = Unpaid Order → anything else = "No rule matched (keep aside & check)".
+Before scanning: choose Courier (list or type manually), pickup address (can be saved and re-selected), pickup boy, mobile, time, vehicle. Scan with a USB/Bluetooth scanner, keyboard, or the mobile camera (Chrome on Android; needs BarcodeDetector). Scans are saved in the browser (survive refresh).
+Downloads: **Complete Excel** (Summary + one sheet per pop-up, DSR columns in the same order + Scan Time) and **Manifest** (Please Ship only, as per the manifest format; Product Name = first 15 characters). DSR columns (AWB, Payment Status, Final Remark, User Name, Product Name, Recipient Name/Phone, SKU, Total Amount) are auto-selected by header name and can be changed.
+Mobile ↔ computer: add file `api/scan.js` (same Upstash env vars + DSR_KEY as api/dsr.js). On the mobile: Step 1 → save key → "Load DSR from cloud" → scan; on the computer: Manifest Scan tab → "Sync scans" → download.

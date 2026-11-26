@@ -164,7 +164,7 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 <div class="card"><h3>View DSR (Excel-like filter)</h3>
 <div class="row">Column <select class="dsr" id="vc"></select> Value <select id="vv"></select> Search <input type="text" id="vq" placeholder="type anything"><button id="vb">Filter</button><button id="dl2">⬇ Download</button></div>
 <div id="vm" class="mu"></div><div class="sc"><table id="vt"></table></div></div></section>
-<section id="p8"></section>
+<section id="p8"></section><section id="p9"></section>
 </main>
 <script src="fflate.min.js"></script><script src="core.js"></script>
 <script>
@@ -747,4 +747,284 @@ new MutationObserver(()=>{if(LG==='en')return;clearTimeout(trT);trT=setTimeout(t
 $('#lang').onchange=()=>{LG=$('#lang').value;try{localStorage.setItem('dsr_lang',LG)}catch(e){}trAll()};
 try{const l=localStorage.getItem('dsr_lang');if(l&&I18N[l]){LG=l;$('#lang').value=l}}catch(e){}
 show(1);if(LG!=='en')trAll();
-</script></body></html>
+</script><script>
+/* ================= Manifest Scan (new tab, added in v22) ================= */
+(function(){
+const POP={
+ ship:{t:'Please Ship',c:'#16a34a',sh:'Please Ship'},
+ ref:{t:'Refunded (Please Do Not Ship)',c:'#dc2626',sh:'Refunded'},
+ unp:{t:'Unpaid Order (Please Do Not Ship)',c:'#dc2626',sh:'Unpaid Order'},
+ df:{t:'DF Order (Please Do Not Ship)',c:'#dc2626',sh:'DF Order'},
+ na:{t:'NA (Please keep a Side this packet)',c:'#ea580c',sh:'NA'},
+ shp:{t:'Already Shipped',c:'#2563eb',sh:'Already Shipped'},
+ dup:{t:'Already Scanned',c:'#7c3aed',sh:'Already Scanned'},
+ chk:{t:'No rule matched (Please keep aside & check)',c:'#6b7280',sh:'Check'}};
+const ORDER=['ship','ref','unp','df','na','shp','dup','chk'];
+const SHIPSET=new Set([PH.B9,PH.DP,'FM Intrasit',PH.INP,PH.NPC,'Reached AT India WH',PH.WNA].map(canon));
+const SHIPPED=new Set(['Last Mile Intrasit','Delivered to end buyer'].map(canon));
+const MN={sc:[],seen:new Map(),H:null,fmt:{dc:[],cf:{}},bid:'',chunks:new Set(),idx:null,cam:null,last:{v:'',t:0},tm:0,syT:0,sy:false};
+const LS={g(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},s(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const key=()=>{try{return localStorage.getItem('dsr_cloud_key')||''}catch(e){return ''}};
+
+/* ---------- UI ---------- */
+const css=document.createElement('style');css.textContent=`
+#mnov{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:24px;cursor:pointer}
+#mnov h1{font-size:clamp(30px,7vw,64px);margin:0 0 14px;line-height:1.15}#mnov .a{font-size:clamp(18px,4vw,30px);font-weight:700;opacity:.95;word-break:break-all}#mnov .i{margin-top:14px;font-size:clamp(13px,2.6vw,18px);opacity:.9}#mnov small{margin-top:22px;opacity:.75}
+#mnvid{width:100%;max-width:420px;border-radius:14px;background:#000;display:none;max-height:320px;object-fit:cover}
+.mnb{display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;font-weight:700;font-size:12px;white-space:nowrap}
+.mnc{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.mnc span{padding:5px 12px;border-radius:999px;color:#fff;font-weight:700;font-size:12.5px}
+#mnin{font-size:20px;padding:12px 14px;flex:1;min-width:220px}
+.mnt td,.mnt th{padding:5px 8px;border-bottom:1px solid var(--bd);text-align:left;font-size:12.5px}.mnt{border-collapse:collapse;width:100%}
+`;document.head.append(css);
+
+$('#p9').innerHTML=`
+<div class="card"><h3>📷 Manifest Scan</h3>
+<div class="mu hint">Scan the AWB of every packet. The pop-up comes from the DSR (Payment Status + Final Remark + User Name). Everything scanned is saved on this device and can be downloaded any time as one Excel (separate sheet for each pop-up) and as the Courier Manifest (Please Ship only). Works with a USB/Bluetooth scanner, the keyboard, and the mobile camera (Chrome on Android).</div>
+<div id="mnwarn" class="row"></div>
+<details class="sec"><summary>⚙ DSR columns used for scanning (auto-selected by name — check once)</summary><div class="in"><div class="grid5">
+<label class="fld"><span>AWB / Tracking Number</span><select class="mns" id="mn_awb"></select></label>
+<label class="fld"><span>Payment Status</span><select class="mns" id="mn_pay"></select></label>
+<label class="fld"><span>Final Remark</span><select class="mns" id="mn_fr"></select></label>
+<label class="fld"><span>User Name</span><select class="mns" id="mn_usr"></select></label>
+<label class="fld"><span>Product Name</span><select class="mns" id="mn_prod"></select></label>
+<label class="fld"><span>Recipient Name</span><select class="mns" id="mn_rn"></select></label>
+<label class="fld"><span>Recipient Phone</span><select class="mns" id="mn_ph"></select></label>
+<label class="fld"><span>SKU</span><select class="mns" id="mn_sku"></select></label>
+<label class="fld"><span>Total Amount</span><select class="mns" id="mn_amt"></select></label></div></div></details></div>
+
+<div class="card"><h3>① Courier &amp; pickup details (fill before you start scanning)</h3>
+<div class="grid5">
+<label class="fld"><span>Courier Company</span><select id="mn_co"></select><input type="text" id="mn_con" placeholder="Type courier name" style="display:none"></label>
+<label class="fld"><span>Saved pickup address</span><select id="mn_adsel"></select></label>
+<label class="fld"><span>Pickup Boy Name</span><input type="text" id="mn_pb"></label>
+<label class="fld"><span>Mobile</span><input type="text" id="mn_pm" inputmode="tel"></label>
+<label class="fld"><span>Pickup Time</span><input type="text" id="mn_pt" placeholder="e.g. 5:30 PM"></label>
+<label class="fld"><span>Vehicle No.</span><input type="text" id="mn_vn"></label></div>
+<div class="row"><label class="fld" style="flex:1;min-width:260px"><span>Pickup Address</span><input type="text" id="mn_ad" placeholder="Full pickup address (comes on the manifest)"></label><button class="g" id="mn_adsv">💾 Save this address</button><button class="g" id="mn_addl">🗑 Delete saved address</button></div></div>
+
+<div class="card"><h3>② Scan AWB</h3>
+<div class="row"><input type="text" id="mnin" placeholder="Scan / type AWB and press Enter" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="mngo">Scan</button><button class="g" id="mncam">📷 Camera scan</button></div>
+<div class="row"><video id="mnvid" playsinline muted></video></div><div class="mu" id="mncm"></div>
+<div class="mnc" id="mncnt"></div></div>
+
+<div class="card"><h3>③ Download &amp; manage</h3>
+<div class="row"><button class="big" id="mnxl">⬇ Complete Excel (sheet per pop-up)</button><button class="big" id="mnmf">⬇ Manifest (Please Ship)</button></div>
+<div class="row"><button class="g" id="mnsy">☁ Sync scans (cloud)</button><button class="g" id="mnnew">🗑 Start a new batch (clear all scans)</button><span class="mu" id="mnsyst"></span></div>
+<div class="mu hint">Scans are kept in this browser after refresh. To scan on the mobile and download on the computer: save the access key in Step 1 (Cloud save) on both devices, and keep "Sync" on. On the mobile, first load the DSR with "Load DSR from cloud" (Step 1).</div>
+<div class="sc" style="max-height:420px"><table class="mnt" id="mnt"></table></div></div>
+<div id="mnov"></div>`;
+
+const nb=document.createElement('button');nb.innerHTML='<span class="n">9</span><span class="t">📷 Manifest Scan</span>';nb.dataset.n=9;nb.onclick=()=>{show(9);mnOpen()};$('#nav').append(nb);
+
+/* ---------- column mapping ---------- */
+const GUESS={awb:[/^(tracking ?(number|no\.?|id)|awb( ?(no\.?|number))?|waybill( ?(no\.?|number))?)$/i,/tracking|awb/i],pay:[/^payment ?status$/i],fr:[/^final ?remark$/i],usr:[/^user ?name$/i,/user ?name|^user$/i],
+ prod:[/^product ?name$/i,/product ?name|item ?name|^product$/i],rn:[/^(recipient|customer|buyer|receiver|consignee)('?s)? ?name$/i,/(recipient|customer|buyer|receiver|consignee).*name/i,/^name$/i],
+ ph:[/^(recipient|customer|buyer|receiver|consignee)('?s)? ?(phone|mobile)( ?(no\.?|number))?$/i,/(recipient|customer|buyer|receiver|consignee).*(phone|mobile|contact)/i,/phone|mobile/i],
+ sku:[/^sku$/i,/sku/i],amt:[/^total ?amount$/i,/total ?amount|order ?(value|amount)|^amount$/i]};
+const NOTRE=/courier|transporter|remark|date|status|invoice/i;
+function guess(k){const H=S.d.H;for(const re of GUESS[k]){const i=H.findIndex(h=>re.test(String(h).replace(/\s+/g,' ').trim())&&(k!=='awb'||!NOTRE.test(h)));if(i>=0)return i}return -1}
+function fillSel(){if(!S.d)return;const sv=LS.g('mn_cols',{});
+  $$('.mns').forEach(s=>{const k=s.id.slice(3),cur=s.value;s.innerHTML=op(S.d.H,-1,'<option value="-1">— Select —</option>');
+    let i=-1;const nmv=sv[k];if(nmv!=null)i=S.d.H.findIndex(h=>h===nmv);
+    if(i<0){const c=C();if(k==='pay'&&c.pay>=0)i=c.pay;else if(k==='fr'&&c.fr>=0)i=c.fr}
+    if(i<0)i=guess(k);s.value=String(i);s.onchange=()=>{const o={};$$('.mns').forEach(x=>{if(+x.value>=0)o[x.id.slice(3)]=S.d.H[+x.value]});LS.s('mn_cols',o);MN.ix=null;warn()}});
+  MN.ix=null;warn()}
+const col=k=>{const e=$('#mn_'+k);return e&&e.value!==''?+e.value:-1};
+function warn(){const w=$('#mnwarn');if(!S.d){w.innerHTML='<span class="er">⚠ DSR is not loaded. Upload the Master in Step 1 — or on a mobile press "Load DSR from cloud" in Step 1.</span>';return}
+  const m=[['awb','AWB / Tracking Number'],['pay','Payment Status'],['fr','Final Remark']].filter(([k])=>col(k)<0).map(x=>x[1]);
+  w.innerHTML=m.length?'<span class="er">⚠ Select these DSR columns above: '+m.join(', ')+'</span>':`<span class="ok">✔ DSR ready: ${S.d.rows.length.toLocaleString()} rows</span>`}
+
+/* ---------- courier + address ---------- */
+$('#mn_co').innerHTML='<option value="">— Select courier —</option>'+COURIERS.map(([g,a])=>`<optgroup label="${g}">`+a.map(c=>`<option>${esc(c)}</option>`).join('')+'</optgroup>').join('')+'<option value="__m">✍ Other (type manually)</option>';
+const F=['co','con','pb','pm','pt','vn','ad'];
+function cfgSave(){const o={};F.forEach(k=>o[k]=$('#mn_'+k).value);LS.s('mn_cfg',o);$('#mn_con').style.display=$('#mn_co').value==='__m'?'':'none';metaPush()}
+function cfgLoad(){const o=LS.g('mn_cfg',{});F.forEach(k=>{if(o[k]!=null)$('#mn_'+k).value=o[k]});if($('#mn_co').value!==o.co)$('#mn_co').value='';$('#mn_con').style.display=$('#mn_co').value==='__m'?'':'none'}
+F.forEach(k=>{const e=$('#mn_'+k);e.onchange=cfgSave;e.oninput=()=>{if(e.tagName==='INPUT')cfgSave()}});
+const courier=()=>$('#mn_co').value==='__m'?$('#mn_con').value.trim():$('#mn_co').value;
+const adBook=()=>LS.g('mn_addr',[]);
+function adFill(){const a=adBook();$('#mn_adsel').innerHTML='<option value="">— Select saved address —</option>'+a.map((x,i)=>`<option value="${i}">${esc(x.slice(0,70))}</option>`).join('')}
+$('#mn_adsel').onchange=()=>{const a=adBook()[+$('#mn_adsel').value];if(a!=null){$('#mn_ad').value=a;cfgSave()}};
+$('#mn_adsv').onclick=()=>{const v=$('#mn_ad').value.trim();if(!v)return alert('Type the pickup address first');const a=adBook();if(!a.includes(v)){a.push(v);LS.s('mn_addr',a)}adFill();$('#mn_adsel').value=String(adBook().indexOf(v))};
+$('#mn_addl').onclick=()=>{const i=$('#mn_adsel').value;if(i==='')return alert('Select a saved address first');if(!confirm('Delete this saved address?'))return;const a=adBook();a.splice(+i,1);LS.s('mn_addr',a);adFill()};
+
+/* ---------- lookup + rules ---------- */
+function index(){const a=col('awb');if(MN.ix&&MN.ix.d===S.d&&MN.ix.a===a&&MN.ix.n===S.d.rows.length)return MN.ix.m;
+  const m=new Map(),R=S.d.rows;for(let i=0;i<R.length;i++){const k=nm(R[i][a]);if(k&&k!=='0'&&!m.has(k))m.set(k,i)}MN.ix={d:S.d,a,n:R.length,m};return m}
+function classify(r){const pay=tx(r[col('pay')]).toUpperCase(),fr=canon(tx(r[col('fr')])),u=col('usr'),usr=u>=0?tx(r[u]).toLowerCase().replace(/\s+/g,''):'';
+  if(pay==='PR')return'ref';
+  if(usr==='onestopbulk')return'df';
+  if(pay==='PD'&&SHIPSET.has(fr))return'ship';
+  if(pay==='PD'&&SHIPPED.has(fr))return'shp';
+  if(pay==='PU'&&SHIPSET.has(fr))return'unp';
+  return'chk'}
+const snapV=v=>v instanceof Date?v.getTime()/86400000+25569:(v&&typeof v==='object'?gv(v):v);
+const rebuildSeen=()=>{MN.seen=new Map();MN.sc.forEach(r=>{if(r.pop!=='dup'&&!MN.seen.has(r.k))MN.seen.set(r.k,r)})};
+function doScan(raw,src){const awb=String(raw||'').trim();if(!awb)return;
+  if(!S.d){alert('DSR is not loaded. Upload the Master (Step 1) or use "Load DSR from cloud" first.');return}
+  if(col('awb')<0||col('pay')<0||col('fr')<0){alert('First select the AWB, Payment Status and Final Remark columns (⚙ DSR columns used for scanning).');return}
+  const k=nm(awb),t=new Date().toISOString();let rec;
+  if(!MN.bid){{const d=new Date(),q=n=>String(n).padStart(2,'0');MN.bid='MF-'+d.getFullYear()+q(d.getMonth()+1)+q(d.getDate())+'-'+q(d.getHours())+q(d.getMinutes())+q(d.getSeconds())}MN.H=S.d.H.slice();const cf={};Object.keys(S.d.colFmt||{}).forEach(c=>cf[c]=S.d.colFmt[c]);MN.fmt={dc:[...(S.d.dateCols||[])],cf}}
+  const first=MN.seen.get(k);
+  if(first)rec={k,awb,t,pop:'dup',fp:first.pop};
+  else{let ri=index().get(k);if(ri!=null&&nm(S.d.rows[ri][col('awb')])!==k)ri=null;if(ri==null){MN.ix=null;ri=index().get(k)}if(ri==null)rec={k,awb,t,pop:'na'};else{const row=S.d.rows[ri];rec={k,awb,t,pop:classify(row),row:row.map(snapV)}}MN.seen.set(k,rec)}
+  MN.sc.push(rec);persist();render();popup(rec);metaPush();pushSoon()}
+
+/* ---------- popup / sound ---------- */
+let audio;function beep(p){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.connect(g);g.connect(audio.destination);o.type='sine';o.frequency.value=p==='ship'?880:p==='dup'||p==='na'?330:220;g.gain.value=.12;o.start();o.stop(audio.currentTime+(p==='ship'?.12:.4))}catch(e){}try{navigator.vibrate&&navigator.vibrate(p==='ship'?60:[120,60,120])}catch(e){}}
+function popup(rec){const P=POP[rec.pop],ov=$('#mnov'),r=rec.row;clearTimeout(MN.tm);
+  const info=r?[['Payment',tx(r[col('pay')])],['Final Remark',tx(r[col('fr')])],col('usr')>=0?['User',tx(r[col('usr')])]:null].filter(Boolean).map(x=>x[0]+': '+esc(x[1]||'-')).join(' &nbsp;·&nbsp; '):(rec.pop==='dup'?'First result: '+esc((POP[rec.fp]||{}).t||''):'');
+  ov.style.background=P.c;ov.innerHTML=`<h1>${esc(P.t)}</h1><div class="a">${esc(rec.awb)}</div><div class="i">${info}</div><small>tap to close</small>`;ov.style.display='flex';beep(rec.pop);
+  ov.onclick=closePop;if(rec.pop==='ship')MN.tm=setTimeout(closePop,1100)}
+function closePop(){clearTimeout(MN.tm);$('#mnov').style.display='none';if(!MN.cam)$('#mnin').focus()}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePop()});
+
+/* ---------- list ---------- */
+const fmtT=t=>{const d=new Date(t),p=n=>String(n).padStart(2,'0');return`${p(d.getDate())}-${p(d.getMonth()+1)}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
+function render(){const c={};MN.sc.forEach(r=>c[r.pop]=(c[r.pop]||0)+1);
+  $('#mncnt').innerHTML=`<span style="background:#475569">Total scans: ${MN.sc.length}</span>`+ORDER.filter(k=>c[k]).map(k=>`<span style="background:${POP[k].c}">${esc(POP[k].sh)}: ${c[k]}</span>`).join('');
+  const H=MN.H||(S.d&&S.d.H)||[],pi=col('pay'),fi=col('fr'),L=MN.sc.slice(-200).reverse();
+  $('#mnt').innerHTML='<tr><th>#</th><th>Time</th><th>AWB</th><th>Pop-up</th><th>Payment</th><th>Final Remark</th><th></th></tr>'+L.map(r=>{const n=MN.sc.indexOf(r)+1;return`<tr><td>${n}</td><td>${fmtT(r.t)}</td><td>${esc(r.awb)}</td><td><span class="mnb" style="background:${POP[r.pop].c}">${esc(POP[r.pop].sh)}</span></td><td>${r.row&&pi>=0?esc(tx(r.row[pi])):''}</td><td>${r.row&&fi>=0?esc(tx(r.row[fi])):''}</td><td><button class="g" data-mnrm="${n-1}" title="Remove this scan">✕</button></td></tr>`}).join('')}
+$('#mnt').onclick=e=>{const b=e.target.closest('button[data-mnrm]');if(!b)return;const i=+b.dataset.mnrm,r=MN.sc[i];if(!r||!confirm('Remove this scan ('+r.awb+')?'))return;MN.sc.splice(i,1);rebuildSeen();persist();render();pushDel(r)};
+$('#mnin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const v=$('#mnin').value;$('#mnin').value='';doScan(v,'kb')}});
+$('#mngo').onclick=()=>{const v=$('#mnin').value;$('#mnin').value='';doScan(v,'kb');$('#mnin').focus()};
+$('#mnnew').onclick=async()=>{if(!MN.sc.length&&!MN.bid)return;if(!confirm('Clear ALL scans and start a new batch? Download the Excel/Manifest first!'))return;
+  MN.sc=[];MN.seen=new Map();MN.bid='';MN.H=null;MN.chunks=new Set();persist();render();if(key()){try{await api('clear')}catch(e){}}$('#mnsyst').textContent='New batch started.'};
+
+/* ---------- camera ---------- */
+$('#mncam').onclick=async()=>{if(MN.cam)return camStop();
+  if(!('BarcodeDetector' in window)){$('#mncm').innerHTML='<span class="er">This browser cannot scan barcodes with the camera (use Chrome on Android, or a USB/Bluetooth scanner, or type the AWB).</span>';return}
+  try{let fm=['code_128','code_39','code_93','codabar','ean_13','ean_8','itf','upc_a','upc_e','qr_code','data_matrix'];try{const sup=await BarcodeDetector.getSupportedFormats();fm=fm.filter(x=>sup.includes(x))}catch(e){}
+    const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}),v=$('#mnvid');v.srcObject=st;v.style.display='block';await v.play();
+    const det=new BarcodeDetector({formats:fm});let busy=false;
+    MN.cam={st,iv:setInterval(async()=>{if(busy||$('#mnov').style.display==='flex')return;busy=true;try{const r=await det.detect(v),now=Date.now();
+      for(const x of r){const val=x.rawValue;if(!val)continue;const same=MN.last.v===val&&now-MN.last.t<1800;MN.last={v:val,t:now};if(!same){doScan(val,'cam');break}}}catch(e){}busy=false},200)};
+    $('#mncam').textContent='⏹ Stop camera';$('#mncm').textContent='Point the camera at the AWB barcode. Take the camera away and show the next packet.'}
+  catch(e){$('#mncm').innerHTML='<span class="er">Camera could not start: '+esc(e.message||e)+'</span>'}};
+function camStop(){if(!MN.cam)return;clearInterval(MN.cam.iv);MN.cam.st.getTracks().forEach(t=>t.stop());MN.cam=null;$('#mnvid').style.display='none';$('#mncam').textContent='📷 Camera scan';$('#mncm').textContent=''}
+
+/* ---------- persistence (IndexedDB) ---------- */
+let pt=0;function persist(){clearTimeout(pt);pt=setTimeout(async()=>{try{await DB.set('mnscan',{sc:MN.sc,bid:MN.bid,H:MN.H,fmt:MN.fmt,chunks:[...MN.chunks]})}catch(e){console.warn('scan save failed',e)}},300)}
+async function restore(){try{const v=await DB.get('mnscan');if(v&&!MN.sc.length){MN.sc=v.sc||[];MN.bid=v.bid||'';MN.H=v.H||null;MN.fmt=v.fmt||{dc:[],cf:{}};MN.chunks=new Set(v.chunks||[]);rebuildSeen();render()}}catch(e){}}
+
+/* ---------- cloud sync (api/scan.js) ---------- */
+async function api(op,body){const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json','x-dsr-key':key()},body:JSON.stringify({op,...(body||{})})});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||('HTTP '+r.status+(r.status===404?' (api/scan not deployed — open the Vercel site)':'')));return j}
+const st=h=>$('#mnsyst').innerHTML=h;
+const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+let metaT=0;function metaPush(){if(!key()||!MN.bid)return;clearTimeout(metaT);metaT=setTimeout(()=>{api('meta-set',{data:JSON.stringify({bid:MN.bid,H:MN.H,fmt:MN.fmt,cfg:LS.g('mn_cfg',{}),at:Date.now()})}).catch(()=>{})},1500)}
+function pushSoon(){if(!key())return;clearTimeout(MN.syT);MN.syT=setTimeout(()=>push().catch(e=>st('❌ '+esc(e.message))),2500)}
+async function push(){if(!key()||MN.sy)return;MN.sy=true;try{const un=MN.sc.filter(r=>!r.sy);for(let i=0;i<un.length;i+=60){const part=un.slice(i,i+60),id=rid();await api('add',{id,data:JSON.stringify(part.map(r=>({...r,sy:undefined})))});part.forEach(r=>r.sy=1);MN.chunks.add(id)}
+    if(un.length){persist();st('☁ Synced '+new Date().toLocaleTimeString())}}finally{MN.sy=false}}
+async function pushDel(r){if(!key())return;try{const id=rid();await api('add',{id,data:JSON.stringify([{del:1,k:r.k,t:r.t}])});MN.chunks.add(id);persist()}catch(e){}}
+async function pull(){if(!key())return;const m=(await api('meta-get')).meta;
+  if(m&&m.bid!==MN.bid){if(MN.sc.some(r=>!r.sy)&&!confirm('The cloud has a different scan batch ('+m.bid+'). Replace the scans on this device with it?'))return;MN.sc=[];MN.seen=new Map();MN.chunks=new Set();MN.bid=m.bid;MN.H=m.H;MN.fmt=m.fmt||{dc:[],cf:{}};if(m.cfg){LS.s('mn_cfg',m.cfg);cfgLoad()}}
+  else if(m&&m.cfg&&!LS.g('mn_cfg',null)){LS.s('mn_cfg',m.cfg);cfgLoad()}
+  const ids=(await api('idx')).ids||[];let add=0;
+  for(const id of ids){if(MN.chunks.has(id))continue;const arr=JSON.parse((await api('get',{id})).data);MN.chunks.add(id);
+    for(const x of arr){if(x.del){const j=MN.sc.findIndex(r=>r.k===x.k&&r.t===x.t);if(j>=0)MN.sc.splice(j,1);continue}if(MN.sc.some(r=>r.k===x.k&&r.t===x.t))continue;x.sy=1;MN.sc.push(x);add++}}
+  if(add||ids.length){MN.sc.sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0);const sn=new Set();MN.sc.forEach(r=>{if(r.pop==='dup')return;if(sn.has(r.k)){r.pop='dup';r.fp=r.fp||'ship';delete r.row}else sn.add(r.k)});rebuildSeen();persist();render()}
+  return add}
+$('#mnsy').onclick=async()=>{if(!key())return alert('Save the access key first (Step 1 → Cloud save).');try{st('⏳ Syncing…');const a=await pull();await push();metaPush();st(`✅ Synced ${new Date().toLocaleTimeString()}${a?' — '+a+' new scans from the other device':''}`)}catch(e){st('❌ '+esc(e.message))}};
+
+/* ---------- Excel writers ---------- */
+const XH='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n',NSX='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+const ex=s=>String(s).replace(/[&<>]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':'&gt;').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'');
+const cn=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26}return s};
+/* style ids */
+const SX={def:0,dh:1,bd:2,dt:3,tm:4,dtm:5,title:6,lab:7,val:8,mh:9,mc:10,mtx:11,ft:12};
+const STYLES=XH+`<styleSheet ${NSX}><numFmts count="3"><numFmt numFmtId="164" formatCode="dd\\-mmm\\-yyyy"/><numFmt numFmtId="165" formatCode="hh:mm:ss"/><numFmt numFmtId="166" formatCode="dd\\-mm\\-yyyy\\ hh:mm:ss"/></numFmts>
+<fonts count="6"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><b/><sz val="18"/><color rgb="FF14365C"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FF000000"/><name val="Arial"/></font><font><sz val="10"/><color rgb="FF000000"/><name val="Arial"/></font><font><b/><sz val="10"/><color rgb="FF14365C"/><name val="Arial"/></font></fonts>
+<fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E6B52"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF14365C"/><bgColor indexed="64"/></patternFill></fill></fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="13"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1"/>
+<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+<xf numFmtId="165" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+<xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="3" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="4" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="49" fontId="4" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="5" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs></styleSheet>`;
+/* sheet: {rows:[{ht,c:[[v,style],...]}], widths, merges, freeze, filter, land, fit} */
+function sheetXml(s){let x=XH+`<worksheet ${NSX}>${s.fit?'<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>':''}<sheetViews><sheetView workbookViewId="0"${s.grid===false?' showGridLines="0"':''}>${s.freeze?`<pane ySplit="${s.freeze}" topLeftCell="A${s.freeze+1}" activePane="bottomLeft" state="frozen"/>`:''}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>`;
+  x+='<cols>'+s.widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join('')+'</cols><sheetData>';
+  s.rows.forEach((r,i)=>{const rn=i+1;x+=`<row r="${rn}"${r.ht?` ht="${r.ht}" customHeight="1"`:''}>`;
+    (r.c||[]).forEach(([v,sy],ci)=>{const ref=cn(ci)+rn,sa=sy?` s="${sy}"`:'';
+      if(typeof v==='number'&&v===v&&isFinite(v))x+=`<c r="${ref}"${sa}><v>${v}</v></c>`;
+      else if(v==null||v==='')x+=sy?`<c r="${ref}"${sa}/>`:'';
+      else x+=`<c r="${ref}"${sa} t="inlineStr"><is><t xml:space="preserve">${ex(v)}</t></is></c>`});x+='</row>'});
+  x+='</sheetData>';if(s.filter)x+=`<autoFilter ref="${s.filter}"/>`;
+  if(s.merges&&s.merges.length)x+=`<mergeCells count="${s.merges.length}">`+s.merges.map(m=>`<mergeCell ref="${m}"/>`).join('')+'</mergeCells>';
+  if(s.print)x+='<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>';
+  return x+'</worksheet>'}
+function bookBlob(sheets){const f={};const n=sheets.length;
+  f['[Content_Types].xml']=XH+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map((_,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')+'</Types>';
+  f['_rels/.rels']=XH+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const pr=sheets.map((s,i)=>s.print?`<definedName name="_xlnm.Print_Area" localSheetId="${i}">'${ex(s.name)}'!$A$1:$${cn(s.widths.length-1)}$${s.rows.length}</definedName>`:'').join('');
+  f['xl/workbook.xml']=XH+`<workbook ${NSX} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s,i)=>`<sheet name="${ex(s.name)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join('')}</sheets>${pr?`<definedNames>${pr}</definedNames>`:''}</workbook>`;
+  f['xl/_rels/workbook.xml.rels']=XH+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((_,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join('')+`<Relationship Id="rId${n+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+  f['xl/styles.xml']=STYLES;sheets.forEach((s,i)=>f[`xl/worksheets/sheet${i+1}.xml`]=sheetXml(s));
+  const z=fflate.zipSync(Object.fromEntries(Object.entries(f).map(([k,v])=>[k,fflate.strToU8(v)])),{level:1});
+  return new Blob([z],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})}
+function save(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+const safe=s=>String(s||'').replace(/[^\w\-]+/g,'_').replace(/^_+|_+$/g,'');
+const dstamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
+
+/* complete Excel: one sheet per pop-up, DSR columns in the same order, + Scan Time */
+function dsrSheet(name,recs,H){const W=H.length,dc=new Set(MN.fmt.dc||[]),cf=MN.fmt.cf||{},kind=c=>{const k=cf[c];return k==='t1'?'tm':k==='t2'?'dtm':(k==='date'||dc.has(c))?'dt':'bd'};
+  const widths=H.map(h=>Math.min(40,Math.max(10,String(h).length*1.15+3)).toFixed(1)).concat(['20']);
+  recs.slice(0,150).forEach(r=>r.row&&r.row.forEach((v,c)=>{if(v!=null&&c<W){const L=typeof v==='string'?Math.min(45,v.length+2):13;if(L>+widths[c])widths[c]=String(L)}}));
+  for(let c=0;c<W;c++)if(kind(c)==='dt')widths[c]=String(Math.max(+widths[c],13));
+  const rows=[{ht:32,c:H.map(h=>[String(h),SX.dh]).concat([['Scan Time',SX.dh]])}];
+  recs.forEach(r=>{const row=r.row||[],c=[];for(let i=0;i<W;i++){let v=row[i];if(v==null||v==='')v=null;c.push([v,typeof v==='number'?SX[kind(i)]:SX.bd])}c.push([fmtT(r.t),SX.bd]);rows.push({c})});
+  return{name,widths,rows,freeze:1,filter:`A1:${cn(W)}${rows.length}`}}
+function simpleSheet(name,head,recs,f){const rows=[{ht:28,c:head.map(h=>[h,SX.dh])}];recs.forEach(r=>rows.push({c:f(r).map(v=>[v,SX.bd])}));return{name,widths:head.map(()=>'26'),rows,freeze:1,filter:`A1:${cn(head.length-1)}${rows.length}`}}
+$('#mnxl').onclick=()=>{if(!MN.sc.length)return alert('Nothing scanned yet');
+  const H=MN.H||S.d.H,by={};MN.sc.forEach(r=>(by[r.pop]=by[r.pop]||[]).push(r));
+  const sh=[];const sum=[{ht:30,c:[['Scan Summary',SX.title]]},{c:[['Manifest No.',SX.lab],[MN.bid,SX.val]]},{c:[['Courier',SX.lab],[courier(),SX.val]]},{c:[['Downloaded',SX.lab],[fmtT(new Date().toISOString()),SX.val]]},{c:[['Total scans',SX.lab],[MN.sc.length,SX.val]]},{c:[]},{ht:24,c:[['Pop-up',SX.dh],['Sheet',SX.dh],['Count',SX.dh]]}];
+  ORDER.forEach(k=>{if(by[k])sum.push({c:[[POP[k].t,SX.bd],[POP[k].sh,SX.bd],[by[k].length,SX.bd]]})});
+  sh.push({name:'Summary',widths:['38','22','14'],rows:sum,merges:['A1:C1']});
+  ORDER.forEach(k=>{const a=by[k];if(!a)return;
+    if(k==='na')sh.push(simpleSheet(POP[k].sh,['AWB Scanned','Scan Time'],a,r=>[r.awb,fmtT(r.t)]));
+    else if(k==='dup')sh.push(simpleSheet(POP[k].sh,['AWB Scanned','Scan Time','Earlier Result'],a,r=>[r.awb,fmtT(r.t),(POP[r.fp]||{}).t||'']));
+    else sh.push(dsrSheet(POP[k].sh,a,H))});
+  save(bookBlob(sh),`Scan_Report_${safe(courier())||'batch'}_${dstamp()}.xlsx`)};
+
+/* Manifest (as per Manifest_Format.xlsx) for Please Ship */
+$('#mnmf').onclick=()=>{const L=MN.sc.filter(r=>r.pop==='ship');if(!L.length)return alert('No "Please Ship" scans yet');
+  if(!courier()&&!confirm('Courier is not selected. Download the manifest anyway?'))return;
+  const g=(r,k)=>{const c=col(k);if(c<0||!r.row)return'';const v=r.row[c];return v==null?'':v};
+  const txt=v=>typeof v==='number'?(Number.isInteger(v)?String(v):String(v)):String(v).trim();
+  const now=fmtT(new Date().toISOString()),n=L.length,cur=now.slice(0,10);
+  const R=[];const e=()=>({ht:20,c:[]});
+  R.push({ht:30,c:[['COURIER HANDOVER MANIFEST',SX.title]]});
+  const pair=(a,b,c,d)=>({ht:20,c:[[a,SX.lab],['',SX.lab],[b,SX.val],['',SX.val],[c,SX.lab],['',SX.lab],[d,SX.val],['',SX.val]]});
+  R.push(pair('Company / Seller','One Stop Fashions Pvt. Ltd.','Manifest No.',MN.bid||'MF-'+dstamp().replace(/-/g,'')));
+  R.push(pair('Courier Company',courier(),'Date',cur));
+  R.push(pair('Pickup Boy Name',$('#mn_pb').value,'Pickup Time',$('#mn_pt').value));
+  R.push(pair('Mobile',$('#mn_pm').value,'Vehicle No.',$('#mn_vn').value));
+  R.push({ht:20,c:[['Pickup Address',SX.lab],['',SX.lab],[$('#mn_ad').value,SX.val]].concat(Array(5).fill(['',SX.val]))});
+  R.push({ht:20,c:[['Total shipments to dispatch',SX.lab],['',SX.lab],[String(n),SX.val]].concat(Array(5).fill(['',SX.val]))});
+  R.push({c:[]});
+  R.push({ht:30,c:['S.No.','Tracking Number','Product Name','Recipient Name','Recipient Phone','SKU','Total Amount','Remarks'].map(h=>[h,SX.mh])});
+  L.forEach((r,i)=>{const amt=g(r,'amt');R.push({ht:18,c:[[i+1,SX.mc],[r.awb,SX.mtx],[txt(g(r,'prod')).slice(0,15),SX.mc],[txt(g(r,'rn')),SX.mc],[txt(g(r,'ph')),SX.mtx],[txt(g(r,'sku')),SX.mc],[typeof amt==='number'?amt:txt(amt),SX.mc],['',SX.mc]]})});
+  R.push({c:[]});R.push({c:[]});
+  const f0=R.length+1;
+  R.push({ht:20,c:[['HANDED OVER BY (Seller)',SX.ft],['',SX.ft],['',SX.ft],['',SX.ft],['RECEIVED BY (Courier)',SX.ft],['',SX.ft],['',SX.ft],['',SX.ft]]});
+  const fr=(a,b,c,d,h)=>({ht:h||20,c:[[a,SX.mc],['',SX.mc],[b,SX.mc],['',SX.mc],[c,SX.mc],['',SX.mc],[d,SX.mc],['',SX.mc]]});
+  R.push(fr('Name','One Stop Fashions Pvt. Ltd.','Name',''));R.push(fr('Mobile','','Employee ID',''));R.push(fr('Signature & Stamp','','Signature','',30));R.push(fr('Date & Time',now,'Date & Time',''));
+  const M=['A1:H1'];for(let r=2;r<=5;r++)M.push(`A${r}:B${r}`,`C${r}:D${r}`,`E${r}:F${r}`,`G${r}:H${r}`);M.push('A6:B6','C6:H6','A7:B7','C7:H7',`A${f0}:D${f0}`,`E${f0}:H${f0}`);
+  for(let r=f0+1;r<=f0+4;r++)M.push(`A${r}:B${r}`,`C${r}:D${r}`,`E${r}:F${r}`,`G${r}:H${r}`);
+  save(bookBlob([{name:'Manifest',widths:['7','22','15','18','14','14','13','18'],rows:R,merges:M,print:1,fit:1,grid:true}]),`Manifest_${safe(courier())||'courier'}_${dstamp()}.xlsx`)};
+
+/* ---------- open / init ---------- */
+function mnOpen(){fillSel();adFill();render();if(key()&&!MN.pulled){MN.pulled=1;pull().then(()=>{render();st('☁ Cloud checked')}).catch(e=>st('❌ '+esc(e.message)))}if(!MN.cam)setTimeout(()=>$('#mnin').focus(),50)}
+cfgLoad();adFill();restore().then(()=>{render()});render();
+window.addEventListener('beforeunload',()=>{});
+})();
+</script>
+</body></html>
