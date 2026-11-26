@@ -774,7 +774,8 @@ const css=document.createElement('style');css.textContent=`
 .mnb{display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;font-weight:700;font-size:12px;white-space:nowrap}
 .mnc{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.mnc span{padding:5px 12px;border-radius:999px;color:#fff;font-weight:700;font-size:12.5px}
 #mnin{font-size:20px;padding:12px 14px;flex:1;min-width:220px}
-.mnt td,.mnt th{padding:5px 8px;border-bottom:1px solid var(--bd);text-align:left;font-size:12.5px}.mnt{border-collapse:collapse;width:100%}
+.mnt .mnb{white-space:normal;display:inline-block}.mnt td,.mnt th{padding:5px 8px;border-bottom:1px solid var(--bd);text-align:left;font-size:12.5px}.mnt{border-collapse:collapse;width:100%}
+@media(max-width:760px){header{position:static}nav{flex-wrap:wrap;overflow:visible}nav button{flex:1 1 46%;padding:8px 10px}.navnote{display:none}}
 `;document.head.append(css);
 
 $('#p9').innerHTML=`
@@ -792,27 +793,26 @@ $('#p9').innerHTML=`
 <label class="fld"><span>SKU</span><select class="mns" id="mn_sku"></select></label>
 <label class="fld"><span>Total Amount</span><select class="mns" id="mn_amt"></select></label></div></div></details></div>
 
-<div class="card"><h3>① Courier &amp; pickup details (fill before you start scanning)</h3>
+<div class="card"><h3>① Courier &amp; pickup address</h3>
 <div class="grid5">
 <label class="fld"><span>Courier Company</span><select id="mn_co"></select><input type="text" id="mn_con" placeholder="Type courier name" style="display:none"></label>
-<label class="fld"><span>Saved pickup address</span><select id="mn_adsel"></select></label>
-<label class="fld"><span>Pickup Boy Name</span><input type="text" id="mn_pb"></label>
-<label class="fld"><span>Mobile</span><input type="text" id="mn_pm" inputmode="tel"></label>
-<label class="fld"><span>Pickup Time</span><input type="text" id="mn_pt" placeholder="e.g. 5:30 PM"></label>
-<label class="fld"><span>Vehicle No.</span><input type="text" id="mn_vn"></label></div>
-<div class="row"><label class="fld" style="flex:1;min-width:260px"><span>Pickup Address</span><input type="text" id="mn_ad" placeholder="Full pickup address (comes on the manifest)"></label><button class="g" id="mn_adsv">💾 Save this address</button><button class="g" id="mn_addl">🗑 Delete saved address</button></div></div>
+<label class="fld"><span>Pickup address (saved)</span><select id="mn_adsel"></select></label></div>
+<div class="row"><button id="mn_adnew" class="g">➕ Add new address</button><button class="g" id="mn_addl">🗑 Delete selected address</button></div>
+<div id="mn_adbox" style="display:none"><textarea id="mn_adtx" rows="3" placeholder="Type the full pickup address once. It is saved in this browser and can be selected next time." style="width:100%;font:inherit;border:1px solid var(--bd);border-radius:10px;padding:8px;background:var(--cd2);color:var(--tx)"></textarea><div class="row"><button id="mn_adsv">💾 Save address</button><button class="g" id="mn_adcn">Cancel</button></div></div>
+<div class="mu" id="mn_adshow"></div>
+<div class="mu hint">Pickup boy name, mobile, pickup time and vehicle no. are left blank on the manifest, fill them by hand.</div></div>
 
 <div class="card"><h3>② Scan AWB</h3>
 <div class="row"><input type="text" id="mnin" placeholder="Scan / type AWB and press Enter" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="mngo">Scan</button><button class="g" id="mncam">📷 Camera scan</button></div>
 <div class="row"><video id="mnvid" playsinline muted></video></div><div class="mu" id="mncm"></div>
-<div class="mnc" id="mncnt"></div></div>
+<div id="mnlast"></div><div class="mnc" id="mncnt"></div>
+<h4 style="margin:10px 0 4px">Scan log (latest on top)</h4><div class="sc" style="max-height:60vh"><table class="mnt" id="mnt"></table></div></div>
 
 <div class="card"><h3>③ Download &amp; manage</h3>
 <div class="row"><button class="big" id="mnxl">⬇ Complete Excel (sheet per pop-up)</button><button class="big" id="mnmf">⬇ Manifest (Please Ship)</button></div>
 <div class="row"><button class="g" id="mnsy">☁ Sync scans (cloud)</button><button class="g" id="mnnew">🗑 Start a new batch (clear all scans)</button><span class="mu" id="mnsyst"></span></div>
 <div class="mu hint">Scans are kept in this browser after refresh. To scan on the mobile and download on the computer: save the access key in Step 1 (Cloud save) on both devices, and keep "Sync" on. On the mobile, first load the DSR with "Load DSR from cloud" (Step 1).</div>
-<div class="sc" style="max-height:420px"><table class="mnt" id="mnt"></table></div></div>
-<div id="mnov"></div>`;
+</div>`;
 
 const nb=document.createElement('button');nb.innerHTML='<span class="n">9</span><span class="t">📷 Manifest Scan</span>';nb.dataset.n=9;nb.onclick=()=>{show(9);mnOpen()};$('#nav').append(nb);
 
@@ -836,16 +836,20 @@ function warn(){const w=$('#mnwarn');if(!S.d){w.innerHTML='<span class="er">⚠ 
 
 /* ---------- courier + address ---------- */
 $('#mn_co').innerHTML='<option value="">— Select courier —</option>'+COURIERS.map(([g,a])=>`<optgroup label="${g}">`+a.map(c=>`<option>${esc(c)}</option>`).join('')+'</optgroup>').join('')+'<option value="__m">✍ Other (type manually)</option>';
-const F=['co','con','pb','pm','pt','vn','ad'];
-function cfgSave(){const o={};F.forEach(k=>o[k]=$('#mn_'+k).value);LS.s('mn_cfg',o);$('#mn_con').style.display=$('#mn_co').value==='__m'?'':'none';metaPush()}
-function cfgLoad(){const o=LS.g('mn_cfg',{});F.forEach(k=>{if(o[k]!=null)$('#mn_'+k).value=o[k]});if($('#mn_co').value!==o.co)$('#mn_co').value='';$('#mn_con').style.display=$('#mn_co').value==='__m'?'':'none'}
-F.forEach(k=>{const e=$('#mn_'+k);e.onchange=cfgSave;e.oninput=()=>{if(e.tagName==='INPUT')cfgSave()}});
+MN.ad='';
+function cfgSave(){LS.s('mn_cfg',{co:$('#mn_co').value,con:$('#mn_con').value,ad:MN.ad});$('#mn_con').style.display=$('#mn_co').value==='__m'?'':'none';metaPush()}
+function cfgLoad(){const o=LS.g('mn_cfg',{});if(o.co!=null)$('#mn_co').value=o.co;if($('#mn_co').value!==o.co)$('#mn_co').value='';if(o.con!=null)$('#mn_con').value=o.con;MN.ad=o.ad||'';$('#mn_con').style.display=$('#mn_co').value==='__m'?'':'none'}
+$('#mn_co').onchange=cfgSave;$('#mn_con').oninput=cfgSave;
 const courier=()=>$('#mn_co').value==='__m'?$('#mn_con').value.trim():$('#mn_co').value;
 const adBook=()=>LS.g('mn_addr',[]);
-function adFill(){const a=adBook();$('#mn_adsel').innerHTML='<option value="">— Select saved address —</option>'+a.map((x,i)=>`<option value="${i}">${esc(x.slice(0,70))}</option>`).join('')}
-$('#mn_adsel').onchange=()=>{const a=adBook()[+$('#mn_adsel').value];if(a!=null){$('#mn_ad').value=a;cfgSave()}};
-$('#mn_adsv').onclick=()=>{const v=$('#mn_ad').value.trim();if(!v)return alert('Type the pickup address first');const a=adBook();if(!a.includes(v)){a.push(v);LS.s('mn_addr',a)}adFill();$('#mn_adsel').value=String(adBook().indexOf(v))};
-$('#mn_addl').onclick=()=>{const i=$('#mn_adsel').value;if(i==='')return alert('Select a saved address first');if(!confirm('Delete this saved address?'))return;const a=adBook();a.splice(+i,1);LS.s('mn_addr',a);adFill()};
+function adFill(){const a=adBook();if(MN.ad&&!a.includes(MN.ad)){a.push(MN.ad);LS.s('mn_addr',a)}
+  $('#mn_adsel').innerHTML='<option value="">— Select saved address —</option>'+a.map((x,i)=>`<option value="${i}">${esc(x.slice(0,80))}</option>`).join('');
+  $('#mn_adsel').value=MN.ad?String(a.indexOf(MN.ad)):'';$('#mn_adshow').innerHTML=MN.ad?'📍 <b>Manifest address:</b> '+esc(MN.ad):'<span class="er">No pickup address selected</span>'}
+$('#mn_adsel').onchange=()=>{const v=$('#mn_adsel').value;MN.ad=v===''?'':(adBook()[+v]||'');cfgSave();adFill()};
+$('#mn_adnew').onclick=()=>{$('#mn_adbox').style.display='block';$('#mn_adtx').focus()};
+$('#mn_adcn').onclick=()=>{$('#mn_adbox').style.display='none';$('#mn_adtx').value=''};
+$('#mn_adsv').onclick=()=>{const v=$('#mn_adtx').value.trim().replace(/\s*\n\s*/g,', ');if(!v)return alert('Type the pickup address first');const a=adBook();if(!a.includes(v)){a.push(v);LS.s('mn_addr',a)}MN.ad=v;cfgSave();adFill();$('#mn_adtx').value='';$('#mn_adbox').style.display='none'};
+$('#mn_addl').onclick=()=>{const i=$('#mn_adsel').value;if(i==='')return alert('Select a saved address first');if(!confirm('Delete this saved address?'))return;const a=adBook();const gone=a.splice(+i,1)[0];LS.s('mn_addr',a);if(MN.ad===gone){MN.ad='';cfgSave()}adFill()};
 
 /* ---------- lookup + rules ---------- */
 function index(){const a=col('awb');if(MN.ix&&MN.ix.d===S.d&&MN.ix.a===a&&MN.ix.n===S.d.rows.length)return MN.ix.m;
@@ -871,19 +875,15 @@ function doScan(raw,src){const awb=String(raw||'').trim();if(!awb)return;
 
 /* ---------- popup / sound ---------- */
 let audio;function beep(p){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.connect(g);g.connect(audio.destination);o.type='sine';o.frequency.value=p==='ship'?880:p==='dup'||p==='na'?330:220;g.gain.value=.12;o.start();o.stop(audio.currentTime+(p==='ship'?.12:.4))}catch(e){}try{navigator.vibrate&&navigator.vibrate(p==='ship'?60:[120,60,120])}catch(e){}}
-function popup(rec){const P=POP[rec.pop],ov=$('#mnov'),r=rec.row;clearTimeout(MN.tm);
-  const info=r?[['Payment',tx(r[col('pay')])],['Final Remark',tx(r[col('fr')])],col('usr')>=0?['User',tx(r[col('usr')])]:null].filter(Boolean).map(x=>x[0]+': '+esc(x[1]||'-')).join(' &nbsp;·&nbsp; '):(rec.pop==='dup'?'First result: '+esc((POP[rec.fp]||{}).t||''):'');
-  ov.style.background=P.c;ov.innerHTML=`<h1>${esc(P.t)}</h1><div class="a">${esc(rec.awb)}</div><div class="i">${info}</div><small>tap to close</small>`;ov.style.display='flex';beep(rec.pop);
-  ov.onclick=closePop;if(rec.pop==='ship')MN.tm=setTimeout(closePop,1100)}
-function closePop(){clearTimeout(MN.tm);$('#mnov').style.display='none';if(!MN.cam)$('#mnin').focus()}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closePop()});
-
+function popup(rec){const P=POP[rec.pop],r=rec.row;
+  const info=r?[['Payment',tx(r[col('pay')])],['Final Remark',tx(r[col('fr')])],col('usr')>=0?['User',tx(r[col('usr')])]:null].filter(Boolean).map(x=>x[0]+': '+esc(x[1]||'-')).join(' · '):(rec.pop==='dup'?'First result: '+esc((POP[rec.fp]||{}).t||''):'');
+  $('#mnlast').innerHTML=`<div style="background:${P.c};color:#fff;border-radius:14px;padding:14px 16px;margin:8px 0"><div style="font-size:clamp(22px,6vw,34px);font-weight:800;line-height:1.2">${esc(P.t)}</div><div style="font-size:clamp(15px,4vw,20px);font-weight:700;word-break:break-all;margin-top:4px">${esc(rec.awb)}</div><div style="font-size:13px;opacity:.92;margin-top:4px">${info}</div></div>`;beep(rec.pop)}
 /* ---------- list ---------- */
 const fmtT=t=>{const d=new Date(t),p=n=>String(n).padStart(2,'0');return`${p(d.getDate())}-${p(d.getMonth()+1)}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
 function render(){const c={};MN.sc.forEach(r=>c[r.pop]=(c[r.pop]||0)+1);
   $('#mncnt').innerHTML=`<span style="background:#475569">Total scans: ${MN.sc.length}</span>`+ORDER.filter(k=>c[k]).map(k=>`<span style="background:${POP[k].c}">${esc(POP[k].sh)}: ${c[k]}</span>`).join('');
   const H=MN.H||(S.d&&S.d.H)||[],pi=col('pay'),fi=col('fr'),L=MN.sc.slice(-200).reverse();
-  $('#mnt').innerHTML='<tr><th>#</th><th>Time</th><th>AWB</th><th>Pop-up</th><th>Payment</th><th>Final Remark</th><th></th></tr>'+L.map(r=>{const n=MN.sc.indexOf(r)+1;return`<tr><td>${n}</td><td>${fmtT(r.t)}</td><td>${esc(r.awb)}</td><td><span class="mnb" style="background:${POP[r.pop].c}">${esc(POP[r.pop].sh)}</span></td><td>${r.row&&pi>=0?esc(tx(r.row[pi])):''}</td><td>${r.row&&fi>=0?esc(tx(r.row[fi])):''}</td><td><button class="g" data-mnrm="${n-1}" title="Remove this scan">✕</button></td></tr>`}).join('')}
+  $('#mnt').innerHTML='<tr><th>#</th><th>Time</th><th>AWB</th><th>Result</th><th>Payment</th><th>Final Remark</th><th></th></tr>'+L.map(r=>{const n=MN.sc.indexOf(r)+1;return`<tr><td>${n}</td><td>${fmtT(r.t).slice(11)}</td><td>${esc(r.awb)}</td><td><span class="mnb" style="background:${POP[r.pop].c}">${esc(POP[r.pop].t)}</span></td><td>${r.row&&pi>=0?esc(tx(r.row[pi])):''}</td><td>${r.row&&fi>=0?esc(tx(r.row[fi])):''}</td><td><button class="g" data-mnrm="${n-1}" title="Remove this scan">✕</button></td></tr>`}).join('')}
 $('#mnt').onclick=e=>{const b=e.target.closest('button[data-mnrm]');if(!b)return;const i=+b.dataset.mnrm,r=MN.sc[i];if(!r||!confirm('Remove this scan ('+r.awb+')?'))return;MN.sc.splice(i,1);rebuildSeen();persist();render();pushDel(r)};
 $('#mnin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const v=$('#mnin').value;$('#mnin').value='';doScan(v,'kb')}});
 $('#mngo').onclick=()=>{const v=$('#mnin').value;$('#mnin').value='';doScan(v,'kb');$('#mnin').focus()};
@@ -896,7 +896,7 @@ $('#mncam').onclick=async()=>{if(MN.cam)return camStop();
   try{let fm=['code_128','code_39','code_93','codabar','ean_13','ean_8','itf','upc_a','upc_e','qr_code','data_matrix'];try{const sup=await BarcodeDetector.getSupportedFormats();fm=fm.filter(x=>sup.includes(x))}catch(e){}
     const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}),v=$('#mnvid');v.srcObject=st;v.style.display='block';await v.play();
     const det=new BarcodeDetector({formats:fm});let busy=false;
-    MN.cam={st,iv:setInterval(async()=>{if(busy||$('#mnov').style.display==='flex')return;busy=true;try{const r=await det.detect(v),now=Date.now();
+    MN.cam={st,iv:setInterval(async()=>{if(busy)return;busy=true;try{const r=await det.detect(v),now=Date.now();
       for(const x of r){const val=x.rawValue;if(!val)continue;const same=MN.last.v===val&&now-MN.last.t<1800;MN.last={v:val,t:now};if(!same){doScan(val,'cam');break}}}catch(e){}busy=false},200)};
     $('#mncam').textContent='⏹ Stop camera';$('#mncm').textContent='Point the camera at the AWB barcode. Take the camera away and show the next packet.'}
   catch(e){$('#mncm').innerHTML='<span class="er">Camera could not start: '+esc(e.message||e)+'</span>'}};
@@ -1005,9 +1005,9 @@ $('#mnmf').onclick=()=>{const L=MN.sc.filter(r=>r.pop==='ship');if(!L.length)ret
   const pair=(a,b,c,d)=>({ht:20,c:[[a,SX.lab],['',SX.lab],[b,SX.val],['',SX.val],[c,SX.lab],['',SX.lab],[d,SX.val],['',SX.val]]});
   R.push(pair('Company / Seller','One Stop Fashions Pvt. Ltd.','Manifest No.',MN.bid||'MF-'+dstamp().replace(/-/g,'')));
   R.push(pair('Courier Company',courier(),'Date',cur));
-  R.push(pair('Pickup Boy Name',$('#mn_pb').value,'Pickup Time',$('#mn_pt').value));
-  R.push(pair('Mobile',$('#mn_pm').value,'Vehicle No.',$('#mn_vn').value));
-  R.push({ht:20,c:[['Pickup Address',SX.lab],['',SX.lab],[$('#mn_ad').value,SX.val]].concat(Array(5).fill(['',SX.val]))});
+  R.push(pair('Pickup Boy Name','','Pickup Time',''));
+  R.push(pair('Mobile','','Vehicle No.',''));
+  R.push({ht:20,c:[['Pickup Address',SX.lab],['',SX.lab],[MN.ad,SX.val]].concat(Array(5).fill(['',SX.val]))});
   R.push({ht:20,c:[['Total shipments to dispatch',SX.lab],['',SX.lab],[String(n),SX.val]].concat(Array(5).fill(['',SX.val]))});
   R.push({c:[]});
   R.push({ht:30,c:['S.No.','Tracking Number','Product Name','Recipient Name','Recipient Phone','SKU','Total Amount','Remarks'].map(h=>[h,SX.mh])});
@@ -1022,7 +1022,9 @@ $('#mnmf').onclick=()=>{const L=MN.sc.filter(r=>r.pop==='ship');if(!L.length)ret
   save(bookBlob([{name:'Manifest',widths:['7','22','15','18','14','14','13','18'],rows:R,merges:M,print:1,fit:1,grid:true}]),`Manifest_${safe(courier())||'courier'}_${dstamp()}.xlsx`)};
 
 /* ---------- open / init ---------- */
-function mnOpen(){fillSel();adFill();render();if(key()&&!MN.pulled){MN.pulled=1;pull().then(()=>{render();st('☁ Cloud checked')}).catch(e=>st('❌ '+esc(e.message)))}if(!MN.cam)setTimeout(()=>$('#mnin').focus(),50)}
+function autoDsr(){if(S.d||!key()||MN.autoTried)return;MN.autoTried=1;const b=$('#cld');if(b){st('⏳ Loading DSR from cloud…');b.click()}}
+setTimeout(autoDsr,3000);
+function mnOpen(){if(!S.d)setTimeout(()=>{autoDsr();fillSel()},1200);fillSel();adFill();render();if(key()&&!MN.pulled){MN.pulled=1;pull().then(()=>{render();st('☁ Cloud checked')}).catch(e=>st('❌ '+esc(e.message)))}if(!MN.cam)setTimeout(()=>$('#mnin').focus(),50)}
 cfgLoad();adFill();restore().then(()=>{render()});render();
 window.addEventListener('beforeunload',()=>{});
 })();
