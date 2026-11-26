@@ -78,3 +78,6 @@ Last Mile: only Pickup/Delivery/RTO dates are filled (no Final Remark/Remark cha
 1. Upstash: create a free Redis database, copy REST URL + REST token.
 2. Vercel project -> Settings -> Environment Variables: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN (or the KV_REST_API_URL / KV_REST_API_TOKEN that the Vercel-Upstash integration adds) and DSR_KEY (any long password you choose). Redeploy.
 3. Open the site, Step 1 -> "Cloud save": enter DSR_KEY, Save key, then Save / Load. The function is api/dsr.js (requests are ~600 KB each, under Hobby's 4.5 MB body limit).
+
+## v20
+Cloud save is no longer done after every step. It runs (a) when you press "Save DSR to cloud" any time, and (b) automatically once when the final DSR is downloaded (View & Download), if the tick is on (remembered).
