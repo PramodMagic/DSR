@@ -81,3 +81,6 @@ Last Mile: only Pickup/Delivery/RTO dates are filled (no Final Remark/Remark cha
 
 ## v20
 Cloud save is no longer done after every step. It runs (a) when you press "Save DSR to cloud" any time, and (b) automatically once when the final DSR is downloaded (View & Download), if the tick is on (remembered).
+
+## v21
+The Master Excel is copied into memory when selected (no more dependence on the file staying unchanged on disk). If copying the original sheets fails during download, a plain DSR is downloaded instead of an error. Auto cloud save no longer pops an alert when no key is set.
