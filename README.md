@@ -97,3 +97,6 @@ Pickup boy / mobile / time / vehicle fields removed (blank on the manifest, fill
 Addresses are also synced through the cloud (api/scan.js ops addr-get/addr-set), so an address added on one device shows on the others (key must be saved on each).
 
 v25: Manifest Scan tab has its own access-key box + 'Load DSR from cloud' (for mobile); no alert popups when the DSR is not loaded; louder, different beeps per result.
+
+## v26 · Manifest Scan (only this tab changed)
+Sessions = date + courier + pickup address + scanner. ▶ Start / ⏸ Pause / ▶ Resume / ✔ Scanning complete; starting another courier pauses the previous session of the same scanner, so you can switch and resume later. Every scan stores its date, courier, address and scanner. ③ has Date / Courier / Pickup address filters: Complete Excel follows the filters (extra columns Courier, Pickup Address, Scanned By + a sessions table in Summary); Manifest needs ONE date + ONE courier + ONE address (only that group's Please Ship AWBs). Scans sync to the other device automatically (tab refreshes every 15 s). "Delete selected date's scans" replaces "Start a new batch" (api/scan.js got the op clear-date; chunk ids now start with the date).

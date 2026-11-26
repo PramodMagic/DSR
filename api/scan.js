@@ -38,6 +38,12 @@ module.exports = async (req, res) => {
       if (!okId) return res.status(400).json({ error: 'Bad chunk' });
       const d = await cmd(['GET', 'scan:c:' + id]); if (d == null) return res.status(404).json({ error: 'Chunk missing' }); return res.json({ data: d });
     }
+    if (b.op === 'clear-date') { // delete the chunks of one date (ids are prefixed YYYY-MM-DD_)
+      const d = String(b.d || ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return res.status(400).json({ error: 'Bad date' });
+      const l = ((await cmd(['LRANGE', 'scan:idx', 0, -1])) || []).filter(x => String(x).startsWith(d + '_'));
+      if (l.length) { await cmd(['DEL', ...l.map(x => 'scan:c:' + x)]); for (const x of l) await cmd(['LREM', 'scan:idx', 0, x]); }
+      return res.json({ ok: true, removed: l.length });
+    }
     if (b.op === 'clear') {
       const l = (await cmd(['LRANGE', 'scan:idx', 0, -1])) || [];
       const ks = l.map(x => 'scan:c:' + x).concat(['scan:idx', 'scan:meta']);
