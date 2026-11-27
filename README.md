@@ -112,3 +112,9 @@ Delete is admin-only (per-scan ✕, "Delete selected date's scans", delete saved
 
 ## v30 (Manifest Scan)
 Round 2: when a session is complete, ▶ Start asks to open Round 2, 3... (the completed round stays locked). A scanner can remove his own wrong scan while the session is not complete; deleting a date, a saved address or completed scans is admin-only.
+
+## v31
+Last Mile step D writes the courier remark into the chosen courier's own DSR column ("<Courier> Courier Remark", e.g. Shiprocket / Bluedart / India Post Courier Remark; spaces and case ignored). Menu: on computers the tabs wrap / compact instead of scrolling.
+
+## v32
+Last Mile: the courier dropdown id is now t3cou (it clashed with the step C "overwrite dates" checkbox id t3co, so that checkbox never worked).
