@@ -762,7 +762,7 @@ const POP={
 const ORDER=['ship','ref','unp','df','na','shp','dup','chk'];
 const SHIPSET=new Set([PH.B9,PH.DP,'FM Intrasit',PH.INP,PH.NPC,'Reached AT India WH',PH.WNA].map(canon));
 const SHIPPED=new Set(['Last Mile Intrasit','Delivered to end buyer'].map(canon));
-const MN={sc:[],ses:[],seen:new Map(),H:null,fmt:{dc:[],cf:{}},bid:'',chunks:new Set(),idx:null,cam:null,last:{v:'',t:0},tm:0,syT:0,sy:false};
+const MN={sc:[],ses:[],tomb:{},seen:new Map(),H:null,fmt:{dc:[],cf:{}},bid:'',chunks:new Set(),idx:null,cam:null,last:{v:'',t:0},tm:0,syT:0,sy:false};
 const LS={g(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},s(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const key=()=>{try{return localStorage.getItem('dsr_cloud_key')||''}catch(e){return ''}};
 
@@ -804,6 +804,7 @@ $('#p9').innerHTML=`
 <div class="row"><button id="mn_adnew" class="g">➕ Add new address</button><button class="g" id="mn_addl">🗑 Delete selected address</button></div>
 <div id="mn_adbox" style="display:none"><textarea id="mn_adtx" rows="3" placeholder="Type the full pickup address once. It is saved in this browser and can be selected next time." style="width:100%;font:inherit;border:1px solid var(--bd);border-radius:10px;padding:8px;background:var(--cd2);color:var(--tx)"></textarea><div class="row"><button id="mn_adsv">💾 Save address</button><button class="g" id="mn_adcn">Cancel</button></div></div>
 <div class="mu" id="mn_adshow"></div>
+<div class="row" id="mn_admrow"><label class="mu">Admin (needed to delete saved data / dates / addresses) <input type="password" id="mn_admk" placeholder="Admin password" size="16" autocomplete="off"></label><button class="g" id="mn_admin">🔓 Admin login</button><span class="mu" id="mn_admst"></span></div>
 <div class="row"><button class="big" id="mn_start">▶ Start / resume scanning</button></div>
 <div id="mn_cur"></div>
 <div class="mu hint">Pickup boy name, mobile, pickup time and vehicle no. are left blank on the manifest, fill them by hand.</div></div>
@@ -812,14 +813,15 @@ $('#p9').innerHTML=`
 <div class="row"><input type="text" id="mnin" placeholder="Scan / type AWB and press Enter" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="mngo">Scan</button><button class="g" id="mncam">📷 Camera scan</button></div>
 <div class="row"><video id="mnvid" playsinline muted></video></div><div class="mu" id="mncm"></div>
 <div id="mnlast"></div><div class="mnc" id="mncnt"></div>
-<h4 style="margin:10px 0 4px">Scan log (selected date / courier / address, latest on top)</h4><div class="sc" style="max-height:60vh"><table class="mnt" id="mnt"></table></div></div>
+<div class="row"><label class="mu">Show <select id="mn_lv"><option value="me">Only my scans (scanner name in ①)</option><option value="all">All scanners</option></select></label></div><h4 style="margin:10px 0 4px">Scan log (selected date, latest on top — last 3 shown, scroll for more)</h4><div class="sc" id="mnlog" style="max-height:60vh"><table class="mnt" id="mnt"></table></div></div>
 
 <div class="card"><h3>③ Download &amp; manage</h3>
 <div class="grid5">
 <label class="fld"><span>Date</span><select id="mn_fd"></select></label>
 <label class="fld"><span>Courier</span><select id="mn_fc"></select></label>
-<label class="fld"><span>Pickup address</span><select id="mn_fa"></select></label></div>
-<h4 style="margin:10px 0 4px">Sessions</h4><div class="sc" style="max-height:34vh"><table class="mnt" id="mn_st"></table></div>
+<label class="fld"><span>Pickup address</span><select id="mn_fa"></select></label>
+<label class="fld"><span>Scanner</span><select id="mn_fu"></select></label></div>
+<h4 style="margin:10px 0 4px">Sessions <span class="mu" style="font-weight:400">— tick the sessions you want in the download</span></h4><div class="row"><button class="g" id="mn_pall">☑ Select all (as per the filters above)</button><button class="g" id="mn_pclr">☐ Clear selection</button></div><div class="mu" id="mn_sel"></div><div class="sc" style="max-height:34vh"><table class="mnt" id="mn_st"></table></div>
 <div class="row"><button class="big" id="mnxl">⬇ Complete Excel (sheet per pop-up)</button><button class="big" id="mnmf">⬇ Manifest (Please Ship)</button></div>
 <div class="row"><button class="g" id="mnsy">☁ Sync scans (cloud)</button><button class="g" id="mndel">🗑 Delete selected date's scans</button><span class="mu" id="mnsyst"></span></div>
 <div class="mu hint">Complete Excel = the selected date (all or one courier / address). Manifest = ONE date + ONE courier + ONE pickup address only, so no other courier's data comes in. Scans made on the mobile reach the computer automatically (this tab refreshes every 15 seconds; or press Sync). Save the access key on both devices (Step 1 → Cloud save).</div>
@@ -862,7 +864,7 @@ $('#mn_adsel').onchange=()=>{const v=$('#mn_adsel').value;MN.ad=v===''?'':(adBoo
 $('#mn_adnew').onclick=()=>{$('#mn_adbox').style.display='block';$('#mn_adtx').focus()};
 $('#mn_adcn').onclick=()=>{$('#mn_adbox').style.display='none';$('#mn_adtx').value=''};
 $('#mn_adsv').onclick=()=>{const v=$('#mn_adtx').value.trim().replace(/\s*\n\s*/g,', ');if(!v)return alert('Type the pickup address first');(async()=>{await adPull();const a=adBook();if(!a.includes(v)){a.push(v);LS.s('mn_addr',a)}MN.ad=v;cfgSave();adFill();adPush();$('#mn_adtx').value='';$('#mn_adbox').style.display='none'})()};
-$('#mn_addl').onclick=()=>{const i=$('#mn_adsel').value;if(i==='')return alert('Select a saved address first');if(!confirm('Delete this saved address?'))return;const a=adBook();const gone=a.splice(+i,1)[0];LS.s('mn_addr',a);if(MN.ad===gone){MN.ad='';cfgSave()}adFill();adPush()};
+$('#mn_addl').onclick=()=>{if(!ADM())return alert('Only the admin can delete saved addresses.');const i=$('#mn_adsel').value;if(i==='')return alert('Select a saved address first');if(!confirm('Delete this saved address?'))return;const a=adBook();const gone=a.splice(+i,1)[0];LS.s('mn_addr',a);if(MN.ad===gone){MN.ad='';cfgSave()}adFill();adPush()};
 
 /* ---------- lookup + rules ---------- */
 function index(){const a=col('awb');if(MN.ix&&MN.ix.d===S.d&&MN.ix.a===a&&MN.ix.n===S.d.rows.length)return MN.ix.m;
@@ -878,6 +880,7 @@ const snapV=v=>v instanceof Date?v.getTime()/86400000+25569:(v&&typeof v==='obje
 const rebuildSeen=()=>{MN.seen=new Map();MN.sc.forEach(r=>{if(r.pop!=='dup'&&!MN.seen.has(r.k))MN.seen.set(r.k,r)})};
 const dateOf=t=>{const d=new Date(t),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())};
 const todayS=()=>dateOf(new Date().toISOString());
+const ADM=()=>{try{return sessionStorage.getItem('mn_admin')||''}catch(e){return ''}};
 const hsh=x=>{let h=5381;for(let i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i))>>>0;return h.toString(36)};
 const sidOf=(d,co,ad,u)=>hsh((d+'|'+co+'|'+ad+'|'+u).toLowerCase());
 const me=()=>($('#mn_user').value||'').trim();
@@ -910,45 +913,67 @@ const fmtT=t=>{const d=new Date(t),p=n=>String(n).padStart(2,'0');return`${p(d.g
 const SC={active:'#16a34a',paused:'#d97706',done:'#2563eb'},SL={active:'● Scanning',paused:'⏸ Paused',done:'✔ Complete'};
 const ssCount=id=>{const a=MN.sc.filter(r=>r.s===id);return[a.length,a.filter(r=>r.pop==='ship').length]};
 function setSt(x,st){x.st=st;x.upd=Date.now();x.sy=0;if(st==='done')x.t1=Date.now();persist();pushSoon()}
-function activate(x){MN.ses.filter(o=>o!==x&&o.st==='active'&&sameU(o.u,x.u)).forEach(o=>setSt(o,'paused'));setSt(x,'active')}
+function activate(x){if(x.st==='done')return;MN.ses.filter(o=>o!==x&&o.st==='active'&&sameU(o.u,x.u)).forEach(o=>setSt(o,'paused'));setSt(x,'active')}
 function startSes(){const u=me(),co=courier(),ad=MN.ad;if(!u)return alert('Enter your name (scanner name) first');if(!co)return alert('Select the courier');if(!ad)return alert('Select (or add) the pickup address');
-  LS.s('mn_user',u);const d=todayS(),id=sidOf(d,co,ad,u);let x=MN.ses.find(o=>o.id===id);
-  if(!x){x={id,d,co,ad,u,st:'paused',t0:Date.now(),upd:Date.now(),sy:0};MN.ses.push(x)}
-  else if(x.st==='done'&&!confirm('Scanning for this courier / address was marked complete. Re-open it?'))return;
+  LS.s('mn_user',u);const d=todayS(),same=MN.ses.filter(o=>o.d===d&&o.co===co&&o.ad===ad&&sameU(o.u,u));let x=same.find(o=>o.st!=='done');
+  if(!x){let rd=1;if(same.length){rd=Math.max(...same.map(o=>o.rd||1))+1;if(!confirm('Scanning for '+co+' — '+ad.slice(0,60)+' is COMPLETE for today ('+u+').\n\nStart Round '+rd+' (a new pickup)? The completed round stays locked.'))return}
+    const id=rd>1?hsh((d+'|'+co+'|'+ad+'|'+u+'|r'+rd).toLowerCase()):sidOf(d,co,ad,u);x={id,d,co,ad,u,rd,st:'paused',t0:Date.now(),upd:Date.now(),sy:0};MN.ses.push(x)}
   activate(x);render();$('#mnin').focus()}
-function sesAct(e){const b=e.target.closest('button[data-sa]');if(!b)return;const x=MN.ses.find(o=>o.id===b.dataset.si);if(!x)return;const a=b.dataset.sa;
+function sesAct(e){const b=e.target.closest('button[data-sa]');if(!b)return;const x=MN.ses.find(o=>o.id===b.dataset.si);if(!x||x.st==='done')return;const a=b.dataset.sa;
   if(a==='resume')activate(x);else if(a==='pause')setSt(x,'paused');
-  else if(a==='done'){if(!confirm('Mark scanning COMPLETE for '+x.co+' — '+x.ad.slice(0,50)+' ('+x.u+')? You can re-open it later.'))return;setSt(x,'done')}
+  else if(a==='done'){if(!confirm('Mark scanning COMPLETE for '+x.co+' — '+x.ad.slice(0,50)+' ('+x.u+')?\n\nOnce complete it is locked and CANNOT be resumed.'))return;setSt(x,'done')}
   render();if(a!=='done')$('#mnin').focus()}
 $('#mn_start').onclick=startSes;$('#mn_cur').onclick=sesAct;$('#mn_st').onclick=sesAct;$('#mn_user').oninput=()=>{LS.s('mn_user',me());render()};
 function curBanner(){const e=$('#mn_cur'),cs=cur(),u=me();
-  if(cs){const[n,sh]=ssCount(cs.id);e.innerHTML=`<div class="mnsb" style="background:#16a34a"><b>● SCANNING</b><div class="x">${esc(cs.co)} · ${esc(cs.ad.slice(0,90))}<br>${cs.d} · ${esc(cs.u)} · ${n} scans (${sh} Please Ship)</div><button class="g" data-sa="pause" data-si="${cs.id}">⏸ Pause</button><button class="g" data-sa="done" data-si="${cs.id}">✔ Scanning complete</button></div>`;return}
+  if(cs){const[n,sh]=ssCount(cs.id);e.innerHTML=`<div class="mnsb" style="background:#16a34a"><b>● SCANNING</b><div class="x">${esc(cs.co)} · ${esc(cs.ad.slice(0,90))}<br>${cs.d} · ${esc(cs.u)}${cs.rd>1?' · Round '+cs.rd:''} · ${n} scans (${sh} Please Ship)</div><button class="g" data-sa="pause" data-si="${cs.id}">⏸ Pause</button><button class="g" data-sa="done" data-si="${cs.id}">✔ Scanning complete</button></div>`;return}
   const p=u?MN.ses.filter(o=>sameU(o.u,u)&&o.st==='paused').sort((a,b)=>b.upd-a.upd)[0]:null;
   e.innerHTML=p?`<div class="mnsb" style="background:#d97706"><b>⏸ PAUSED</b><div class="x">Last: ${esc(p.co)} · ${esc(p.ad.slice(0,90))} · ${p.d}</div><button class="g" data-sa="resume" data-si="${p.id}">▶ Resume</button></div>`:`<div class="mnsb" style="background:#64748b"><b>No active session</b><div class="x">Enter your name, choose courier + pickup address and press ▶ Start scanning.</div></div>`}
 let fh='';
-function fSel(){return{d:$('#mn_fd').value||todayS(),co:$('#mn_fc').value||'*',ad:$('#mn_fa').value||'*'}}
-function fillFilters(){const fd=$('#mn_fd'),fc=$('#mn_fc'),fa=$('#mn_fa'),pd=fd.value||todayS(),pc=fc.value||'*',pa=fa.value||'*';
+MN.pick=new Set();
+function fSel(){return{d:$('#mn_fd').value||todayS(),co:$('#mn_fc').value||'*',ad:$('#mn_fa').value||'*',u:$('#mn_fu').value||'*'}}
+function fillFilters(){const fd=$('#mn_fd'),fc=$('#mn_fc'),fa=$('#mn_fa'),fu=$('#mn_fu'),pd=fd.value||todayS(),pc=fc.value||'*',pa=fa.value||'*';
   const dates=[...new Set(MN.sc.map(r=>r.d).concat(MN.ses.map(x=>x.d),[todayS()]))].sort().reverse();
   const dv=dates.includes(pd)||pd==='*'?pd:dates[0],inD=r=>dv==='*'||r.d===dv,all=MN.sc.filter(inD).concat(MN.ses.filter(inD)),cos=[...new Set(all.map(r=>r.co))].sort();
   const cv=cos.includes(pc)?pc:'*',ads=[...new Set(all.filter(r=>cv==='*'||r.co===cv).map(r=>r.ad))].sort(),av=ads.includes(pa)?pa:'*';
-  const h=JSON.stringify([dates,cos,ads]);if(h!==fh){fh=h;fd.innerHTML=dates.map(d=>`<option value="${d}">${d}</option>`).join('')+'<option value="*">All dates</option>';fc.innerHTML='<option value="*">All couriers</option>'+cos.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');fa.innerHTML='<option value="*">All addresses</option>'+ads.map(a=>`<option value="${esc(a)}">${esc(a.slice(0,80))}</option>`).join('')}
-  fd.value=dv;fc.value=cv;fa.value=av}
-$('#mn_fd').onchange=$('#mn_fc').onchange=$('#mn_fa').onchange=()=>render();
-function scope(){const f=fSel();return MN.sc.filter(r=>(f.d==='*'||r.d===f.d)&&(f.co==='*'||r.co===f.co)&&(f.ad==='*'||r.ad===f.ad))}
-function sesScope(){const f=fSel();return MN.ses.filter(x=>(f.d==='*'||x.d===f.d)&&(f.co==='*'||x.co===f.co)&&(f.ad==='*'||x.ad===f.ad)).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:a.t0-b.t0)}
-function render(){fillFilters();const sc=scope(),c={};sc.forEach(r=>c[r.pop]=(c[r.pop]||0)+1);
-  $('#mncnt').innerHTML=`<span style="background:#475569">Scans (selected): ${sc.length}</span>`+ORDER.filter(k=>c[k]).map(k=>`<span style="background:${POP[k].c}">${esc(POP[k].sh)}: ${c[k]}</span>`).join('');
+  const um=new Map();all.forEach(r=>{if(r.u&&!um.has(r.u.toLowerCase()))um.set(r.u.toLowerCase(),r.u)});const users=[...um.values()].sort();
+  let uv=fu.value||'*';if(!MN.fuSet&&me()&&um.has(me().toLowerCase()))uv=um.get(me().toLowerCase());if(uv!=='*'&&!users.some(n=>sameU(n,uv)))uv='*';
+  const h=JSON.stringify([dates,cos,ads,users]);if(h!==fh){fh=h;fd.innerHTML=dates.map(d=>`<option value="${d}">${d}</option>`).join('')+'<option value="*">All dates</option>';fc.innerHTML='<option value="*">All couriers</option>'+cos.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');fa.innerHTML='<option value="*">All addresses</option>'+ads.map(a=>`<option value="${esc(a)}">${esc(a.slice(0,80))}</option>`).join('');fu.innerHTML='<option value="*">All scanners</option>'+users.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}
+  fd.value=dv;fc.value=cv;fa.value=av;fu.value=uv}
+$('#mn_fd').onchange=$('#mn_fc').onchange=$('#mn_fa').onchange=()=>render();$('#mn_fu').onchange=()=>{MN.fuSet=true;render()};$('#mn_lv').onchange=()=>render();
+const okU=(r,f)=>f.u==='*'||sameU(r.u,f.u);
+function scope(){const f=fSel();return MN.sc.filter(r=>(f.d==='*'||r.d===f.d)&&(f.co==='*'||r.co===f.co)&&(f.ad==='*'||r.ad===f.ad)&&okU(r,f))}
+function sesScope(){const f=fSel();return MN.ses.filter(x=>(f.d==='*'||x.d===f.d)&&(f.co==='*'||x.co===f.co)&&(f.ad==='*'||x.ad===f.ad)&&okU(x,f)).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:a.t0-b.t0)}
+/* manifest / Excel selection: ticked sessions win, otherwise everything in the filters */
+const pickSes=()=>MN.ses.filter(x=>MN.pick.has(x.id));
+const chosen=()=>MN.pick.size&&pickSes().length?MN.sc.filter(r=>MN.pick.has(r.s)):scope();
+const chosenSes=()=>pickSes().length?pickSes():sesScope();
+function gInfo(){const ps=pickSes();if(!ps.length)return fSel();const g=a=>{const v=[...new Set(ps.map(x=>x[a]))];return v.length===1?v[0]:'*'};return{d:g('d'),co:g('co'),ad:g('ad'),u:'*'}}
+$('#mn_st').onchange=e=>{const t=e.target;if(t.id==='mn_sall')sesScope().forEach(x=>t.checked?MN.pick.add(x.id):MN.pick.delete(x.id));else if(t.dataset.pk)t.checked?MN.pick.add(t.dataset.pk):MN.pick.delete(t.dataset.pk);render()};
+$('#mn_pall').onclick=()=>{sesScope().forEach(x=>MN.pick.add(x.id));render()};$('#mn_pclr').onclick=()=>{MN.pick.clear();render()};
+const sesOf=r=>MN.ses.find(x=>x.id===r.s);
+const canDel=r=>!!ADM()||!!(me()&&sameU(r.u,me())&&!(sesOf(r)&&sesOf(r).st==='done'));
+function admUI(){const a=!!ADM();MN.adm=a;$('#mn_admk').style.display=a?'none':'';$('#mn_admk').parentElement.style.display=a?'none':'';$('#mn_admin').textContent=a?'🔒 Log out (admin)':'🔓 Admin login';$('#mn_admst').textContent=a?'🔓 Admin mode: delete is allowed':'🔒 Admin-only: delete dates, addresses and completed scans (you can still remove your own wrong scan)';$('#mn_addl').style.display=a?'':'none';$('#mndel').style.display=a?'':'none'}
+$('#mn_admin').onclick=async()=>{if(ADM()){try{sessionStorage.removeItem('mn_admin')}catch(e){}admUI();render();return}
+  const v=$('#mn_admk').value.trim();if(!v)return alert('Enter the admin password');if(!key())return alert('Save the access key first (Step 1 → Cloud save).');
+  try{sessionStorage.setItem('mn_admin',v);await api('admin-check');$('#mn_admk').value='';admUI();render()}catch(e){try{sessionStorage.removeItem('mn_admin')}catch(x){}admUI();alert('Admin login failed: '+e.message)}};
+function fitLog(){const t=$('#mnt'),w=$('#mnlog');if(!t||!w)return;const r=t.rows;if(r.length<=4){w.style.maxHeight='none';return}let h=0;for(let i=0;i<4;i++)h+=r[i].offsetHeight;if(h>20)w.style.maxHeight=(h+2)+'px'}
+try{new ResizeObserver(()=>fitLog()).observe($('#mnt'))}catch(e){}
+function render(){admUI();fillFilters();const f=fSel(),lv=$('#mn_lv').value,vw=MN.sc.filter(r=>(f.d==='*'||r.d===f.d)&&(lv==='all'||(me()&&sameU(r.u,me())))),c={};vw.forEach(r=>c[r.pop]=(c[r.pop]||0)+1);
+  $('#mncnt').innerHTML=`<span style="background:#475569">${lv==='all'?'All scanners':'My scans'}${me()&&lv!=='all'?' ('+esc(me())+')':''}: ${vw.length}</span>`+ORDER.filter(k=>c[k]).map(k=>`<span style="background:${POP[k].c}">${esc(POP[k].sh)}: ${c[k]}</span>`).join('');
   curBanner();
-  $('#mn_st').innerHTML='<tr><th>Date</th><th>Courier</th><th>Pickup address</th><th>Scanner</th><th>Scans</th><th>Please Ship</th><th>Status</th><th></th></tr>'+sesScope().map(x=>{const[n,sh]=ssCount(x.id);return`<tr><td>${x.d}</td><td>${esc(x.co)}</td><td>${esc(x.ad.slice(0,60))}</td><td>${esc(x.u)}</td><td>${n}</td><td>${sh}</td><td><span class="mnst" style="background:${SC[x.st]}">${SL[x.st]}</span></td><td>${x.st==='active'?`<button class="g" data-sa="pause" data-si="${x.id}">⏸ Pause</button>`:`<button class="g" data-sa="resume" data-si="${x.id}">▶ Resume</button>`}${x.st!=='done'?`<button class="g" data-sa="done" data-si="${x.id}">✔ Complete</button>`:''}</td></tr>`}).join('');
-  const pi=col('pay'),fi=col('fr'),L=sc.slice(-200).reverse();
-  $('#mnt').innerHTML='<tr><th>#</th><th>Time</th><th>AWB</th><th>Result</th><th>Courier</th><th>By</th><th>Payment</th><th>Final Remark</th><th></th></tr>'+L.map(r=>{const n=MN.sc.indexOf(r)+1;return`<tr><td>${n}</td><td>${fmtT(r.t).slice(11)}</td><td>${esc(r.awb)}</td><td><span class="mnb" style="background:${POP[r.pop].c}">${esc(POP[r.pop].t)}</span></td><td>${esc(r.co)}</td><td>${esc(r.u)}</td><td>${r.row&&pi>=0?esc(tx(r.row[pi])):''}</td><td>${r.row&&fi>=0?esc(tx(r.row[fi])):''}</td><td><button class="g" data-mnrm="${n-1}" title="Remove this scan">✕</button></td></tr>`}).join('')}
-$('#mnt').onclick=e=>{const b=e.target.closest('button[data-mnrm]');if(!b)return;const i=+b.dataset.mnrm,r=MN.sc[i];if(!r||!confirm('Remove this scan ('+r.awb+')?'))return;MN.sc.splice(i,1);rebuildSeen();persist();render();pushDel(r)};
+  MN.pick=new Set([...MN.pick].filter(id=>MN.ses.some(x=>x.id===id)));const ss=sesScope(),ps=pickSes();
+  $('#mn_st').innerHTML='<tr><th><input type="checkbox" id="mn_sall" title="Tick all"'+(ss.length&&ss.every(x=>MN.pick.has(x.id))?' checked':'')+'></th><th>Date</th><th>Courier</th><th>Pickup address</th><th>Scanner</th><th>Scans</th><th>Please Ship</th><th>Status</th><th></th></tr>'+ss.map(x=>{const[n,sh]=ssCount(x.id);return`<tr><td><input type="checkbox" data-pk="${x.id}"${MN.pick.has(x.id)?' checked':''}></td><td>${x.d}</td><td>${esc(x.co)}</td><td>${esc(x.ad.slice(0,60))}</td><td>${esc(x.u)}${x.rd>1?' · Round '+x.rd:''}</td><td>${n}</td><td>${sh}</td><td><span class="mnst" style="background:${SC[x.st]}">${SL[x.st]}</span></td><td>${x.st==='done'?'<span class="mu">🔒 Locked</span>':(x.st==='active'?`<button class="g" data-sa="pause" data-si="${x.id}">⏸ Pause</button>`:`<button class="g" data-sa="resume" data-si="${x.id}">▶ Resume</button>`)+`<button class="g" data-sa="done" data-si="${x.id}">✔ Complete</button>`}</td></tr>`}).join('');
+  const ch=chosen(),ng=new Set(ps.map(x=>x.d+'|'+x.co+'|'+x.ad)).size;$('#mn_sel').innerHTML=ps.length?`<b>✔ ${ps.length} session(s) ticked</b> — downloads use only these: ${ch.length} scans, ${ch.filter(r=>r.pop==='ship').length} Please Ship.${ng>1?` Manifest = <b>${ng} separate manifests</b> (one per date + courier + address) in one ZIP.`:''}`:`Nothing ticked — downloads use everything in the filters above (${ch.length} scans, ${ch.filter(r=>r.pop==='ship').length} Please Ship).`;
+  const pi=col('pay'),fi=col('fr'),L=vw.slice(-200).reverse();
+  $('#mnt').innerHTML='<tr><th>#</th><th>Time</th><th>AWB</th><th>Result</th><th>Courier</th><th>By</th><th>Payment</th><th>Final Remark</th><th></th></tr>'+L.map(r=>{const n=MN.sc.indexOf(r)+1;return`<tr><td>${n}</td><td>${fmtT(r.t).slice(11)}</td><td>${esc(r.awb)}</td><td><span class="mnb" style="background:${POP[r.pop].c}">${esc(POP[r.pop].t)}</span></td><td>${esc(r.co)}</td><td>${esc(r.u)}</td><td>${r.row&&pi>=0?esc(tx(r.row[pi])):''}</td><td>${r.row&&fi>=0?esc(tx(r.row[fi])):''}</td><td>${canDel(r)?`<button class="g" data-mnrm="${n-1}" title="Remove this wrong scan">✕</button>`:''}</td></tr>`}).join('')}
+$('#mnt').onclick=e=>{const b=e.target.closest('button[data-mnrm]');if(!b)return;const i=+b.dataset.mnrm,r=MN.sc[i];if(!r)return;if(!canDel(r))return alert('You can remove only your own scans while the session is not complete. Completed / saved data can be deleted by the admin only.');if(!confirm('Remove this scan ('+r.awb+')?'))return;MN.sc.splice(i,1);rebuildSeen();persist();render();pushDel(r)};
 $('#mnin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const v=$('#mnin').value;$('#mnin').value='';doScan(v,'kb')}});
 $('#mngo').onclick=()=>{const v=$('#mnin').value;$('#mnin').value='';doScan(v,'kb');$('#mnin').focus()};
-$('#mndel').onclick=async()=>{const d=$('#mn_fd').value;if(!d||d==='*')return alert('Select ONE date in ③ first');const n=MN.sc.filter(r=>r.d===d).length;
+$('#mndel').onclick=async()=>{if(!ADM())return alert('Only the admin can delete.');const d=$('#mn_fd').value;if(!d||d==='*')return alert('Select ONE date in ③ first');const n=MN.sc.filter(r=>r.d===d).length;
   if(!confirm('Delete ALL '+n+' scans and sessions of '+d+'? Download the Excel / Manifest first!'))return;
   MN.sc=MN.sc.filter(r=>r.d!==d);MN.ses=MN.ses.filter(x=>x.d!==d);rebuildSeen();[...MN.chunks].filter(i=>i.startsWith(d+'_')).forEach(i=>MN.chunks.delete(i));persist();render();
-  if(key()){try{await api('clear-date',{d});st('🗑 Deleted '+d)}catch(e){st('❌ '+esc(e.message))}}else st('🗑 Deleted '+d)};
+  const tn=Date.now(),tt=new Date(tn).toISOString();MN.tomb[d]={t:tt,tn};persist();
+  if(key()){try{const id='del_'+d+'_'+rid();await api('add',{id,data:JSON.stringify([{clr:1,d,t:tt,tn}])});MN.chunks.add(id);await api('clear-date',{d});st('🗑 Deleted '+d+' on all devices')}catch(e){st('❌ '+esc(e.message))}}else st('🗑 Deleted '+d)};
 
 /* ---------- camera ---------- */
 $('#mncam').onclick=async()=>{if(MN.cam)return camStop();
@@ -963,11 +988,11 @@ $('#mncam').onclick=async()=>{if(MN.cam)return camStop();
 function camStop(){if(!MN.cam)return;clearInterval(MN.cam.iv);MN.cam.st.getTracks().forEach(t=>t.stop());MN.cam=null;$('#mnvid').style.display='none';$('#mncam').textContent='📷 Camera scan';$('#mncm').textContent=''}
 
 /* ---------- persistence (IndexedDB) ---------- */
-let pt=0;function persist(){clearTimeout(pt);pt=setTimeout(async()=>{try{await DB.set('mnscan',{sc:MN.sc,ses:MN.ses,H:MN.H,fmt:MN.fmt,chunks:[...MN.chunks]})}catch(e){console.warn('scan save failed',e)}},300)}
-async function restore(){try{const v=await DB.get('mnscan');if(v&&!MN.sc.length&&!MN.ses.length){MN.sc=(v.sc||[]).map(fix);MN.ses=v.ses||[];MN.H=v.H||null;MN.fmt=v.fmt||{dc:[],cf:{}};MN.chunks=new Set(v.chunks||[]);rebuildSeen();render()}}catch(e){}}
+let pt=0;function persist(){clearTimeout(pt);pt=setTimeout(async()=>{try{await DB.set('mnscan',{sc:MN.sc,ses:MN.ses,tomb:MN.tomb,H:MN.H,fmt:MN.fmt,chunks:[...MN.chunks]})}catch(e){console.warn('scan save failed',e)}},300)}
+async function restore(){try{const v=await DB.get('mnscan');if(v&&!MN.sc.length&&!MN.ses.length){MN.sc=(v.sc||[]).map(fix);MN.ses=v.ses||[];MN.tomb=v.tomb||{};MN.H=v.H||null;MN.fmt=v.fmt||{dc:[],cf:{}};MN.chunks=new Set(v.chunks||[]);rebuildSeen();render()}}catch(e){}}
 
 /* ---------- cloud sync (api/scan.js) ---------- */
-async function api(op,body){const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json','x-dsr-key':key()},body:JSON.stringify({op,...(body||{})})});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||('HTTP '+r.status+(r.status===404?' (api/scan not deployed — open the Vercel site)':'')));return j}
+async function api(op,body){const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json','x-dsr-key':key(),'x-admin-key':ADM()},body:JSON.stringify({op,...(body||{})})});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||('HTTP '+r.status+(r.status===404?' (api/scan not deployed — open the Vercel site)':'')));return j}
 const st=h=>$('#mnsyst').innerHTML=h;
 const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 let metaT=0;function metaPush(){if(!key()||!MN.H)return;clearTimeout(metaT);metaT=setTimeout(()=>{api('meta-set',{data:JSON.stringify({H:MN.H,fmt:MN.fmt,at:Date.now()})}).catch(()=>{})},1500)}
@@ -982,9 +1007,10 @@ async function pushDel(r){if(!key())return;try{const id=(r.d||dateOf(r.t))+'_'+r
 async function pull(){if(!key())return 0;const m=(await api('meta-get')).meta;if(m&&m.H&&!MN.H){MN.H=m.H;MN.fmt=m.fmt||{dc:[],cf:{}}}
   const ids=(await api('idx')).ids||[],have=new Set(MN.sc.map(r=>r.k+'|'+r.t));let add=0,ch=0;
   for(const id of ids){if(MN.chunks.has(id))continue;const arr=JSON.parse((await api('get',{id})).data);MN.chunks.add(id);ch++;
-    for(const x of arr){if(x.del){const j=MN.sc.findIndex(r=>r.k===x.k&&r.t===x.t);if(j>=0)MN.sc.splice(j,1);continue}
-      if(x.ses){const{ses,...o}=x,l=MN.ses.find(z=>z.id===o.id);if(!l)MN.ses.push({...o,sy:1});else if((o.upd||0)>(l.upd||0))Object.assign(l,o,{sy:1});continue}
-      const hk=x.k+'|'+x.t;if(have.has(hk))continue;have.add(hk);x.sy=1;MN.sc.push(fix(x));add++}}
+    for(const x of arr){if(x.clr){MN.tomb[x.d]={t:x.t,tn:x.tn};MN.sc=MN.sc.filter(r=>!(r.d===x.d&&r.t<=x.t));MN.ses=MN.ses.filter(z=>!(z.d===x.d&&(z.upd||0)<=x.tn));[...MN.chunks].filter(i=>i.startsWith(x.d+'_')).forEach(i=>MN.chunks.delete(i));have.clear();MN.sc.forEach(r=>have.add(r.k+'|'+r.t));continue}
+      if(x.del){const j=MN.sc.findIndex(r=>r.k===x.k&&r.t===x.t);if(j>=0)MN.sc.splice(j,1);continue}
+      if(x.ses){const{ses,...o}=x,l=MN.ses.find(z=>z.id===o.id),tb=MN.tomb[o.d];if(tb&&(o.upd||0)<=tb.tn)continue;if(!l)MN.ses.push({...o,sy:1});else if(l.st==='done'&&o.st!=='done'){}else if(o.st==='done'||(o.upd||0)>(l.upd||0))Object.assign(l,o,{sy:1});continue}
+      const tb2=MN.tomb[x.d||dateOf(x.t)];if(tb2&&x.t<=tb2.t)continue;const hk=x.k+'|'+x.t;if(have.has(hk))continue;have.add(hk);x.sy=1;MN.sc.push(fix(x));add++}}
   if(ch){MN.sc.sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0);const sn=new Set();MN.sc.forEach(r=>{if(r.pop==='dup')return;if(sn.has(r.k)){r.pop='dup';r.fp=r.fp||'ship';delete r.row}else sn.add(r.k)});rebuildSeen();persist();render()}
   return add}
 $('#mnsy').onclick=async()=>{if(!key())return alert('Save the access key first (Step 1 → Cloud save).');try{st('⏳ Syncing…');const a=await pull();await push();metaPush();render();st(`✅ Synced ${new Date().toLocaleTimeString()}${a?' — '+a+' new scans from the other device':''}`)}catch(e){st('❌ '+esc(e.message))}};
@@ -1049,12 +1075,12 @@ function dsrSheet(name,recs,H){const W=H.length,dc=new Set(MN.fmt.dc||[]),cf=MN.
   return{name,widths,rows,freeze:1,filter:`A1:${cn(W+3)}${rows.length}`}}
 function simpleSheet(name,head,recs,f){const rows=[{ht:28,c:head.map(h=>[h,SX.dh])}];recs.forEach(r=>rows.push({c:f(r).map(v=>[v,SX.bd])}));return{name,widths:head.map(()=>'26'),rows,freeze:1,filter:`A1:${cn(head.length-1)}${rows.length}`}}
 const fname=f=>(f.d==='*'?'all-dates':f.d)+'_'+(safe(f.co==='*'?'all-couriers':f.co)||'courier');
-$('#mnxl').onclick=()=>{const sc=scope();if(!sc.length)return alert('Nothing scanned for the selected date / courier / address');
-  const H=MN.H||S.d.H,f=fSel(),by={};sc.forEach(r=>(by[r.pop]=by[r.pop]||[]).push(r));
+$('#mnxl').onclick=()=>{const sc=chosen();if(!sc.length)return alert('Nothing scanned for the ticked sessions / selected filters');
+  const H=MN.H||S.d.H,f=gInfo(),by={};sc.forEach(r=>(by[r.pop]=by[r.pop]||[]).push(r));
   const sh=[],sum=[{ht:30,c:[['Scan Summary',SX.title]]},{c:[['Date',SX.lab],[f.d==='*'?'All dates':f.d,SX.val]]},{c:[['Courier',SX.lab],[f.co==='*'?'All couriers':f.co,SX.val]]},{c:[['Pickup address',SX.lab],[f.ad==='*'?'All addresses':f.ad,SX.val]]},{c:[['Downloaded',SX.lab],[fmtT(new Date().toISOString()),SX.val]]},{c:[['Total scans',SX.lab],[sc.length,SX.val]]},{c:[]},{ht:24,c:[['Pop-up',SX.dh],['Sheet',SX.dh],['Count',SX.dh]]}];
   ORDER.forEach(k=>{if(by[k])sum.push({c:[[POP[k].t,SX.bd],[POP[k].sh,SX.bd],[by[k].length,SX.bd]]})});
   sum.push({c:[]},{ht:24,c:['Date','Courier','Pickup address','Scanner','Scans','Please Ship','Status'].map(h=>[h,SX.dh])});
-  sesScope().forEach(x=>{const[n,p]=ssCount(x.id);sum.push({c:[[x.d,SX.bd],[x.co,SX.bd],[x.ad,SX.bd],[x.u,SX.bd],[n,SX.bd],[p,SX.bd],[SL[x.st].replace(/^[^A-Za-z]+/,''),SX.bd]]})});
+  chosenSes().forEach(x=>{const[n,p]=ssCount(x.id);sum.push({c:[[x.d,SX.bd],[x.co,SX.bd],[x.ad,SX.bd],[x.u+(x.rd>1?' (Round '+x.rd+')':''),SX.bd],[n,SX.bd],[p,SX.bd],[SL[x.st].replace(/^[^A-Za-z]+/,''),SX.bd]]})});
   sh.push({name:'Summary',widths:['38','22','40','18','12','14','14'],rows:sum,merges:['A1:G1']});
   const X=r=>[r.co,r.ad,r.u];
   ORDER.forEach(k=>{const a=by[k];if(!a)return;
@@ -1064,13 +1090,9 @@ $('#mnxl').onclick=()=>{const sc=scope();if(!sc.length)return alert('Nothing sca
   save(bookBlob(sh),`Scan_Report_${fname(f)}.xlsx`)};
 
 /* Manifest (as per Manifest_Format.xlsx): ONE date + ONE courier + ONE pickup address, Please Ship only */
-$('#mnmf').onclick=()=>{const f=fSel();
-  if(f.d==='*'||f.co==='*'||f.ad==='*')return alert('Select ONE date, ONE courier and ONE pickup address in ③ — the manifest contains only that group, so no other courier / address data gets mixed.');
-  const L=scope().filter(r=>r.pop==='ship');if(!L.length)return alert('No "Please Ship" scans for this date / courier / address');
-  const open=MN.ses.filter(x=>x.d===f.d&&x.co===f.co&&x.ad===f.ad&&x.st!=='done');
-  if(open.length&&!confirm('Scanning is not complete for this group ('+open.map(x=>x.u+': '+x.st).join(', ')+'). Download the manifest anyway?'))return;
+function mfBuild(f,L,sub){
   const g=(r,k)=>{const c=col(k);if(c<0||!r.row)return'';const v=r.row[c];return v==null?'':v};
-  const txt=v=>String(v).trim(),now=fmtT(new Date().toISOString()),n=L.length,[Y,Mo,D]=f.d.split('-'),cur=D+'-'+Mo+'-'+Y,mfno='MF-'+f.d.replace(/-/g,'')+'-'+(safe(f.co).slice(0,6).toUpperCase()||'CO')+'-'+hsh(f.ad).slice(0,3).toUpperCase();
+  const txt=v=>String(v).trim(),now=fmtT(new Date().toISOString()),n=L.length,[Y,Mo,D]=f.d.split('-'),cur=D+'-'+Mo+'-'+Y,mfno='MF-'+f.d.replace(/-/g,'')+'-'+(safe(f.co).slice(0,6).toUpperCase()||'CO')+'-'+hsh(f.ad).slice(0,3).toUpperCase()+sub;
   const R=[];
   R.push({ht:30,c:[['COURIER HANDOVER MANIFEST',SX.title]]});
   const pair=(a,b,c,d)=>({ht:20,c:[[a,SX.lab],['',SX.lab],[b,SX.val],['',SX.val],[c,SX.lab],['',SX.lab],[d,SX.val],['',SX.val]]});
@@ -1090,7 +1112,23 @@ $('#mnmf').onclick=()=>{const f=fSel();
   R.push(fr('Name','One Stop Fashions Pvt. Ltd.','Name',''));R.push(fr('Mobile','','Employee ID',''));R.push(fr('Signature & Stamp','','Signature','',30));R.push(fr('Date & Time',now,'Date & Time',''));
   const M=['A1:H1'];for(let r=2;r<=5;r++)M.push(`A${r}:B${r}`,`C${r}:D${r}`,`E${r}:F${r}`,`G${r}:H${r}`);M.push('A6:B6','C6:H6','A7:B7','C7:H7',`A${f0}:D${f0}`,`E${f0}:H${f0}`);
   for(let r=f0+1;r<=f0+4;r++)M.push(`A${r}:B${r}`,`C${r}:D${r}`,`E${r}:F${r}`,`G${r}:H${r}`);
-  save(bookBlob([{name:'Manifest',widths:['7','22','15','18','14','14','13','18'],rows:R,merges:M,print:1,fit:1,grid:true}]),`Manifest_${safe(f.co)}_${f.d}_${hsh(f.ad).slice(0,3)}.xlsx`)};
+  return bookBlob([{name:'Manifest',widths:['7','22','15','18','14','14','13','18'],rows:R,merges:M,print:1,fit:1,grid:true}])}
+const mfName=(f,sub,names)=>`Manifest_${safe(f.co)}_${f.d}_${hsh(f.ad).slice(0,3)}${sub?'_'+safe(names).slice(0,24):''}.xlsx`;
+/* Manifest: ticked sessions (one or many groups) or one date + courier + address from the filters. Each manifest = ONE date + ONE courier + ONE address. */
+$('#mnmf').onclick=async()=>{const ps=pickSes();let groups=[];
+  if(ps.length){const m=new Map();ps.forEach(x=>{const k=x.d+'|'+x.co+'|'+x.ad;if(!m.has(k))m.set(k,{f:{d:x.d,co:x.co,ad:x.ad},ids:[],ss:[]});const o=m.get(k);o.ids.push(x.id);o.ss.push(x)});groups=[...m.values()]}
+  else{const f=fSel();if(f.d==='*'||f.co==='*'||f.ad==='*')return alert('Tick the sessions you want (or press ☑ Select all), or select ONE date, ONE courier and ONE pickup address in ③ — each manifest contains one group only, so no other courier / address data gets mixed.');
+    groups=[{f:{d:f.d,co:f.co,ad:f.ad},ids:null,ss:sesScope()}]}
+  const built=[];
+  for(const G of groups){const all=MN.ses.filter(x=>x.d===G.f.d&&x.co===G.f.co&&x.ad===G.f.ad),L=(G.ids?MN.sc.filter(r=>G.ids.includes(r.s)):scope()).filter(r=>r.pop==='ship');
+    if(!L.length)continue;const sub=G.ids&&G.ids.length<all.length?'-'+hsh(G.ids.slice().sort().join()).slice(0,2).toUpperCase():'';
+    built.push({f:G.f,L,sub,names:[...new Set(G.ss.map(x=>x.u+(x.rd>1?'R'+x.rd:'')))].join('-'),ss:G.ss})}
+  if(!built.length)return alert('No "Please Ship" scans in the ticked sessions / selected filters');
+  const open=built.flatMap(b=>b.ss).filter(x=>x.st!=='done');
+  if(open.length&&!confirm('Scanning is not complete for ('+[...new Set(open.map(x=>x.u+': '+x.st))].join(', ')+'). Download anyway?'))return;
+  if(built.length===1){const b=built[0];save(mfBuild(b.f,b.L,b.sub),mfName(b.f,b.sub,b.names));return}
+  const files={};for(const b of built){let n=mfName(b.f,b.sub,b.names),i=1;while(files[n])n=n.replace(/\.xlsx$/,'').replace(/_\d+$/,'')+'_'+(++i)+'.xlsx';files[n]=new Uint8Array(await mfBuild(b.f,b.L,b.sub).arrayBuffer())}
+  save(new Blob([fflate.zipSync(files,{level:1})],{type:'application/zip'}),`Manifests_${built.length}_groups_${dstamp()}.zip`)};
 
 /* ---------- open / init ---------- */
 function autoDsr(){if(S.d||!key()||MN.autoTried)return;MN.autoTried=1;const b=$('#cld');if(b){st('⏳ Loading DSR from cloud…');b.click()}}

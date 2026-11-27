@@ -100,3 +100,15 @@ v25: Manifest Scan tab has its own access-key box + 'Load DSR from cloud' (for m
 
 ## v26 · Manifest Scan (only this tab changed)
 Sessions = date + courier + pickup address + scanner. ▶ Start / ⏸ Pause / ▶ Resume / ✔ Scanning complete; starting another courier pauses the previous session of the same scanner, so you can switch and resume later. Every scan stores its date, courier, address and scanner. ③ has Date / Courier / Pickup address filters: Complete Excel follows the filters (extra columns Courier, Pickup Address, Scanned By + a sessions table in Summary); Manifest needs ONE date + ONE courier + ONE address (only that group's Please Ship AWBs). Scans sync to the other device automatically (tab refreshes every 15 s). "Delete selected date's scans" replaces "Start a new batch" (api/scan.js got the op clear-date; chunk ids now start with the date).
+
+## v27 (Manifest Scan)
+② shows only the current scanner's scans (switch to "All scanners" if needed). ③ has a Scanner filter (defaults to the scanner who is logged in by name) and a tick box on every session: ticked sessions are the only ones used by Manifest / Complete Excel (nothing ticked = everything in the filters). A manifest still needs one date + one courier + one pickup address; a partial selection gets its own Manifest No. suffix and the scanner names in the file name.
+
+## v28 (Manifest Scan)
+A session marked Scanning complete is locked (no Resume, cannot be started again; "done" always wins when syncing). "☑ Select all" / "☐ Clear selection" tick every session in the current filters (one date or All dates). Manifest for several groups = one ZIP with one manifest per date + courier + pickup address; Complete Excel covers all ticked sessions in one file.
+
+## v29 (Manifest Scan)
+Delete is admin-only (per-scan ✕, "Delete selected date's scans", delete saved address): add env var ADMIN_KEY in Vercel, then use "Admin login" in ①. Deleting a date writes a tombstone so mobile and computer both delete it. The scan log shows the last 3 scans and scrolls. api/scan.js enforces admin for del/clear ops (non-admin address saves can only add).
+
+## v30 (Manifest Scan)
+Round 2: when a session is complete, ▶ Start asks to open Round 2, 3... (the completed round stays locked). A scanner can remove his own wrong scan while the session is not complete; deleting a date, a saved address or completed scans is admin-only.
