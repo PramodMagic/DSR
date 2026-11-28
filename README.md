@@ -131,3 +131,6 @@ Last Mile: the courier dropdown id is now t3cou (it clashed with the step C "ove
 ## v35
 * The DSR loads from the cloud by itself when a device has none, and refreshes by itself when a newer one is saved (only if this device has no unsaved changes). Toggle: "Load / refresh the DSR from the cloud automatically" in Cloud save.
 * India Post sessions: a weight box appears with the result pop-up. After a Please Ship the weight is REQUIRED before the next scan (and before completing the session); for every other result it is optional. Weight is saved in grams (g / kg selector), synced to the other devices, shown in the log, in Complete Excel (Weight (g)) and in the manifest Remarks ("Weight: 450 g").
+
+## v36
+A repeated read of the same AWB keeps the 5-second ignore window open (a parcel held under a scanner counts once). Admin: "Remove accidental repeat reads" (chain rule, 10 s) and "Remove ALL re-scans of the selected date". Headings/legend explain Scans vs Re-scans.
