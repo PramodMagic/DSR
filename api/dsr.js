@@ -11,7 +11,8 @@ async function cmd(args) {
   if (!r.ok || j.error) throw new Error(j.error || 'Upstash HTTP ' + r.status);
   return j.result;
 }
-const keysOf = m => { const k = []; Object.entries((m && m.parts) || {}).forEach(([p, n]) => { for (let i = 0; i < n; i++) k.push(`dsr:${m.id}:${p}:${i}`) }); return k; };
+const keysOf = m => { const k = []; Object.entries((m && m.parts) || {}).forEach(([p, n]) => { const id = p === 'x' ? (m.xid || m.id) : m.id; for (let i = 0; i < n; i++) k.push(`dsr:${id}:${p}:${i}`) }); return k; };
+const delMany = async ks => { for (let i = 0; i < ks.length; i += 200) await cmd(['DEL', ...ks.slice(i, i + 200)]); };
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   try {
@@ -36,10 +37,16 @@ module.exports = async (req, res) => {
       const old = await cmd(['GET', 'dsr:meta']), m = b.meta;
       if (!m || !/^\d{10,}$/.test(String(m.id))) return res.status(400).json({ error: 'Bad meta' });
       await cmd(['SET', 'dsr:meta', JSON.stringify(m)]);
-      const ok = old ? keysOf(JSON.parse(old)) : []; if (ok.length) await cmd(['DEL', ...ok]);
-      return res.json({ ok: true });
+      const nk = new Set(keysOf(m)), ok = (old ? keysOf(JSON.parse(old)) : []).filter(k => !nk.has(k)); // keep chunks shared with the new version (reused original Excel)
+      await delMany(ok);
+      return res.json({ ok: true, removed: ok.length });
     }
-    if (b.op === 'clear') { const old = await cmd(['GET', 'dsr:meta']); const ks = old ? keysOf(JSON.parse(old)) : []; await cmd(['DEL', 'dsr:meta', ...ks]); return res.json({ ok: true }); }
+    if (b.op === 'gc') { // delete leftovers of failed / cancelled saves (older than 10 minutes, not part of the current version)
+      const m = await cmd(['GET', 'dsr:meta']), keep = new Set(m ? keysOf(JSON.parse(m)) : []); const cut = Date.now() - 600000; let cur = '0'; const del = [];
+      do { const r = await cmd(['SCAN', cur, 'MATCH', 'dsr:*', 'COUNT', '1000']); cur = String(r[0]); for (const k of r[1]) { if (keep.has(k)) continue; const mm = /^dsr:(\d{10,}):[dx]:\d+$/.exec(k); if (mm && Number(mm[1]) < cut) del.push(k); } } while (cur !== '0');
+      await delMany(del); return res.json({ ok: true, removed: del.length });
+    }
+    if (b.op === 'clear') { const old = await cmd(['GET', 'dsr:meta']); const ks = old ? keysOf(JSON.parse(old)) : []; await cmd(['DEL', 'dsr:meta']); await delMany(ks); return res.json({ ok: true }); }
     return res.status(400).json({ error: 'Unknown op' });
   } catch (e) { return res.status(500).json({ error: String(e.message || e) }); }
 };

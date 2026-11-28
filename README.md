@@ -118,3 +118,16 @@ Last Mile step D writes the courier remark into the chosen courier's own DSR col
 
 ## v32
 Last Mile: the courier dropdown id is now t3cou (it clashed with the step C "overwrite dates" checkbox id t3co, so that checkbox never worked).
+
+## v33
+* Cloud DSR save: the original Excel is uploaded once (reused while the file is unchanged), each save replaces the previous cloud copy, leftovers of failed saves are removed (api/dsr.js: gc). Optional "Keep scanners updated" auto-save.
+* Manifest Scan: scans are saved in small pieces in the browser (no more page freezes), camera ignores the same barcode for 8 s, "Scans" counts unique AWBs (re-scans in their own column), admin button "Remove accidental double scans", cloud scans no longer carry the full DSR row (details come from the DSR), DSR auto-update from the cloud while scanning and automatic matching of earlier "Not in DSR" scans.
+
+## v34
+* Voice: every scan result except "Please Ship" is spoken (Hindi or English, also "scanning not active / DSR not loaded"); test button + on/off in ②.
+* Admin: name + password login (Vercel: ADMIN_KEY for one shared password, or ADMIN_USERS="Ravi=pass1;Amit=pass2" for named admins), stays logged in after refresh (12 h), badge in the header, "Admin log" (who deleted what).
+* Header: ☁ Save DSR / ☁ Load DSR always visible (asks for the access key the first time).
+
+## v35
+* The DSR loads from the cloud by itself when a device has none, and refreshes by itself when a newer one is saved (only if this device has no unsaved changes). Toggle: "Load / refresh the DSR from the cloud automatically" in Cloud save.
+* India Post sessions: a weight box appears with the result pop-up. After a Please Ship the weight is REQUIRED before the next scan (and before completing the session); for every other result it is optional. Weight is saved in grams (g / kg selector), synced to the other devices, shown in the log, in Complete Excel (Weight (g)) and in the manifest Remarks ("Weight: 450 g").

@@ -16,6 +16,8 @@ header{position:sticky;top:0;z-index:20;background:var(--gl);-webkit-backdrop-fi
 #st{background:var(--acs);color:var(--ac);padding:4px 12px;border-radius:999px;font-weight:600;font-size:12.5px;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sp{flex:1}
 nav{display:flex;gap:8px;padding:16px 18px 4px;overflow-x:auto;max-width:1120px;margin:0 auto}
+@media(min-width:761px) and (max-width:1700px){header>button.g,header .opt summary{padding:7px 10px;font-size:13px}header .brand small{display:none}header{gap:6px}header #st{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#uod,#dl{padding:9px 13px;font-size:13.5px}}
+#cltop{font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#admtop.on{background:#16a34a;color:#fff;border-color:#16a34a}
 @media(min-width:761px){nav{flex-wrap:wrap;overflow:visible;max-width:1500px;gap:6px}nav button{padding:6px 10px 6px 7px;font-size:13px;gap:6px}nav button .n{width:22px;height:22px;font-size:11px}.navnote{max-width:1500px}}
 nav button{display:flex;align-items:center;gap:9px;background:var(--cd);color:var(--tx);border:1px solid var(--bd);border-radius:14px;box-shadow:var(--sh);padding:8px 15px 8px 9px;white-space:nowrap;font-weight:600;transition:transform .12s,box-shadow .15s}
 nav button:hover{transform:translateY(-1px)}
@@ -104,12 +106,13 @@ table.rp tr.det:nth-child(even) td{background:var(--cd)}
 </style></head><body>
 <header>
 <div class="brand"><span class="logo">📋</span><div><b>DSR Updater</b><small>Update your Excel DSR the smart way</small></div></div>
-<span id="st">Master not uploaded</span><span class="sp"></span>
+<span id="st">Master not uploaded</span><span id="cltop" class="mu"></span><span class="sp"></span>
 <label class="mu" title="Show/hide the long explanatory lines"><input type="checkbox" id="hlp"> ℹ️ Help</label>
 <select id="lang" title="Language"><option value="en">English</option><option value="hi">हिन्दी</option><option value="zh">中文</option></select>
 <button class="g ico" id="theme" title="Dark / Light mode">🌙</button>
 <button class="g" id="undo">↩ Undo</button>
 <details class="opt"><summary>⚙ Options</summary><div class="optbox"><label title="Keeps the original file's other sheets, summary/pivot and formulas"><input type="checkbox" id="keep" checked> Keep other sheets/pivot</label><label><input type="checkbox" id="zf" checked> Fill empty cells with 0 (except formula columns)</label></div></details>
+<button class="g" id="tsave" title="Save the DSR to the cloud (Vercel + Upstash)">☁ Save DSR</button><button class="g" id="tload" title="Load the DSR from the cloud">☁ Load DSR</button><button class="g" id="admtop" title="Admin login (needed to delete)">👑 Admin</button>
 <button id="uod" class="big">🔄 Update Order Data</button><button id="dl" title="Download the final DSR">⬇ Download DSR</button></header>
 <div id="topbar"></div>
 <div id="toast" style="display:none"></div>
@@ -207,7 +210,7 @@ async function rd(f,x){
 function snap(extra){const c=C(),ix=[...new Set([c.fr,c.rm,...(extra||[])].filter(i=>i>=0&&i<S.d.H.length))];
   S.hist.push({len:S.d.rows.length,hl:S.d.H.length,ns:S.ns,F:{...S.d.F},cf:{...(S.d.colFmt||{})},cols:ix.map(i=>[i,S.d.rows.map(r=>r[i])])});if(S.hist.length>5)S.hist.shift()}
 $('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return alert('Nothing to undo');const d=S.d;d.rows.length=h.len;d.H.length=h.hl;d.rows.forEach(r=>r.length=h.hl);h.cols.forEach(([i,a])=>{for(let k=0;k<h.len;k++)d.rows[k][i]=a[k]});S.ns=h.ns;if(h.F)d.F=h.F;d.colFmt=h.cf||{};refresh()};
-function refresh(){document.body.classList.toggle('has-master',!!S.d);$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;fillDsr();saveDSR()}
+function refresh(){S.rev=(S.rev||0)+1;S.revT=Date.now();document.body.classList.toggle('has-master',!!S.d);$('#st').textContent=`${S.d.name} · ${S.d.rows.length} rows · ${S.d.H.length} columns`;fillDsr();saveDSR()}
 function fillDsr(){if(!S.d)return;$$('select.dsr').forEach(s=>{const o=s.value;s.innerHTML=op(S.d.H,-1,(s.dataset.ph?'<option value="-1">— Select —</option>':'')+(s.dataset.new?'<option value="new">➕ New column</option>':''));if([...s.options].some(x=>x.value===o))s.value=o;else if(!s.dataset.new)s.selectedIndex=0;s.dispatchEvent(new Event('change'))});
   const G={cw:/^(process ?by|warehouse)$/i,cp:/^payment ?status$/i,cf:/^final ?remark$/i,cr:/^remark$/i,ca:/^(courier|courier ?name|awb)$/i,t8dc:/^dispatch from indian warehouse/i,ci:/^shopperr invoice number$/i};
   Object.keys(G).forEach(id=>{const e=$('#'+id);if(!e||+e.value>=0)return;const i=S.d.H.findIndex(h=>G[id].test(String(h).replace(/\s+/g,' ').trim()));if(i>=0){e.value=String(i);e.dispatchEvent(new Event('change'))}})}
@@ -677,6 +680,7 @@ async function download(){if(!S.d)return alert('Master not uploaded');if($('#fxa
     if(bad.length===Rs.length){if(!confirm('The Report Dashboard columns are not selected (tab 7).\n\nOK = download without Report Dashboard\nCancel = stop and select the columns'))return}
     else{if(bad.length&&!confirm('These reports will not be in the Report Dashboard (columns not selected): '+bad.map(r=>r.title).join(', ')+'\n\nOK = download with the rest\nCancel = stop and select the columns'))return;dash=rdModelAll(Rs)}}
   try{const prog=(i,n)=>{$('#st').textContent=`⏳ Building Excel... ${i.toLocaleString()} / ${n.toLocaleString()} rows`};
+    if($('#keep').checked&&!S.mfile&&S.cloudId&&!confirm('This DSR was loaded from the cloud without the original Excel, so the other sheets / pivot of your original file will NOT be in this download.\n\nOK = download anyway (data sheet only)\nCancel = stop; then press ☁ Load DSR in the top bar to load the full copy first'))return;
     const keep=$('#keep').checked&&S.mfile&&S.d.dataPath&&!/\.csv$/i.test(S.mfile.name);
     let parts;const plain=()=>DSRCore.writeXlsx(S.d,{sheet:S.d.sheetName||'DSR',zero:$('#zf').checked,dash,onProgress:prog});try{parts=keep?await DSRCore.writeXlsxPreserve(S.d,()=>S.mfile.stream(),{zero:$('#zf').checked,dash,onProgress:prog,onCopy:n=>{$('#st').textContent='⏳ Copying original sheets... '+Math.round(n/1048576)+' MB'}}):await plain()}catch(e){if(!keep)throw e;parts=await plain();setTimeout(()=>alert('Note: the original Excel sheets could not be copied ('+(e&&e.message||e)+'), so a plain DSR (data sheet only) was downloaded. To keep the original sheets, select the Master Excel file again in Step 1 and download again.'),300)}
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='DSR_Final_'+new Date().toISOString().slice(0,10)+'.xlsx';document.body.append(a);a.click();a.remove();markDone(7);if($('#cau')&&$('#cau').checked&&window.cloudSave)window.cloudSave(true);setTimeout(()=>URL.revokeObjectURL(a.href),120000)}
@@ -716,16 +720,16 @@ function t8run(){const F=S.f.t8;if(!F||!S.d)return alert('Upload the shipped-ord
 $('#t8go').onclick=t8run;
 /* ---------- Saved DSR (IndexedDB) ---------- */
 const DB={o(){return this._o||(this._o=new Promise((res,rej)=>{const q=indexedDB.open('dsr_updater',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)}))},async tx(m,f){const db=await this.o();return new Promise((res,rej)=>{const t=db.transaction('kv',m),r=f(t.objectStore('kv'));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error)})},set(k,v){return this.tx('readwrite',s=>s.put(v,k))},get(k){return this.tx('readonly',s=>s.get(k))},del(k){return this.tx('readwrite',s=>s.delete(k))}};
-let svT=0;function saveDSR(){if(!S.d)return;clearTimeout(svT);svT=setTimeout(async()=>{try{await DB.set('dsr',{d:S.d,mfile:S.mfile||null,ns:S.ns||0});window.__saved=Date.now()}catch(e){console.warn('DSR save failed',e)}},1500)}
+let svT=0;function saveDSR(){if(!S.d)return;clearTimeout(svT);svT=setTimeout(async()=>{try{await DB.set('dsr',{d:S.d,mfile:S.mfile||null,ns:S.ns||0,cloudId:S.cloudId||''});window.__saved=Date.now()}catch(e){console.warn('DSR save failed',e)}},1500)}
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 (async()=>{try{const sv=await DB.get('dsr');if(!sv||!sv.d||S.d)return;S.d=sv.d;S.mfile=sv.mfile||null;S.ns=sv.ns||0;S.hist=[];S.f={};S.fo={};S.rdAdded=false;rdStatus();resetSteps();fillDsr();
   $('#mi').innerHTML='💾 Saved DSR restored after refresh: <b>'+esc(S.d.name)+'</b> — '+S.d.rows.length.toLocaleString()+' rows, '+S.d.H.length+' columns. <button class="g" id="mclr">🗑 Remove saved DSR</button>';
-  $('#cfg').classList.remove('off');refresh();spDefaults();fxDefaults();rdDefaults();markDone(1);$('#mclr').onclick=async()=>{if(confirm('Remove the saved DSR from this browser?')){await DB.del('dsr');location.reload()}}}catch(e){console.warn('restore failed',e)}})();
+  $('#cfg').classList.remove('off');refresh();S.cloudId=sv.cloudId||'';S.loadRev=S.rev;spDefaults();fxDefaults();rdDefaults();markDone(1);$('#mclr').onclick=async()=>{if(confirm('Remove the saved DSR from this browser?')){await DB.del('dsr');location.reload()}}}catch(e){console.warn('restore failed',e)}finally{window.__restored=true}})();
 /* ---------- Cloud save (Vercel /api/dsr -> Upstash) ---------- */
-(function(){const CK='dsr_cloud_key',key=()=>{try{return localStorage.getItem(CK)||''}catch(e){return ''}},st=h=>{const e=$('#cst');if(e)e.innerHTML=h};
+(function(){const CK='dsr_cloud_key',key=()=>{try{return localStorage.getItem(CK)||''}catch(e){return ''}},st=h=>{const e=$('#cst');if(e)e.innerHTML=h;const t=$('#cltop');if(t)t.textContent=String(h).replace(/<[^>]+>/g,'').slice(0,70)};
   const anchor=$('#mi').closest('.card')||$('#p1');
-  anchor.insertAdjacentHTML('afterend','<div class="card" id="cloud"><h3>☁ Cloud save (Vercel + Upstash)</h3><div class="row"><label class="mu">Access key <input type="password" id="ck" size="22" placeholder="DSR_KEY from Vercel"></label><button class="g" id="cks">Save key</button><button id="csv">☁ Save DSR to cloud</button><button class="g" id="cld">☁ Load DSR from cloud</button></div><div class="row"><label class="mu"><input type="checkbox" id="cau"> Save to cloud automatically when I download the final DSR (last step). Otherwise use the Save button whenever you want.</label><label class="mu"><input type="checkbox" id="cxl" checked> Also save the original Excel (needed for “keep original sheets” download)</label></div><div id="cst" class="mu"></div></div>');
-  $('#ck').value=key();try{$('#cau').checked=localStorage.getItem('dsr_cloud_auto')!=='0'}catch(e){}$('#cau').onchange=()=>{try{localStorage.setItem('dsr_cloud_auto',$('#cau').checked?'1':'0')}catch(e){}};
+  anchor.insertAdjacentHTML('afterend','<div class="card" id="cloud"><h3>☁ Cloud save (Vercel + Upstash)</h3><div class="row"><label class="mu">Access key <input type="password" id="ck" size="22" placeholder="DSR_KEY from Vercel"></label><button class="g" id="cks">Save key</button><button id="csv">☁ Save DSR to cloud</button><button class="g" id="cld">☁ Load DSR from cloud</button></div><div class="row"><label class="mu"><input type="checkbox" id="cau"> Save to cloud automatically when I download the final DSR (last step). Otherwise use the Save button whenever you want.</label><label class="mu"><input type="checkbox" id="cal" checked> Load / refresh the DSR from the cloud automatically (no need to press Load)</label><label class="mu"><input type="checkbox" id="clv"> Keep scanners updated: save the DSR to the cloud automatically 2 minutes after it changes</label><label class="mu"><input type="checkbox" id="cxl" checked> Also save the original Excel (needed for “keep original sheets” download)</label></div><div id="cst" class="mu"></div></div>');
+  $('#ck').value=key();try{$('#clv').checked=localStorage.getItem('dsr_cloud_live')==='1'}catch(e){}$('#clv').onchange=()=>{try{localStorage.setItem('dsr_cloud_live',$('#clv').checked?'1':'0')}catch(e){}};setInterval(()=>{if($('#clv').checked&&S.d&&key()&&S.rev!==S.savedRev&&Date.now()-(S.revT||0)>120000&&window.cloudSave)window.cloudSave(true)},20000);try{$('#cau').checked=localStorage.getItem('dsr_cloud_auto')!=='0'}catch(e){}$('#cau').onchange=()=>{try{localStorage.setItem('dsr_cloud_auto',$('#cau').checked?'1':'0')}catch(e){}};
   async function api(op,body){const r=await fetch('/api/dsr',{method:'POST',headers:{'Content-Type':'application/json','x-dsr-key':key()},body:JSON.stringify({op,...(body||{})})});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||('HTTP '+r.status+(r.status===404?' (api/dsr not deployed — open the Vercel site, not a local file)':'')));return j}
   const gz=b=>new Response(b.stream().pipeThrough(new CompressionStream('gzip'))).blob(),gunz=b=>new Response(b.stream().pipeThrough(new DecompressionStream('gzip'))).text(),
     b64=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(b)}),unb64=t=>fetch('data:application/octet-stream;base64,'+t).then(r=>r.blob());
@@ -734,17 +738,35 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}ca
   let busy=false;
   window.cloudSave=async function(auto){if(busy||!S.d)return;if(!key()){if(auto)return st('ℹ Not saved to the cloud yet: enter the access key above and press Save DSR to cloud');return alert('Enter the access key first (the DSR_KEY you set in Vercel)')}busy=true;
     try{st('⏳ Preparing…');const id=String(Date.now()),js=JSON.stringify({d:S.d,ns:S.ns||0},function(k,v){const o=this[k];return o instanceof Date?{__d:o.getTime()}:v}),blob=await gz(new Blob([js])),parts={};
-      parts.d=await putBlob(id,'d',blob,'DSR data');let note='';
-      if($('#cxl').checked&&S.mfile){if(S.mfile.size>30e6)note=' (original Excel skipped: bigger than 30 MB)';else parts.x=await putBlob(id,'x',S.mfile,'Original Excel')}
-      await api('commit',{meta:{id,savedAt:Date.now(),name:S.d.name,rows:S.d.rows.length,cols:S.d.H.length,parts,fname:S.mfile?S.mfile.name:''}});
-      st(`✅ Saved to cloud ${new Date().toLocaleString()} — ${S.d.rows.length.toLocaleString()} rows, ${(blob.size/1048576).toFixed(1)} MB compressed${note}`)}
+      parts.d=await putBlob(id,'d',blob,'DSR data');let note='',xid='',sx=0,old=null;
+      try{old=(await api('meta')).meta}catch(e){}
+      if($('#cxl').checked&&S.mfile){
+        if(old&&old.parts&&old.parts.x&&old.fname===S.mfile.name&&old.fsize===S.mfile.size){parts.x=old.parts.x;xid=old.xid||old.id;sx=old.sizeX||S.mfile.size;note=' · original Excel unchanged, not uploaded again'}
+        else if(S.mfile.size>100e6)note=' (original Excel skipped: bigger than 100 MB)';
+        else{parts.x=await putBlob(id,'x',S.mfile,'Original Excel');xid=id;sx=S.mfile.size}}
+      await api('commit',{meta:{id,xid,savedAt:Date.now(),name:S.d.name,rows:S.d.rows.length,cols:S.d.H.length,parts,fname:S.mfile?S.mfile.name:'',fsize:S.mfile?S.mfile.size:0,sizeD:blob.size,sizeX:sx}});
+      S.cloudId=id;S.loadRev=S.rev;S.savedRev=S.rev;api('gc').catch(()=>{});
+      st(`✅ Saved to cloud ${new Date().toLocaleString()} — ${S.d.rows.length.toLocaleString()} rows, ${(blob.size/1048576).toFixed(1)} MB data${sx?' + '+(sx/1048576).toFixed(1)+' MB original Excel':''}${old?'. The previous cloud copy was replaced':''}${note}`)}
     catch(e){st('❌ Cloud save failed: '+esc(e.message))}busy=false};
-  async function cloudLoad(){try{if(!key())return alert('Enter the access key first');const m=(await api('meta')).meta;if(!m)return alert('Nothing is saved in the cloud yet');if(S.d&&!confirm('This replaces the DSR that is open now. Continue?'))return;
+  async function cloudLoad(opt){opt=opt&&!(opt instanceof Event)?opt:{};try{if(!key())return alert('Enter the access key first');const m=(await api('meta')).meta;if(!m)return alert('Nothing is saved in the cloud yet');if(S.d&&!opt.silent&&!confirm('This replaces the DSR that is open now. Continue?'))return;
     const d=JSON.parse(await gunz(await getBlob(m.id,'d',m.parts.d,'DSR data')),(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===1&&'__d' in v?new Date(v.__d):v);
-    S.mfile=m.parts.x?new File([await getBlob(m.id,'x',m.parts.x,'Original Excel')],m.fname||'DSR.xlsx'):null;
+    S.mfile=m.parts.x&&!opt.skipX?new File([await getBlob(m.xid||m.id,'x',m.parts.x,'Original Excel')],m.fname||'DSR.xlsx'):(S.mfile&&m.fname===S.mfile.name&&m.fsize===S.mfile.size?S.mfile:null);
     S.d=d.d;S.ns=d.ns||0;S.hist=[];S.f={};S.fo={};S.rdAdded=false;rdStatus();resetSteps();fillDsr();
     $('#mi').innerHTML='☁ DSR loaded from cloud: <b>'+esc(S.d.name)+'</b> — '+S.d.rows.length.toLocaleString()+' rows, '+S.d.H.length+' columns (saved '+new Date(m.savedAt).toLocaleString()+')';
-    $('#cfg').classList.remove('off');refresh();spDefaults();fxDefaults();rdDefaults();markDone(1);st('✅ Loaded from cloud')}catch(e){st('❌ Cloud load failed: '+esc(e.message))}}
+    $('#cfg').classList.remove('off');refresh();S.cloudId=m.id;S.loadRev=S.rev;spDefaults();fxDefaults();rdDefaults();markDone(1);st('✅ Loaded from cloud '+new Date().toLocaleTimeString())}catch(e){st('❌ Cloud load failed: '+esc(e.message));if(opt.silent)throw e}}
+  window.cloudLoad=cloudLoad;window.cloudMeta=async()=>(await api('meta')).meta;
+  let ab=false;
+  async function autoSync(){if(ab||busy||window.__dsrBusy||!$('#cal').checked||!key())return;ab=true;
+    try{const m=await window.cloudMeta();if(!m)return;
+      if(!S.d){st('⬇ Loading the DSR from the cloud automatically…');await cloudLoad({silent:true,skipX:true});st('✅ DSR loaded automatically '+new Date().toLocaleTimeString())}
+      else if(S.cloudId!==m.id&&S.rev===S.loadRev){st('⬇ A newer DSR was saved, updating…');await cloudLoad({silent:true,skipX:true});st('✅ DSR updated automatically '+new Date().toLocaleTimeString())}}
+    catch(e){}finally{ab=false}}
+  window.cloudAutoSync=autoSync;
+  try{$('#cal').checked=localStorage.getItem('dsr_cloud_autoload')!=='0'}catch(e){}$('#cal').onchange=()=>{try{localStorage.setItem('dsr_cloud_autoload',$('#cal').checked?'1':'0')}catch(e){}if($('#cal').checked)autoSync()};
+  (async()=>{for(let i=0;i<120&&!window.__restored;i++)await new Promise(r=>setTimeout(r,500));autoSync()})();
+  setInterval(()=>{if(!document.hidden)autoSync()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(autoSync,500)});
+  const askKey=()=>{if(key())return true;const k=prompt('Enter the access key (the DSR_KEY you set in Vercel):');if(k&&k.trim()){try{localStorage.setItem(CK,k.trim())}catch(e){}$('#ck').value=k.trim();return true}return false};
+  $('#tsave').onclick=()=>{if(!S.d)return alert('Upload the DSR first');if(askKey())window.cloudSave()};$('#tload').onclick=()=>{if(askKey())cloudLoad()};
   $('#csv').onclick=()=>window.cloudSave();$('#cld').onclick=cloudLoad;
   $('#cks').onclick=async()=>{try{localStorage.setItem(CK,$('#ck').value.trim())}catch(e){}try{const m=(await api('meta')).meta;st(m?`✅ Connected. Cloud copy: <b>${esc(m.name)}</b>, ${m.rows.toLocaleString()} rows, saved ${new Date(m.savedAt).toLocaleString()}`:'✅ Connected. Nothing saved in the cloud yet')}catch(e){st('❌ '+esc(e.message))}};
   if(key())api('meta').then(r=>{const m=r.meta;if(m)st(`☁ Cloud copy found: <b>${esc(m.name)}</b>, ${m.rows.toLocaleString()} rows, saved ${new Date(m.savedAt).toLocaleString()}`)}).catch(()=>{})})();
@@ -770,7 +792,7 @@ const POP={
 const ORDER=['ship','ref','unp','df','na','shp','dup','chk'];
 const SHIPSET=new Set([PH.B9,PH.DP,'FM Intrasit',PH.INP,PH.NPC,'Reached AT India WH',PH.WNA].map(canon));
 const SHIPPED=new Set(['Last Mile Intrasit','Delivered to end buyer'].map(canon));
-const MN={sc:[],ses:[],tomb:{},seen:new Map(),H:null,fmt:{dc:[],cf:{}},bid:'',chunks:new Set(),idx:null,cam:null,last:{v:'',t:0},tm:0,syT:0,sy:false};
+const MN={sc:[],ses:[],tomb:{},seen:new Map(),camT:new Map(),recent:new Map(),dirty:new Set(),H:null,fmt:{dc:[],cf:{}},bid:'',chunks:new Set(),idx:null,cam:null,last:{v:'',t:0},tm:0,syT:0,sy:false};
 const LS={g(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},s(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const key=()=>{try{return localStorage.getItem('dsr_cloud_key')||''}catch(e){return ''}};
 
@@ -783,6 +805,7 @@ const css=document.createElement('style');css.textContent=`
 .mnc{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.mnc span{padding:5px 12px;border-radius:999px;color:#fff;font-weight:700;font-size:12.5px}
 #mnin{font-size:20px;padding:12px 14px;flex:1;min-width:220px}
 .mnsb{border-radius:14px;padding:12px 14px;margin:10px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#fff}.mnsb b{font-size:15px}.mnsb .x{flex:1;min-width:200px;font-size:13px}.mnsb button{background:#fff;color:#111;border:0}.mnst{display:inline-block;padding:2px 10px;border-radius:999px;color:#fff;font-weight:700;font-size:12px}
+#mnwt .mnsb{background:#0f766e}#mnwt input,#mnwt select{padding:8px 10px;border-radius:8px;border:0;font-size:18px;width:120px}#mnwt select{width:70px}
 .mnt .mnb{white-space:normal;display:inline-block}.mnt td,.mnt th{padding:5px 8px;border-bottom:1px solid var(--bd);text-align:left;font-size:12.5px}.mnt{border-collapse:collapse;width:100%}
 @media(max-width:760px){header{position:static}nav{flex-wrap:wrap;overflow:visible}nav button{flex:1 1 46%;padding:8px 10px}.navnote{display:none}}
 `;document.head.append(css);
@@ -812,15 +835,19 @@ $('#p9').innerHTML=`
 <div class="row"><button id="mn_adnew" class="g">➕ Add new address</button><button class="g" id="mn_addl">🗑 Delete selected address</button></div>
 <div id="mn_adbox" style="display:none"><textarea id="mn_adtx" rows="3" placeholder="Type the full pickup address once. It is saved in this browser and can be selected next time." style="width:100%;font:inherit;border:1px solid var(--bd);border-radius:10px;padding:8px;background:var(--cd2);color:var(--tx)"></textarea><div class="row"><button id="mn_adsv">💾 Save address</button><button class="g" id="mn_adcn">Cancel</button></div></div>
 <div class="mu" id="mn_adshow"></div>
-<div class="row" id="mn_admrow"><label class="mu">Admin (needed to delete saved data / dates / addresses) <input type="password" id="mn_admk" placeholder="Admin password" size="16" autocomplete="off"></label><button class="g" id="mn_admin">🔓 Admin login</button><span class="mu" id="mn_admst"></span></div>
+<div class="row" id="mn_admrow"><span class="mu" id="mn_admst"></span><button class="g" id="mn_admin">👑 Admin login</button><button class="g" id="mn_admlog" style="display:none">📜 Admin log</button></div>
+<div class="row"><label class="mu"><input type="checkbox" id="mn_dsrauto" checked> Update the DSR from the cloud automatically while scanning (new entries are picked up; downloads the DSR only when a newer one was saved)</label><button class="g" id="mn_dsrnow">🔄 Update DSR now</button><span class="mu" id="mn_dsrst"></span></div>
 <div class="row"><button class="big" id="mn_start">▶ Start / resume scanning</button></div>
 <div id="mn_cur"></div>
 <div class="mu hint">Pickup boy name, mobile, pickup time and vehicle no. are left blank on the manifest, fill them by hand.</div></div>
 
 <div class="card"><h3>② Scan AWB</h3>
+<div class="row"><label class="mu"><input type="checkbox" id="mn_voice" checked> 🔊 Voice alert for every result except Please Ship</label><select id="mn_vlang" title="Voice language"><option value="hi">हिन्दी</option><option value="en">English</option></select><button class="g" id="mn_vtest">🔊 Test voice</button></div>
 <div class="row"><input type="text" id="mnin" placeholder="Scan / type AWB and press Enter" autocomplete="off" autocapitalize="off" spellcheck="false"><button id="mngo">Scan</button><button class="g" id="mncam">📷 Camera scan</button></div>
 <div class="row"><video id="mnvid" playsinline muted></video></div><div class="mu" id="mncm"></div>
-<div id="mnlast"></div><div class="mnc" id="mncnt"></div>
+<div id="mnlast"></div>
+<div id="mnwt" style="display:none"><div class="mnsb"><b id="mnwl">⚖ Weight</b><input type="number" id="mnw" inputmode="decimal" min="0" step="any" placeholder="Weight"><select id="mnwu"><option value="g">g</option><option value="kg">kg</option></select><button id="mnws">Save weight</button><button class="g" id="mnwk">Skip</button></div></div>
+<div class="mnc" id="mncnt"></div>
 <div class="row"><label class="mu">Show <select id="mn_lv"><option value="me">Only my scans (scanner name in ①)</option><option value="all">All scanners</option></select></label></div><h4 style="margin:10px 0 4px">Scan log (selected date, latest on top — last 3 shown, scroll for more)</h4><div class="sc" id="mnlog" style="max-height:60vh"><table class="mnt" id="mnt"></table></div></div>
 
 <div class="card"><h3>③ Download &amp; manage</h3>
@@ -831,7 +858,7 @@ $('#p9').innerHTML=`
 <label class="fld"><span>Scanner</span><select id="mn_fu"></select></label></div>
 <h4 style="margin:10px 0 4px">Sessions <span class="mu" style="font-weight:400">— tick the sessions you want in the download</span></h4><div class="row"><button class="g" id="mn_pall">☑ Select all (as per the filters above)</button><button class="g" id="mn_pclr">☐ Clear selection</button></div><div class="mu" id="mn_sel"></div><div class="sc" style="max-height:34vh"><table class="mnt" id="mn_st"></table></div>
 <div class="row"><button class="big" id="mnxl">⬇ Complete Excel (sheet per pop-up)</button><button class="big" id="mnmf">⬇ Manifest (Please Ship)</button></div>
-<div class="row"><button class="g" id="mnsy">☁ Sync scans (cloud)</button><button class="g" id="mndel">🗑 Delete selected date's scans</button><span class="mu" id="mnsyst"></span></div>
+<div class="row"><button class="g" id="mnsy">☁ Sync scans (cloud)</button><button class="g" id="mndel">🗑 Delete selected date's scans</button><button class="g" id="mnclean" title="Same AWB scanned again by the same scanner within 5 seconds">🧹 Remove accidental double scans</button><span class="mu" id="mnsyst"></span></div>
 <div class="mu hint">Complete Excel = the selected date (all or one courier / address). Manifest = ONE date + ONE courier + ONE pickup address only, so no other courier's data comes in. Scans made on the mobile reach the computer automatically (this tab refreshes every 15 seconds; or press Sync). Save the access key on both devices (Step 1 → Cloud save).</div>
 </div>`;
 
@@ -888,38 +915,58 @@ const snapV=v=>v instanceof Date?v.getTime()/86400000+25569:(v&&typeof v==='obje
 const rebuildSeen=()=>{MN.seen=new Map();MN.sc.forEach(r=>{if(r.pop!=='dup'&&!MN.seen.has(r.k))MN.seen.set(r.k,r)})};
 const dateOf=t=>{const d=new Date(t),p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())};
 const todayS=()=>dateOf(new Date().toISOString());
-const ADM=()=>{try{return sessionStorage.getItem('mn_admin')||''}catch(e){return ''}};
+const ADMS=()=>{try{const o=JSON.parse(localStorage.getItem('mn_adm')||sessionStorage.getItem('mn_adm')||'null');if(!o||!o.k||Date.now()>o.x){localStorage.removeItem('mn_adm');sessionStorage.removeItem('mn_adm');return null}return o}catch(e){return null}};
+const ADM=()=>{const o=ADMS();return o?o.k:''},ADU=()=>{const o=ADMS();return o?o.u:''};
 const hsh=x=>{let h=5381;for(let i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i))>>>0;return h.toString(36)};
 const sidOf=(d,co,ad,u)=>hsh((d+'|'+co+'|'+ad+'|'+u).toLowerCase());
 const me=()=>($('#mn_user').value||'').trim();
 const sameU=(a,b)=>String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();
 const cur=()=>{const u=me();return u?MN.ses.find(x=>x.st==='active'&&sameU(x.u,u)):null};
+const rowOf=r=>{if(r.row)return r.row;if(r.pop==='na'||r.pop==='dup'||!S.d||col('awb')<0)return null;const ri=index().get(r.k);if(ri==null)return null;return r.row=S.d.rows[ri].map(snapV)};
 const fix=r=>{r.d=r.d||dateOf(r.t);r.co=r.co||'(not set)';r.ad=r.ad||'(not set)';r.u=r.u||'';return r};
 const box=(bg,t,sub)=>`<div style="background:${bg};color:#fff;border-radius:14px;padding:14px 16px;margin:8px 0;font-weight:700">⚠ ${esc(t)}<div style="font-weight:400;margin-top:4px">${sub}</div></div>`;
+const isIP=co=>/india\s*-?\s*post/i.test(co||'');
+const needW=cs=>{for(let i=MN.sc.length-1;i>=Math.max(0,MN.sc.length-400);i--){const r=MN.sc[i];if(r.s===cs.id&&r.wq&&!r.w)return r}return null};
+function showW(rec){const p=$('#mnwt');if(!p)return;if(!rec||!isIP(rec.co)){p.style.display='none';MN.wrec=null;return}const must=!!rec.wq&&!rec.w;if(rec.w){p.style.display='none';return}
+  MN.wrec=rec;$('#mnwl').textContent='⚖ Weight of '+rec.awb+(must?' — required before the next scan':' — optional');$('#mnwk').style.display=must?'none':'';$('#mnw').value='';p.style.display='';if(must)setTimeout(()=>$('#mnw').focus(),50)}
+function saveW(){const rec=MN.wrec;if(!rec)return;const v=parseFloat($('#mnw').value);if(!(v>0))return alert('Enter the weight (a number)');const g=Math.round(v*($('#mnwu').value==='kg'?1000:1));
+  if(g<1||g>100000)return alert('The weight looks wrong ('+g+' g). Check the number and the unit.');
+  rec.w=g;rec.v=Date.now();rec.sy=0;persist();pushSoon();$('#mnwt').style.display='none';MN.wrec=null;render();$('#mnin').focus()}
+$('#mnws').onclick=saveW;$('#mnwk').onclick=()=>{$('#mnwt').style.display='none';MN.wrec=null;$('#mnin').focus()};$('#mnw').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveW()}});
 function doScan(raw,src){const awb=String(raw||'').trim();if(!awb)return;
   if(!S.d||col('awb')<0||col('pay')<0||col('fr')<0){const m=!S.d?'DSR is not loaded. Save the access key above and press "Load DSR from cloud" (or upload the Master in Step 1).':'Select the AWB, Payment Status and Final Remark columns first (⚙ DSR columns used for scanning).';
-    $('#mnlast').innerHTML=box('#dc2626',m,'Scanned: '+esc(awb)+' (not saved)');beep('na');return}
+    $('#mnlast').innerHTML=box('#dc2626',m,'Scanned: '+esc(awb)+' (not saved)');beep('na');say('nodsr');return}
   const cs=cur();if(!cs){const p=me()&&MN.ses.some(x=>sameU(x.u,me())&&x.st==='paused');
-    $('#mnlast').innerHTML=box('#dc2626',p?'Scanning is paused':'No active scanning session',(p?'Press ▶ Resume in ① (or in the Sessions list).':'Enter your name, choose courier + pickup address and press ▶ Start scanning (①).')+' Scanned: '+esc(awb)+' (not saved)');beep('na');return}
-  const k=nm(awb),t=new Date().toISOString(),B={d:cs.d,co:cs.co,ad:cs.ad,u:cs.u,s:cs.id};let rec;
+    $('#mnlast').innerHTML=box('#dc2626',p?'Scanning is paused':'No active scanning session',(p?'Press ▶ Resume in ① (or in the Sessions list).':'Enter your name, choose courier + pickup address and press ▶ Start scanning (①).')+' Scanned: '+esc(awb)+' (not saved)');beep('na');say('nosess');return}
+  const nk0=nm(awb);if(Date.now()-(MN.recent.get(nk0)||0)<3000){$('#mnlast').innerHTML=box('#475569','Same AWB ignored','Scanned a moment ago, not counted again: '+esc(awb));return}
+  const pw=needW(cs);if(pw){$('#mnlast').innerHTML=box('#dc2626','Enter the weight first','The weight of '+esc(pw.awb)+' is not entered yet. Scanned now: '+esc(awb)+' (not saved)');beep('na');say('weight');showW(pw);return}
+  MN.lastScanT=Date.now();const k=nm(awb),t=new Date().toISOString(),B={d:cs.d,co:cs.co,ad:cs.ad,u:cs.u,s:cs.id};let rec;
   if(!MN.H){MN.H=S.d.H.slice();const cf={};Object.keys(S.d.colFmt||{}).forEach(c=>cf[c]=S.d.colFmt[c]);MN.fmt={dc:[...(S.d.dateCols||[])],cf}}
   const first=MN.seen.get(k);
   if(first)rec={k,awb,t,pop:'dup',fp:first.pop,...B};
   else{let ri=index().get(k);if(ri!=null&&nm(S.d.rows[ri][col('awb')])!==k)ri=null;if(ri==null){MN.ix=null;ri=index().get(k)}if(ri==null)rec={k,awb,t,pop:'na',...B};else{const row=S.d.rows[ri];rec={k,awb,t,pop:classify(row),row:row.map(snapV),...B}}MN.seen.set(k,rec)}
-  MN.sc.push(rec);persist();render();popup(rec);metaPush();pushSoon()}
+  if(isIP(cs.co)&&rec.pop==='ship')rec.wq=1;MN.recent.set(k,Date.now());MN.sc.push(rec);persist();render();popup(rec);showW(rec);metaPush();pushSoon()}
 
 /* ---------- popup / sound ---------- */
 let audio;function audioOn(){try{audio=audio||new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume()}catch(e){}}
 ['click','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,audioOn,{passive:true}));
 function tone(f,t0,d,type){const o=audio.createOscillator(),g=audio.createGain();o.type=type||'square';o.frequency.value=f;o.connect(g);g.connect(audio.destination);const T=audio.currentTime+t0;g.gain.setValueAtTime(.0001,T);g.gain.exponentialRampToValueAtTime(.7,T+.01);g.gain.setValueAtTime(.7,T+d-.02);g.gain.exponentialRampToValueAtTime(.0001,T+d);o.start(T);o.stop(T+d+.02)}
 function beep(p){try{audioOn();if(p==='ship'){tone(1200,0,.18)}else if(p==='na'||p==='dup'||p==='shp'){tone(600,0,.2);tone(600,.3,.2)}else{tone(300,0,.35);tone(300,.45,.35);tone(300,.9,.35)}}catch(e){}try{navigator.vibrate&&navigator.vibrate(p==='ship'?80:[200,80,200,80,200])}catch(e){}}
+const VOICE={hi:{ref:'रिफंड ऑर्डर. पैकेट मत भेजो.',unp:'अनपेड ऑर्डर. पैकेट मत भेजो.',df:'डी एफ ऑर्डर. पैकेट मत भेजो.',na:'डी एस आर में नहीं है. पैकेट को अलग रखो.',shp:'यह पहले ही शिप हो चुका है.',dup:'पहले से स्कैन हो चुका है.',chk:'कोई नियम नहीं मिला. पैकेट को अलग रखकर जाँच करो.',nosess:'स्कैनिंग चालू नहीं है. यह स्कैन सेव नहीं हुआ.',nodsr:'डी एस आर लोड नहीं है. यह स्कैन सेव नहीं हुआ.',weight:'पहले वज़न डालो.'},
+ en:{ref:'Refunded order. Do not ship.',unp:'Unpaid order. Do not ship.',df:'D F order. Do not ship.',na:'Not in the D S R. Keep this packet aside.',shp:'Already shipped.',dup:'Already scanned.',chk:'No rule matched. Keep this packet aside and check.',nosess:'Scanning is not active. This scan was not saved.',nodsr:'D S R is not loaded. This scan was not saved.',weight:'Enter the weight first.'}};
+function say(pop,force){if(pop==='ship'||!('speechSynthesis' in window)||(!force&&!$('#mn_voice').checked))return;const lang=$('#mn_vlang').value==='en'?'en':'hi';let txt=VOICE[lang][pop];if(!txt)return;
+  try{speechSynthesis.cancel();const vs=speechSynthesis.getVoices()||[],u=new SpeechSynthesisUtterance(txt);let v=vs.find(x=>String(x.lang).toLowerCase().startsWith(lang));
+    if(!v&&lang==='hi'){const ev=vs.find(x=>String(x.lang).toLowerCase().startsWith('en'));if(ev){v=ev;txt=VOICE.en[pop];u.text=txt}}
+    if(v){u.voice=v;u.lang=v.lang}else u.lang=lang==='hi'?'hi-IN':'en-IN';u.rate=1;u.volume=1;speechSynthesis.speak(u)}catch(e){}}
+$('#mn_voice').checked=LS.g('mn_voice','1')!=='0';$('#mn_voice').onchange=()=>LS.s('mn_voice',$('#mn_voice').checked?'1':'0');
+$('#mn_vlang').value=LS.g('mn_vlang','hi');$('#mn_vlang').onchange=()=>LS.s('mn_vlang',$('#mn_vlang').value);$('#mn_vtest').onclick=()=>say('dup',true);
 function popup(rec){const P=POP[rec.pop],r=rec.row;
   const info=r?[['Payment',tx(r[col('pay')])],['Final Remark',tx(r[col('fr')])],col('usr')>=0?['User',tx(r[col('usr')])]:null].filter(Boolean).map(x=>x[0]+': '+esc(x[1]||'-')).join(' · '):(rec.pop==='dup'?(()=>{const f=MN.seen.get(rec.k);return 'First result: '+esc((POP[rec.fp]||{}).t||'')+(f?' · first scanned '+fmtT(f.t)+' · '+esc(f.co)+(f.u?' ('+esc(f.u)+')':''):'')})():'');
-  $('#mnlast').innerHTML=`<div style="background:${P.c};color:#fff;border-radius:14px;padding:14px 16px;margin:8px 0"><div style="font-size:clamp(22px,6vw,34px);font-weight:800;line-height:1.2">${esc(P.t)}</div><div style="font-size:clamp(15px,4vw,20px);font-weight:700;word-break:break-all;margin-top:4px">${esc(rec.awb)}</div><div style="font-size:13px;opacity:.92;margin-top:4px">${info}</div></div>`;beep(rec.pop)}
+  $('#mnlast').innerHTML=`<div style="background:${P.c};color:#fff;border-radius:14px;padding:14px 16px;margin:8px 0"><div style="font-size:clamp(22px,6vw,34px);font-weight:800;line-height:1.2">${esc(P.t)}</div><div style="font-size:clamp(15px,4vw,20px);font-weight:700;word-break:break-all;margin-top:4px">${esc(rec.awb)}</div><div style="font-size:13px;opacity:.92;margin-top:4px">${info}</div></div>`;beep(rec.pop);say(rec.pop)}
 /* ---------- list ---------- */
 const fmtT=t=>{const d=new Date(t),p=n=>String(n).padStart(2,'0');return`${p(d.getDate())}-${p(d.getMonth()+1)}-${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`};
 const SC={active:'#16a34a',paused:'#d97706',done:'#2563eb'},SL={active:'● Scanning',paused:'⏸ Paused',done:'✔ Complete'};
-const ssCount=id=>{const a=MN.sc.filter(r=>r.s===id);return[a.length,a.filter(r=>r.pop==='ship').length]};
+const ssCount=id=>{let n=0,sh=0,d=0;for(const r of MN.sc)if(r.s===id){if(r.pop==='dup')d++;else{n++;if(r.pop==='ship')sh++}}return[n,sh,d]};
 function setSt(x,st){x.st=st;x.upd=Date.now();x.sy=0;if(st==='done')x.t1=Date.now();persist();pushSoon()}
 function activate(x){if(x.st==='done')return;MN.ses.filter(o=>o!==x&&o.st==='active'&&sameU(o.u,x.u)).forEach(o=>setSt(o,'paused'));setSt(x,'active')}
 function startSes(){const u=me(),co=courier(),ad=MN.ad;if(!u)return alert('Enter your name (scanner name) first');if(!co)return alert('Select the courier');if(!ad)return alert('Select (or add) the pickup address');
@@ -929,7 +976,7 @@ function startSes(){const u=me(),co=courier(),ad=MN.ad;if(!u)return alert('Enter
   activate(x);render();$('#mnin').focus()}
 function sesAct(e){const b=e.target.closest('button[data-sa]');if(!b)return;const x=MN.ses.find(o=>o.id===b.dataset.si);if(!x||x.st==='done')return;const a=b.dataset.sa;
   if(a==='resume')activate(x);else if(a==='pause')setSt(x,'paused');
-  else if(a==='done'){if(!confirm('Mark scanning COMPLETE for '+x.co+' — '+x.ad.slice(0,50)+' ('+x.u+')?\n\nOnce complete it is locked and CANNOT be resumed.'))return;setSt(x,'done')}
+  else if(a==='done'){const miss=MN.sc.filter(r=>r.s===x.id&&r.wq&&!r.w).length;if(miss)return alert(miss+' scan(s) of this session have no weight yet. Enter the weight (or remove the wrong scan) before completing.');if(!confirm('Mark scanning COMPLETE for '+x.co+' — '+x.ad.slice(0,50)+' ('+x.u+')?\n\nOnce complete it is locked and CANNOT be resumed.'))return;setSt(x,'done')}
   render();if(a!=='done')$('#mnin').focus()}
 $('#mn_start').onclick=startSes;$('#mn_cur').onclick=sesAct;$('#mn_st').onclick=sesAct;$('#mn_user').oninput=()=>{LS.s('mn_user',me());render()};
 function curBanner(){const e=$('#mn_cur'),cs=cur(),u=me();
@@ -960,21 +1007,36 @@ $('#mn_st').onchange=e=>{const t=e.target;if(t.id==='mn_sall')sesScope().forEach
 $('#mn_pall').onclick=()=>{sesScope().forEach(x=>MN.pick.add(x.id));render()};$('#mn_pclr').onclick=()=>{MN.pick.clear();render()};
 const sesOf=r=>MN.ses.find(x=>x.id===r.s);
 const canDel=r=>!!ADM()||!!(me()&&sameU(r.u,me())&&!(sesOf(r)&&sesOf(r).st==='done'));
-function admUI(){const a=!!ADM();MN.adm=a;$('#mn_admk').style.display=a?'none':'';$('#mn_admk').parentElement.style.display=a?'none':'';$('#mn_admin').textContent=a?'🔒 Log out (admin)':'🔓 Admin login';$('#mn_admst').textContent=a?'🔓 Admin mode: delete is allowed':'🔒 Admin-only: delete dates, addresses and completed scans (you can still remove your own wrong scan)';$('#mn_addl').style.display=a?'':'none';$('#mndel').style.display=a?'':'none'}
-$('#mn_admin').onclick=async()=>{if(ADM()){try{sessionStorage.removeItem('mn_admin')}catch(e){}admUI();render();return}
-  const v=$('#mn_admk').value.trim();if(!v)return alert('Enter the admin password');if(!key())return alert('Save the access key first (Step 1 → Cloud save).');
-  try{sessionStorage.setItem('mn_admin',v);await api('admin-check');$('#mn_admk').value='';admUI();render()}catch(e){try{sessionStorage.removeItem('mn_admin')}catch(x){}admUI();alert('Admin login failed: '+e.message)}};
+function admUI(){const o=ADMS(),a=!!o;MN.adm=a;const bt=$('#admtop');
+  $('#mn_admin').textContent=a?'🔒 Log out ('+o.u+')':'👑 Admin login';$('#mn_admst').textContent=a?'👑 Admin: '+o.u+' — delete is allowed':'🔒 Admin-only: delete dates, addresses and completed scans (you can still remove your own wrong scan)';
+  $('#mn_addl').style.display=a?'':'none';$('#mndel').style.display=a?'':'none';$('#mnclean').style.display=a?'':'none';$('#mn_admlog').style.display=a?'':'none';
+  if(bt){bt.textContent=a?'👑 '+o.u:'👑 Admin';bt.classList.toggle('on',a)}}
+function admLogout(){try{localStorage.removeItem('mn_adm');sessionStorage.removeItem('mn_adm')}catch(e){}admUI();render()}
+function admModal(){if(!key())return alert('Save the access key first (Step 1 → Cloud save).');
+  const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+  d.innerHTML=`<div style="background:var(--cd2,#fff);color:var(--tx,#111);border-radius:16px;padding:20px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)"><h3 style="margin:0 0 10px">👑 Admin login</h3><label class="fld"><span>Admin name</span><input id="am_u" type="text" autocomplete="username" value="${esc(LS.g('mn_admu',''))}"></label><label class="fld" style="margin-top:8px"><span>Password</span><input id="am_p" type="password" autocomplete="current-password"></label><label class="mu" style="display:block;margin-top:8px"><input type="checkbox" id="am_s" checked> Stay logged in on this device (12 hours)</label><div id="am_e" class="mu" style="color:#dc2626;min-height:18px;margin-top:6px"></div><div class="row"><button id="am_go">Login</button><button class="g" id="am_x">Cancel</button></div></div>`;
+  document.body.append(d);const q=x=>d.querySelector(x);q(q('#am_u').value?'#am_p':'#am_u').focus();
+  const go=async()=>{const u=q('#am_u').value.trim(),p=q('#am_p').value;if(!u||!p){q('#am_e').textContent='Enter the admin name and the password';return}
+    const stg=q('#am_s').checked?localStorage:sessionStorage,rec={u,k:p,x:Date.now()+12*3600e3};q('#am_go').disabled=true;
+    try{stg.setItem('mn_adm',JSON.stringify(rec));const r=await api('admin-check');rec.u=r.name||u;stg.setItem('mn_adm',JSON.stringify(rec));LS.s('mn_admu',rec.u);d.remove();admUI();render()}
+    catch(e){try{localStorage.removeItem('mn_adm');sessionStorage.removeItem('mn_adm')}catch(x){}q('#am_e').textContent=e.message;q('#am_go').disabled=false}};
+  q('#am_go').onclick=go;q('#am_x').onclick=()=>d.remove();q('#am_p').addEventListener('keydown',e=>{if(e.key==='Enter')go()})}
+const admClick=()=>{if(ADMS()){if(confirm('Log out the admin ('+ADU()+')?'))admLogout()}else admModal()};
+$('#mn_admin').onclick=admClick;$('#admtop').onclick=admClick;
+$('#mn_admlog').onclick=async()=>{try{const L=(await api('audit-list')).list||[];const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+  d.innerHTML=`<div style="background:var(--cd2,#fff);color:var(--tx,#111);border-radius:16px;padding:18px;max-width:900px;width:100%;max-height:85vh;display:flex;flex-direction:column"><h3 style="margin:0 0 8px">📜 Admin log (latest 200)</h3><div class="sc" style="overflow:auto"><table class="mnt"><tr><th>Time</th><th>Admin</th><th>Action</th><th>Details</th></tr>${L.map(x=>{const{t,u,op,...r}=x;return`<tr><td>${new Date(t).toLocaleString()}</td><td>${esc(u||'')}</td><td>${esc(op)}</td><td>${esc(JSON.stringify(r).slice(0,160))}</td></tr>`}).join('')||'<tr><td colspan="4">Nothing yet</td></tr>'}</table></div><div class="row"><button class="g" id="al_x">Close</button></div></div>`;document.body.append(d);d.querySelector('#al_x').onclick=()=>d.remove()}catch(e){alert(e.message)}};
+setTimeout(()=>{if(ADMS()&&key())api('admin-check').then(r=>{const o=ADMS();if(o){o.x=Date.now()+12*3600e3;o.u=r.name||o.u;(localStorage.getItem('mn_adm')?localStorage:sessionStorage).setItem('mn_adm',JSON.stringify(o))}admUI()}).catch(e=>{if(/admin|password/i.test(e.message))admLogout()})},1500);
 function fitLog(){const t=$('#mnt'),w=$('#mnlog');if(!t||!w)return;const r=t.rows;if(r.length<=4){w.style.maxHeight='none';return}let h=0;for(let i=0;i<4;i++)h+=r[i].offsetHeight;if(h>20)w.style.maxHeight=(h+2)+'px'}
 try{new ResizeObserver(()=>fitLog()).observe($('#mnt'))}catch(e){}
 function render(){admUI();fillFilters();const f=fSel(),lv=$('#mn_lv').value,vw=MN.sc.filter(r=>(f.d==='*'||r.d===f.d)&&(lv==='all'||(me()&&sameU(r.u,me())))),c={};vw.forEach(r=>c[r.pop]=(c[r.pop]||0)+1);
-  $('#mncnt').innerHTML=`<span style="background:#475569">${lv==='all'?'All scanners':'My scans'}${me()&&lv!=='all'?' ('+esc(me())+')':''}: ${vw.length}</span>`+ORDER.filter(k=>c[k]).map(k=>`<span style="background:${POP[k].c}">${esc(POP[k].sh)}: ${c[k]}</span>`).join('');
+  $('#mncnt').innerHTML=`<span style="background:#475569">${lv==='all'?'All scanners':'My scans'}${me()&&lv!=='all'?' ('+esc(me())+')':''}: ${vw.filter(r=>r.pop!=='dup').length}</span>`+ORDER.filter(k=>c[k]).map(k=>`<span style="background:${POP[k].c}">${esc(POP[k].sh)}: ${c[k]}</span>`).join('');
   curBanner();
   MN.pick=new Set([...MN.pick].filter(id=>MN.ses.some(x=>x.id===id)));const ss=sesScope(),ps=pickSes();
-  $('#mn_st').innerHTML='<tr><th><input type="checkbox" id="mn_sall" title="Tick all"'+(ss.length&&ss.every(x=>MN.pick.has(x.id))?' checked':'')+'></th><th>Date</th><th>Courier</th><th>Pickup address</th><th>Scanner</th><th>Scans</th><th>Please Ship</th><th>Status</th><th></th></tr>'+ss.map(x=>{const[n,sh]=ssCount(x.id);return`<tr><td><input type="checkbox" data-pk="${x.id}"${MN.pick.has(x.id)?' checked':''}></td><td>${x.d}</td><td>${esc(x.co)}</td><td>${esc(x.ad.slice(0,60))}</td><td>${esc(x.u)}${x.rd>1?' · Round '+x.rd:''}</td><td>${n}</td><td>${sh}</td><td><span class="mnst" style="background:${SC[x.st]}">${SL[x.st]}</span></td><td>${x.st==='done'?'<span class="mu">🔒 Locked</span>':(x.st==='active'?`<button class="g" data-sa="pause" data-si="${x.id}">⏸ Pause</button>`:`<button class="g" data-sa="resume" data-si="${x.id}">▶ Resume</button>`)+`<button class="g" data-sa="done" data-si="${x.id}">✔ Complete</button>`}</td></tr>`}).join('');
+  $('#mn_st').innerHTML='<tr><th><input type="checkbox" id="mn_sall" title="Tick all"'+(ss.length&&ss.every(x=>MN.pick.has(x.id))?' checked':'')+'></th><th>Date</th><th>Courier</th><th>Pickup address</th><th>Scanner</th><th>Scans</th><th>Please Ship</th><th>Re-scans</th><th>Status</th><th></th></tr>'+ss.map(x=>{const[n,sh,dd]=ssCount(x.id);return`<tr><td><input type="checkbox" data-pk="${x.id}"${MN.pick.has(x.id)?' checked':''}></td><td>${x.d}</td><td>${esc(x.co)}</td><td>${esc(x.ad.slice(0,60))}</td><td>${esc(x.u)}${x.rd>1?' · Round '+x.rd:''}</td><td>${n}</td><td>${sh}</td><td>${dd}</td><td><span class="mnst" style="background:${SC[x.st]}">${SL[x.st]}</span></td><td>${x.st==='done'?'<span class="mu">🔒 Locked</span>':(x.st==='active'?`<button class="g" data-sa="pause" data-si="${x.id}">⏸ Pause</button>`:`<button class="g" data-sa="resume" data-si="${x.id}">▶ Resume</button>`)+`<button class="g" data-sa="done" data-si="${x.id}">✔ Complete</button>`}</td></tr>`}).join('');
   const ch=chosen(),ng=new Set(ps.map(x=>x.d+'|'+x.co+'|'+x.ad)).size;$('#mn_sel').innerHTML=ps.length?`<b>✔ ${ps.length} session(s) ticked</b> — downloads use only these: ${ch.length} scans, ${ch.filter(r=>r.pop==='ship').length} Please Ship.${ng>1?` Manifest = <b>${ng} separate manifests</b> (one per date + courier + address) in one ZIP.`:''}`:`Nothing ticked — downloads use everything in the filters above (${ch.length} scans, ${ch.filter(r=>r.pop==='ship').length} Please Ship).`;
-  const pi=col('pay'),fi=col('fr'),L=vw.slice(-200).reverse();
-  $('#mnt').innerHTML='<tr><th>#</th><th>Time</th><th>AWB</th><th>Result</th><th>Courier</th><th>By</th><th>Payment</th><th>Final Remark</th><th></th></tr>'+L.map(r=>{const n=MN.sc.indexOf(r)+1;return`<tr><td>${n}</td><td>${fmtT(r.t).slice(11)}</td><td>${esc(r.awb)}</td><td><span class="mnb" style="background:${POP[r.pop].c}">${esc(POP[r.pop].t)}</span></td><td>${esc(r.co)}</td><td>${esc(r.u)}</td><td>${r.row&&pi>=0?esc(tx(r.row[pi])):''}</td><td>${r.row&&fi>=0?esc(tx(r.row[fi])):''}</td><td>${canDel(r)?`<button class="g" data-mnrm="${n-1}" title="Remove this wrong scan">✕</button>`:''}</td></tr>`}).join('')}
-$('#mnt').onclick=e=>{const b=e.target.closest('button[data-mnrm]');if(!b)return;const i=+b.dataset.mnrm,r=MN.sc[i];if(!r)return;if(!canDel(r))return alert('You can remove only your own scans while the session is not complete. Completed / saved data can be deleted by the admin only.');if(!confirm('Remove this scan ('+r.awb+')?'))return;MN.sc.splice(i,1);rebuildSeen();persist();render();pushDel(r)};
+  const pi=col('pay'),fi=col('fr'),L=vw.slice(-200).reverse(),wc=vw.some(r=>r.wq||r.w);
+  $('#mnt').innerHTML='<tr><th>#</th><th>Time</th><th>AWB</th><th>Result</th><th>Courier</th><th>By</th><th>Payment</th><th>Final Remark</th>'+(wc?'<th>Weight</th>':'')+'<th></th></tr>'+L.map(r=>{const n=MN.sc.indexOf(r)+1;return`<tr><td>${n}</td><td>${fmtT(r.t).slice(11)}</td><td>${esc(r.awb)}</td><td><span class="mnb" style="background:${POP[r.pop].c}">${esc(POP[r.pop].t)}</span></td><td>${esc(r.co)}</td><td>${esc(r.u)}</td><td>${(()=>{const w=rowOf(r);return w&&pi>=0?esc(tx(w[pi])):''})()}</td><td>${(()=>{const w=rowOf(r);return w&&fi>=0?esc(tx(w[fi])):''})()}</td>${wc?'<td>'+(r.w?r.w+' g':(r.wq?'⚠ missing':''))+'</td>':''}<td>${canDel(r)?`<button class="g" data-mnrm="${n-1}" title="Remove this wrong scan">✕</button>`:''}</td></tr>`}).join('')}
+$('#mnt').onclick=e=>{const b=e.target.closest('button[data-mnrm]');if(!b)return;const i=+b.dataset.mnrm,r=MN.sc[i];if(!r)return;if(!canDel(r))return alert('You can remove only your own scans while the session is not complete. Completed / saved data can be deleted by the admin only.');if(!confirm('Remove this scan ('+r.awb+')?'))return;MN.recent.delete(r.k);MN.sc.splice(i,1);rebuildSeen();persist();render();pushDel(r)};
 $('#mnin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const v=$('#mnin').value;$('#mnin').value='';doScan(v,'kb')}});
 $('#mngo').onclick=()=>{const v=$('#mnin').value;$('#mnin').value='';doScan(v,'kb');$('#mnin').focus()};
 $('#mndel').onclick=async()=>{if(!ADM())return alert('Only the admin can delete.');const d=$('#mn_fd').value;if(!d||d==='*')return alert('Select ONE date in ③ first');const n=MN.sc.filter(r=>r.d===d).length;
@@ -983,6 +1045,12 @@ $('#mndel').onclick=async()=>{if(!ADM())return alert('Only the admin can delete.
   const tn=Date.now(),tt=new Date(tn).toISOString();MN.tomb[d]={t:tt,tn};persist();
   if(key()){try{const id='del_'+d+'_'+rid();await api('add',{id,data:JSON.stringify([{clr:1,d,t:tt,tn}])});MN.chunks.add(id);await api('clear-date',{d});st('🗑 Deleted '+d+' on all devices')}catch(e){st('❌ '+esc(e.message))}}else st('🗑 Deleted '+d)};
 
+$('#mnclean').onclick=async()=>{if(!ADM())return alert('Only the admin can do this.');const f=fSel();
+  const bad=MN.sc.filter(r=>r.pop==='dup'&&(f.d==='*'||r.d===f.d)).filter(r=>{const a=MN.seen.get(r.k);return a&&a!==r&&sameU(a.u,r.u)&&Date.parse(r.t)-Date.parse(a.t)<=5000});
+  if(!bad.length)return alert('No accidental double scans found (same AWB, same scanner, within 5 seconds).');
+  if(!confirm('Remove '+bad.length+' accidental double-scan entries (the same AWB scanned again by the same scanner within 5 seconds)?\nThe first scan of every AWB stays.'))return;
+  const set=new Set(bad);MN.sc=MN.sc.filter(r=>!set.has(r));rebuildSeen();MN.dall=1;persist();render();
+  if(key()){try{for(let i=0;i<bad.length;i+=200){const id=(f.d==='*'?todayS():f.d)+'_'+rid();await api('add',{id,data:JSON.stringify(bad.slice(i,i+200).map(r=>({del:1,k:r.k,t:r.t})))});MN.chunks.add(id)}st('🧹 Removed '+bad.length+' double scans on all devices')}catch(e){st('❌ '+esc(e.message))}}else st('🧹 Removed '+bad.length+' double scans')};
 /* ---------- camera ---------- */
 $('#mncam').onclick=async()=>{if(MN.cam)return camStop();
   if(!('BarcodeDetector' in window)){$('#mncm').innerHTML='<span class="er">This browser cannot scan barcodes with the camera (use Chrome on Android, or a USB/Bluetooth scanner, or type the AWB).</span>';return}
@@ -990,26 +1058,35 @@ $('#mncam').onclick=async()=>{if(MN.cam)return camStop();
     const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false}),v=$('#mnvid');v.srcObject=st;v.style.display='block';await v.play();
     const det=new BarcodeDetector({formats:fm});let busy=false;
     MN.cam={st,iv:setInterval(async()=>{if(busy)return;busy=true;try{const r=await det.detect(v),now=Date.now();
-      for(const x of r){const val=x.rawValue;if(!val)continue;const same=MN.last.v===val&&now-MN.last.t<1800;MN.last={v:val,t:now};if(!same){doScan(val,'cam');break}}}catch(e){}busy=false},200)};
+      for(const x of r){const val=x.rawValue;if(!val)continue;const ck=nm(val),same=now-(MN.camT.get(ck)||0)<8000;MN.camT.set(ck,now);if(!same){doScan(val,'cam');MN.camT.set(ck,Date.now());break}}}catch(e){}busy=false},200)};
     $('#mncam').textContent='⏹ Stop camera';$('#mncm').textContent='Point the camera at the AWB barcode. Take the camera away and show the next packet.'}
   catch(e){$('#mncm').innerHTML='<span class="er">Camera could not start: '+esc(e.message||e)+'</span>'}};
 function camStop(){if(!MN.cam)return;clearInterval(MN.cam.iv);MN.cam.st.getTracks().forEach(t=>t.stop());MN.cam=null;$('#mnvid').style.display='none';$('#mncam').textContent='📷 Camera scan';$('#mncm').textContent=''}
 
 /* ---------- persistence (IndexedDB) ---------- */
-let pt=0;function persist(){clearTimeout(pt);pt=setTimeout(async()=>{try{await DB.set('mnscan',{sc:MN.sc,ses:MN.ses,tomb:MN.tomb,H:MN.H,fmt:MN.fmt,chunks:[...MN.chunks]})}catch(e){console.warn('scan save failed',e)}},300)}
-async function restore(){try{const v=await DB.get('mnscan');if(v&&!MN.sc.length&&!MN.ses.length){MN.sc=(v.sc||[]).map(fix);MN.ses=v.ses||[];MN.tomb=v.tomb||{};MN.H=v.H||null;MN.fmt=v.fmt||{dc:[],cf:{}};MN.chunks=new Set(v.chunks||[]);rebuildSeen();render()}}catch(e){}}
+const PCH=500;let pt=0;
+function persist(){clearTimeout(pt);pt=setTimeout(async()=>{try{const len=MN.sc.length,n=Math.ceil(len/PCH),full=MN.dall||len<(MN.pl||0),idx=new Set(MN.dirty);
+    if(full)for(let i=0;i<n;i++)idx.add(i);else for(let i=Math.floor(Math.max(0,(MN.pl||0)-1)/PCH);i<n;i++)idx.add(i);
+    MN.dirty.clear();MN.dall=0;MN.pl=len;
+    for(const i of idx)if(i<n)await DB.set('mnscan:c'+i,MN.sc.slice(i*PCH,(i+1)*PCH));
+    await DB.set('mnscan:meta',{ses:MN.ses,tomb:MN.tomb,H:MN.H,fmt:MN.fmt,chunks:[...MN.chunks],n,len});
+    for(let i=n;i<(MN.pn||0);i++)await DB.del('mnscan:c'+i);MN.pn=n}catch(e){console.warn('scan save failed',e)}},800)}
+async function restore(){try{if(MN.sc.length||MN.ses.length)return;const meta=await DB.get('mnscan:meta');let sc,v;
+  if(meta){sc=[];for(let i=0;i<meta.n;i++){const c=await DB.get('mnscan:c'+i);if(c)sc=sc.concat(c)}v=meta}else{const o=await DB.get('mnscan');if(!o)return;sc=o.sc||[];v=o}
+  MN.sc=sc.map(fix);MN.ses=v.ses||[];MN.tomb=v.tomb||{};MN.H=v.H||null;MN.fmt=v.fmt||{dc:[],cf:{}};MN.chunks=new Set(v.chunks||[]);rebuildSeen();
+  MN.pl=meta?MN.sc.length:0;MN.pn=meta?meta.n:0;if(!meta){MN.dall=1;persist();setTimeout(()=>DB.del('mnscan').catch(()=>{}),6000)}render()}catch(e){}}
 
 /* ---------- cloud sync (api/scan.js) ---------- */
-async function api(op,body){const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json','x-dsr-key':key(),'x-admin-key':ADM()},body:JSON.stringify({op,...(body||{})})});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||('HTTP '+r.status+(r.status===404?' (api/scan not deployed — open the Vercel site)':'')));return j}
+async function api(op,body){const r=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json','x-dsr-key':key(),'x-admin-key':ADM(),'x-admin-user':encodeURIComponent(ADU())},body:JSON.stringify({op,...(body||{})})});let j={};try{j=await r.json()}catch(e){}if(!r.ok)throw new Error(j.error||('HTTP '+r.status+(r.status===404?' (api/scan not deployed — open the Vercel site)':'')));return j}
 const st=h=>$('#mnsyst').innerHTML=h;
 const rid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 let metaT=0;function metaPush(){if(!key()||!MN.H)return;clearTimeout(metaT);metaT=setTimeout(()=>{api('meta-set',{data:JSON.stringify({H:MN.H,fmt:MN.fmt,at:Date.now()})}).catch(()=>{})},1500)}
 function pushSoon(){if(!key())return;clearTimeout(MN.syT);MN.syT=setTimeout(()=>push().catch(e=>st('❌ '+esc(e.message))),2500)}
 async function push(){if(!key()||MN.sy)return;MN.sy=true;try{
   const ds=[...new Set(MN.sc.filter(r=>!r.sy).map(r=>r.d).concat(MN.ses.filter(x=>!x.sy).map(x=>x.d)))];
-  for(const d of ds){const ss=MN.ses.filter(x=>!x.sy&&x.d===d),rr=MN.sc.filter(r=>!r.sy&&r.d===d),items=ss.map(x=>({ses:1,...x,sy:undefined})).concat(rr.map(r=>({...r,sy:undefined})));
+  for(const d of ds){const ss=MN.ses.filter(x=>!x.sy&&x.d===d),rr=MN.sc.filter(r=>!r.sy&&r.d===d),items=ss.map(x=>({ses:1,...x,sy:undefined})).concat(rr.map(r=>({...r,sy:undefined,row:undefined})));
     for(let i=0;i<items.length;i+=60){const id=d+'_'+rid();await api('add',{id,data:JSON.stringify(items.slice(i,i+60))});MN.chunks.add(id)}
-    ss.forEach(x=>x.sy=1);rr.forEach(r=>r.sy=1)}
+    ss.forEach(x=>x.sy=1);rr.forEach(r=>r.sy=1);{const rs=new Set(rr);MN.sc.forEach((r,i)=>{if(rs.has(r))MN.dirty.add(Math.floor(i/PCH))})}}
   if(ds.length){persist();st('☁ Synced '+new Date().toLocaleTimeString())}}finally{MN.sy=false}}
 async function pushDel(r){if(!key())return;try{const id=(r.d||dateOf(r.t))+'_'+rid();await api('add',{id,data:JSON.stringify([{del:1,k:r.k,t:r.t}])});MN.chunks.add(id);persist()}catch(e){}}
 async function pull(){if(!key())return 0;const m=(await api('meta-get')).meta;if(m&&m.H&&!MN.H){MN.H=m.H;MN.fmt=m.fmt||{dc:[],cf:{}}}
@@ -1018,12 +1095,25 @@ async function pull(){if(!key())return 0;const m=(await api('meta-get')).meta;if
     for(const x of arr){if(x.clr){MN.tomb[x.d]={t:x.t,tn:x.tn};MN.sc=MN.sc.filter(r=>!(r.d===x.d&&r.t<=x.t));MN.ses=MN.ses.filter(z=>!(z.d===x.d&&(z.upd||0)<=x.tn));[...MN.chunks].filter(i=>i.startsWith(x.d+'_')).forEach(i=>MN.chunks.delete(i));have.clear();MN.sc.forEach(r=>have.add(r.k+'|'+r.t));continue}
       if(x.del){const j=MN.sc.findIndex(r=>r.k===x.k&&r.t===x.t);if(j>=0)MN.sc.splice(j,1);continue}
       if(x.ses){const{ses,...o}=x,l=MN.ses.find(z=>z.id===o.id),tb=MN.tomb[o.d];if(tb&&(o.upd||0)<=tb.tn)continue;if(!l)MN.ses.push({...o,sy:1});else if(l.st==='done'&&o.st!=='done'){}else if(o.st==='done'||(o.upd||0)>(l.upd||0))Object.assign(l,o,{sy:1});continue}
-      const tb2=MN.tomb[x.d||dateOf(x.t)];if(tb2&&x.t<=tb2.t)continue;const hk=x.k+'|'+x.t;if(have.has(hk))continue;have.add(hk);x.sy=1;MN.sc.push(fix(x));add++}}
-  if(ch){MN.sc.sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0);const sn=new Set();MN.sc.forEach(r=>{if(r.pop==='dup')return;if(sn.has(r.k)){r.pop='dup';r.fp=r.fp||'ship';delete r.row}else sn.add(r.k)});rebuildSeen();persist();render()}
+      const tb2=MN.tomb[x.d||dateOf(x.t)];if(tb2&&x.t<=tb2.t)continue;const hk=x.k+'|'+x.t;if(have.has(hk)){if(x.v){const l=MN.sc.find(r=>r.k===x.k&&r.t===x.t);if(l&&x.v>(l.v||0)){Object.assign(l,x,{sy:1});add++;MN.dall=1}}continue}have.add(hk);x.sy=1;MN.sc.push(fix(x));add++}}
+  if(ch){MN.dall=1;MN.sc.sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0);const sn=new Set();MN.sc.forEach(r=>{if(r.pop==='dup')return;if(sn.has(r.k)){r.pop='dup';r.fp=r.fp||'ship';delete r.row}else sn.add(r.k)});rebuildSeen();persist();render()}
   return add}
 $('#mnsy').onclick=async()=>{if(!key())return alert('Save the access key first (Step 1 → Cloud save).');try{st('⏳ Syncing…');const a=await pull();await push();metaPush();render();st(`✅ Synced ${new Date().toLocaleTimeString()}${a?' — '+a+' new scans from the other device':''}`)}catch(e){st('❌ '+esc(e.message))}};
 setInterval(()=>{if(!key()||MN.sy||document.hidden||!$('#p9').offsetParent)return;pull().then(a=>{if(a)st('☁ '+a+' new scans received '+new Date().toLocaleTimeString())}).then(()=>push()).catch(()=>{})},15000);
 
+function rematch(){if(!S.d||col('awb')<0||!MN.sc.some(r=>r.pop==='na'))return 0;MN.ix=null;const ix=index();let n=0;
+  MN.sc.forEach(r=>{if(r.pop!=='na')return;const ri=ix.get(r.k);if(ri==null)return;const row=S.d.rows[ri];r.pop=classify(row);r.row=row.map(snapV);r.v=Date.now();r.sy=0;n++});
+  if(n){MN.dall=1;persist();render();pushSoon()}return n}
+setInterval(()=>{try{rematch()}catch(e){}},10000);
+$('#mn_dsrauto').checked=LS.g('mn_dsrauto','1')!=='0';$('#mn_dsrauto').onchange=()=>LS.s('mn_dsrauto',$('#mn_dsrauto').checked?'1':'0');
+async function dsrCheck(manual){if(MN.dl||!window.cloudMeta||!key())return;MN.dl=1;const e=$('#mn_dsrst');
+  try{const m=await window.cloudMeta();if(!m){if(manual)e.textContent='Nothing is saved in the cloud yet';return}
+    if(S.d&&S.cloudId===m.id){if(manual)e.textContent='✅ The DSR is the latest ('+new Date(m.savedAt).toLocaleTimeString()+')';return}
+    if(S.d&&S.rev!==S.loadRev){if(!manual)return;if(!confirm('This device has DSR changes that are not in the cloud. Replace them with the cloud copy?'))return}
+    e.textContent='⬇ Updating the DSR from the cloud…';await window.cloudLoad({silent:true,skipX:true});fillSel();MN.ix=null;const n=rematch();e.textContent='✅ DSR updated '+new Date().toLocaleTimeString()+(n?' · '+n+' earlier "Not in DSR" scans matched now':'');render()}
+  catch(x){e.textContent='❌ '+x.message}finally{MN.dl=0}}
+$('#mn_dsrnow').onclick=()=>dsrCheck(true);
+setInterval(()=>{if($('#mn_dsrauto').checked&&!document.hidden&&$('#p9').offsetParent&&!(cur()&&Date.now()-(MN.lastScanT||0)<15000))dsrCheck(false)},60000);
 /* ---------- Excel writers ---------- */
 const XH='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n',NSX='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
 const ex=s=>String(s).replace(/[&<>]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':'&gt;').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'');
@@ -1075,31 +1165,32 @@ const dstamp=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return`${d.g
 
 /* complete Excel: one sheet per pop-up, DSR columns in the same order, + Scan Time */
 function dsrSheet(name,recs,H){const W=H.length,dc=new Set(MN.fmt.dc||[]),cf=MN.fmt.cf||{},kind=c=>{const k=cf[c];return k==='t1'?'tm':k==='t2'?'dtm':(k==='date'||dc.has(c))?'dt':'bd'};
-  const widths=H.map(h=>Math.min(40,Math.max(10,String(h).length*1.15+3)).toFixed(1)).concat(['20','18','40','16']);
-  recs.slice(0,150).forEach(r=>r.row&&r.row.forEach((v,c)=>{if(v!=null&&c<W){const L=typeof v==='string'?Math.min(45,v.length+2):13;if(L>+widths[c])widths[c]=String(L)}}));
+  const widths=H.map(h=>Math.min(40,Math.max(10,String(h).length*1.15+3)).toFixed(1)).concat(['20','18','40','16','12']);
+  recs.slice(0,150).forEach(r=>rowOf(r)&&rowOf(r).forEach((v,c)=>{if(v!=null&&c<W){const L=typeof v==='string'?Math.min(45,v.length+2):13;if(L>+widths[c])widths[c]=String(L)}}));
   for(let c=0;c<W;c++)if(kind(c)==='dt')widths[c]=String(Math.max(+widths[c],13));
-  const rows=[{ht:32,c:H.map(h=>[String(h),SX.dh]).concat([['Scan Time',SX.dh],['Courier',SX.dh],['Pickup Address',SX.dh],['Scanned By',SX.dh]])}];
-  recs.forEach(r=>{const row=r.row||[],c=[];for(let i=0;i<W;i++){let v=row[i];if(v==null||v==='')v=null;c.push([v,typeof v==='number'?SX[kind(i)]:SX.bd])}c.push([fmtT(r.t),SX.bd],[r.co,SX.bd],[r.ad,SX.bd],[r.u,SX.bd]);rows.push({c})});
-  return{name,widths,rows,freeze:1,filter:`A1:${cn(W+3)}${rows.length}`}}
+  const rows=[{ht:32,c:H.map(h=>[String(h),SX.dh]).concat([['Scan Time',SX.dh],['Courier',SX.dh],['Pickup Address',SX.dh],['Scanned By',SX.dh],['Weight (g)',SX.dh]])}];
+  recs.forEach(r=>{const row=rowOf(r)||[],c=[];for(let i=0;i<W;i++){let v=row[i];if(v==null||v==='')v=null;c.push([v,typeof v==='number'?SX[kind(i)]:SX.bd])}c.push([fmtT(r.t),SX.bd],[r.co,SX.bd],[r.ad,SX.bd],[r.u,SX.bd],[r.w||'',SX.bd]);rows.push({c})});
+  return{name,widths,rows,freeze:1,filter:`A1:${cn(W+4)}${rows.length}`}}
 function simpleSheet(name,head,recs,f){const rows=[{ht:28,c:head.map(h=>[h,SX.dh])}];recs.forEach(r=>rows.push({c:f(r).map(v=>[v,SX.bd])}));return{name,widths:head.map(()=>'26'),rows,freeze:1,filter:`A1:${cn(head.length-1)}${rows.length}`}}
 const fname=f=>(f.d==='*'?'all-dates':f.d)+'_'+(safe(f.co==='*'?'all-couriers':f.co)||'courier');
 $('#mnxl').onclick=()=>{const sc=chosen();if(!sc.length)return alert('Nothing scanned for the ticked sessions / selected filters');
+  if(!S.d&&sc.some(r=>r.pop!=='na'&&r.pop!=='dup'&&!r.row))return alert('Load the DSR first (Step 1 → Cloud save → Load DSR from cloud). The scan details are read from the DSR.');
   const H=MN.H||S.d.H,f=gInfo(),by={};sc.forEach(r=>(by[r.pop]=by[r.pop]||[]).push(r));
   const sh=[],sum=[{ht:30,c:[['Scan Summary',SX.title]]},{c:[['Date',SX.lab],[f.d==='*'?'All dates':f.d,SX.val]]},{c:[['Courier',SX.lab],[f.co==='*'?'All couriers':f.co,SX.val]]},{c:[['Pickup address',SX.lab],[f.ad==='*'?'All addresses':f.ad,SX.val]]},{c:[['Downloaded',SX.lab],[fmtT(new Date().toISOString()),SX.val]]},{c:[['Total scans',SX.lab],[sc.length,SX.val]]},{c:[]},{ht:24,c:[['Pop-up',SX.dh],['Sheet',SX.dh],['Count',SX.dh]]}];
   ORDER.forEach(k=>{if(by[k])sum.push({c:[[POP[k].t,SX.bd],[POP[k].sh,SX.bd],[by[k].length,SX.bd]]})});
   sum.push({c:[]},{ht:24,c:['Date','Courier','Pickup address','Scanner','Scans','Please Ship','Status'].map(h=>[h,SX.dh])});
   chosenSes().forEach(x=>{const[n,p]=ssCount(x.id);sum.push({c:[[x.d,SX.bd],[x.co,SX.bd],[x.ad,SX.bd],[x.u+(x.rd>1?' (Round '+x.rd+')':''),SX.bd],[n,SX.bd],[p,SX.bd],[SL[x.st].replace(/^[^A-Za-z]+/,''),SX.bd]]})});
   sh.push({name:'Summary',widths:['38','22','40','18','12','14','14'],rows:sum,merges:['A1:G1']});
-  const X=r=>[r.co,r.ad,r.u];
+  const X=r=>[r.co,r.ad,r.u,r.w||''];
   ORDER.forEach(k=>{const a=by[k];if(!a)return;
-    if(k==='na')sh.push(simpleSheet(POP[k].sh,['AWB Scanned','Scan Time','Courier','Pickup Address','Scanned By'],a,r=>[r.awb,fmtT(r.t),...X(r)]));
-    else if(k==='dup')sh.push(simpleSheet(POP[k].sh,['AWB Scanned','Scan Time','Earlier Result','Courier','Pickup Address','Scanned By'],a,r=>[r.awb,fmtT(r.t),(POP[r.fp]||{}).t||'',...X(r)]));
+    if(k==='na')sh.push(simpleSheet(POP[k].sh,['AWB Scanned','Scan Time','Courier','Pickup Address','Scanned By','Weight (g)'],a,r=>[r.awb,fmtT(r.t),...X(r)]));
+    else if(k==='dup')sh.push(simpleSheet(POP[k].sh,['AWB Scanned','Scan Time','Earlier Result','Courier','Pickup Address','Scanned By','Weight (g)'],a,r=>[r.awb,fmtT(r.t),(POP[r.fp]||{}).t||'',...X(r)]));
     else sh.push(dsrSheet(POP[k].sh,a,H))});
   save(bookBlob(sh),`Scan_Report_${fname(f)}.xlsx`)};
 
 /* Manifest (as per Manifest_Format.xlsx): ONE date + ONE courier + ONE pickup address, Please Ship only */
 function mfBuild(f,L,sub){
-  const g=(r,k)=>{const c=col(k);if(c<0||!r.row)return'';const v=r.row[c];return v==null?'':v};
+  const g=(r,k)=>{const c=col(k),w=rowOf(r);if(c<0||!w)return'';const v=w[c];return v==null?'':v};
   const txt=v=>String(v).trim(),now=fmtT(new Date().toISOString()),n=L.length,[Y,Mo,D]=f.d.split('-'),cur=D+'-'+Mo+'-'+Y,mfno='MF-'+f.d.replace(/-/g,'')+'-'+(safe(f.co).slice(0,6).toUpperCase()||'CO')+'-'+hsh(f.ad).slice(0,3).toUpperCase()+sub;
   const R=[];
   R.push({ht:30,c:[['COURIER HANDOVER MANIFEST',SX.title]]});
@@ -1112,7 +1203,7 @@ function mfBuild(f,L,sub){
   R.push({ht:20,c:[['Total shipments to dispatch',SX.lab],['',SX.lab],[String(n),SX.val]].concat(Array(5).fill(['',SX.val]))});
   R.push({c:[]});
   R.push({ht:30,c:['S.No.','Tracking Number','Product Name','Recipient Name','Recipient Phone','SKU','Total Amount','Remarks'].map(h=>[h,SX.mh])});
-  L.forEach((r,i)=>{const amt=g(r,'amt');R.push({ht:18,c:[[i+1,SX.mc],[r.awb,SX.mtx],[txt(g(r,'prod')).slice(0,15),SX.mc],[txt(g(r,'rn')),SX.mc],[txt(g(r,'ph')),SX.mtx],[txt(g(r,'sku')),SX.mc],[typeof amt==='number'?amt:txt(amt),SX.mc],['',SX.mc]]})});
+  L.forEach((r,i)=>{const amt=g(r,'amt');R.push({ht:18,c:[[i+1,SX.mc],[r.awb,SX.mtx],[txt(g(r,'prod')).slice(0,15),SX.mc],[txt(g(r,'rn')),SX.mc],[txt(g(r,'ph')),SX.mtx],[txt(g(r,'sku')),SX.mc],[typeof amt==='number'?amt:txt(amt),SX.mc],[r.w?'Weight: '+r.w+' g':'',SX.mc]]})});
   R.push({c:[]});R.push({c:[]});
   const f0=R.length+1;
   R.push({ht:20,c:[['HANDED OVER BY (Seller)',SX.ft],['',SX.ft],['',SX.ft],['',SX.ft],['RECEIVED BY (Courier)',SX.ft],['',SX.ft],['',SX.ft],['',SX.ft]]});
@@ -1132,6 +1223,7 @@ $('#mnmf').onclick=async()=>{const ps=pickSes();let groups=[];
     if(!L.length)continue;const sub=G.ids&&G.ids.length<all.length?'-'+hsh(G.ids.slice().sort().join()).slice(0,2).toUpperCase():'';
     built.push({f:G.f,L,sub,names:[...new Set(G.ss.map(x=>x.u+(x.rd>1?'R'+x.rd:'')))].join('-'),ss:G.ss})}
   if(!built.length)return alert('No "Please Ship" scans in the ticked sessions / selected filters');
+  if(!S.d&&built.some(b=>b.L.some(r=>!r.row)))return alert('Load the DSR first (Step 1 → Cloud save → Load DSR from cloud). The scan details are read from the DSR.');
   const open=built.flatMap(b=>b.ss).filter(x=>x.st!=='done');
   if(open.length&&!confirm('Scanning is not complete for ('+[...new Set(open.map(x=>x.u+': '+x.st))].join(', ')+'). Download anyway?'))return;
   if(built.length===1){const b=built[0];save(mfBuild(b.f,b.L,b.sub),mfName(b.f,b.sub,b.names));return}
